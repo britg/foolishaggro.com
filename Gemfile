@@ -136,7 +136,14 @@ group :assets do
   # Sam: disabling for now, having issues with our jenkins build
   # gem 'turbo-sprockets-rails3'
   gem 'uglifier'
+  gem 'bourbon'
 end
+
+gem 'haml-rails'
+gem 'jquery-rails'
+gem 'anjlab-bootstrap-rails', :require => 'bootstrap-rails',
+                              :github => 'anjlab/bootstrap-rails',
+                              :branch => '3.0.0'
 
 group :test do
   gem 'fakeweb', '~> 1.3.0', require: false
@@ -169,6 +176,7 @@ end
 group :development do
   gem 'better_errors'
   gem 'binding_of_caller'
+  gem 'meta_request', '0.2.5'
   gem 'librarian', '>= 0.0.25', require: false
   # https://github.com/ctran/annotate_models/pull/106
   gem 'annotate', :git => 'https://github.com/SamSaffron/annotate_models.git'

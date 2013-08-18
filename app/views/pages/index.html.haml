@@ -1,0 +1,27 @@
+
+- content_for :sidebar_content do
+
+  .tease.pyroclasm
+    = image_tag "pages/pyro_logo.png", :class => "title"
+    %p.status
+      %span.label.label-warning Status
+      v1.0 Playable
+
+    = link_to "Get it on the App Store", "/pryoclasm", :class => "btn btn-block btn-primary"
+
+  .tease.forgecraft
+    %h1.title Forgecraft
+    %p.status
+      %span.label.label-warning Status
+      v0.1 Beta, Playable
+
+    = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
+
+
+.panel
+  .panel-heading
+    %h2.panel-title Recent Posts
+
+  .panel-body
+
+    .thing{ :style => "height: 1200px;" }

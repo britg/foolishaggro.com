@@ -1,0 +1,42 @@
+!!!
+%html{ :lang => "en" }
+  %head
+    %link{ :href => 'http://fonts.googleapis.com/css?family=Condiment|Lato:300,900', :rel => 'stylesheet', :type => 'text/css' }
+    %meta{'http-equiv' => "content-type", :content => "text/html;charset=UTF-8"}
+
+    %title= @browser_title || "Foolish Aggro &middot; Game Development Studio".html_safe
+
+    = stylesheet_link_tag "pages", :media => "all"
+    = csrf_meta_tags
+
+    = favicon_link_tag 'pages/favicon.png'
+    = favicon_link_tag 'apple-touch-icon.png', :rel => 'apple-touch-icon-precomposed', :type => 'image/png'
+
+  %body{ :class => params[:controller] }
+
+    %header
+
+      .navbar-wrapper
+        .container
+          .navbar.navbar-inverse.navbar-static-top
+            .container
+              %button.navbar-toggle{ "data-toggle" => "collapse", :type => "button", "data-target" => ".nav-collapse" }
+
+              .brand
+                = link_to image_tag("pages/banner.png"), root_path, :class => "brand-banner"
+                = link_to "Foolish Aggro", root_path, :class => "navbar-brand"
+
+              %ul.nav.navbar-nav
+                %li= link_to "About", "#"
+                %li= link_to "Contact", "#"
+                %li= link_to "Forums", "#"
+
+
+    #prime.container
+      #main.col-md-8
+        = yield
+
+      #sidebar.col-md-4
+        = yield :sidebar_content
+
+    = javascript_include_tag "pages"

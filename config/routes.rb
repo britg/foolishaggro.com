@@ -265,6 +265,8 @@ Discourse::Application.routes.draw do
 
   get 'robots.txt' => 'robots_txt#index'
 
+  root to: "pages#index"
+
   [:latest, :hot, :unread, :new, :favorited, :read, :posted].each do |filter|
     root to: "list##{filter}", constraints: HomePageConstraint.new("#{filter}"), :as => "list_#{filter}"
   end
