@@ -44,6 +44,11 @@ header {
   background: url(image_path("pages/binding_dark.png"));
 }
 
+@media (min-width: 768px) {
+  .navbar > .container .navbar-brand {
+    margin-left: 120px;
+  }
+}
 .navbar-inverse .navbar-brand {
   margin-left: 120px;
   margin-right: 20px;
