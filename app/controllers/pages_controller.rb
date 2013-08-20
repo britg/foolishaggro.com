@@ -12,4 +12,12 @@ class PagesController < ActionController::Base
     render @page_name
   end
 
+  def about
+
+  end
+
+  def contact
+
+  end
+
 end
