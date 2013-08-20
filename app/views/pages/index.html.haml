@@ -39,6 +39,25 @@
 
       .panel-body
 
+        - @topics.each do |topic|
+          .topic
+            %h2.title= link_to topic.title, topic.relative_url
+            .by
+              Posted by
+              %strong.label.label-success= topic.user.username
+              - topic.category.try(:tap) do |cat|
+                in
+                %span.label.label-info= cat.name
+
+            .content= simple_format(truncate(topic.posts.first.raw, length: 500, separator: ' '))
+
+            %br
+
+            = link_to "Read more...", topic.relative_url
+
+            %hr
+
+
   .col-md-4
 
     :erb

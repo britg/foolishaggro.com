@@ -136,3 +136,25 @@ header {
     }
   }
 }
+
+.topic {
+  .title {
+    text-shadow: 2px 2px #000;
+    margin-bottom: 5px;
+  }
+
+  .by {
+    font-size: 16px;
+    color: #ccc;
+    margin-bottom: 20px;
+  }
+
+  .content {
+    color: #cfcfcf;
+  }
+
+  hr {
+    border-color: #666;
+  }
+}
+
