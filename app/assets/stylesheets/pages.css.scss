@@ -35,8 +35,8 @@ header {
 
 .brand-banner {
   float: left;
-  margin-top: -20px;
-  margin-left: 20px;
+  margin-top: -36px;
+  margin-left: 0px;
   position: absolute;
 }
 
@@ -46,7 +46,7 @@ header {
 
 @media (min-width: 768px) {
   .navbar > .container .navbar-brand {
-    margin-left: 120px;
+    margin-left: 88px;
   }
 }
 .navbar-inverse .navbar-brand {
@@ -76,9 +76,35 @@ header {
 
 .tease {
   padding: 10px;
+  border: solid 2px #000;
   border-radius: 5px;
   box-shadow: 1px green;
   margin-bottom: 40px;
+  min-height: 140px;
+
+  .status {
+    text-shadow: 2px 2px #000000;
+    .label {
+      text-shadow: none;
+    }
+  }
+
+  &.foolishgalaxy {
+    background: url(image_path("pages/foolishgalaxy_tease.jpg")) top left no-repeat;
+    background-size: cover;
+    text-align: center;
+
+    .title {
+      display: block;
+      width: 100%;
+      position: relative;
+      top: -48px;
+      margin-bottom: -7px;
+      text-shadow: 2px 2px #000000;
+      font-size: 36px;
+      font-family: "Press Start 2P"
+    }
+  }
 
   &.pyroclasm {
     background: url(image_path("pages/pyro_tease.jpg")) top left no-repeat;
@@ -88,15 +114,8 @@ header {
     .title {
       width: 100%;
       position: relative;
-      top: -54px;
-      margin-bottom: -44px;
-    }
-
-    .status {
-      text-shadow: 2px 2px #000000;
-      .label {
-        text-shadow: none;
-      }
+      top: -37px;
+      margin-bottom: 2px;
     }
 
   }
@@ -111,17 +130,9 @@ header {
       width: 100%;
       position: relative;
       top: -54px;
-      margin-bottom: -44px;
+      margin-bottom: -14px;
       text-shadow: 2px 2px #000000;
       font-size: 42px;
     }
-
-    .status {
-      text-shadow: 2px 2px #000000;
-      .label {
-        text-shadow: none;
-      }
-    }
-
   }
 }

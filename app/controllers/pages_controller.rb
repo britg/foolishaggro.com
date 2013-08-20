@@ -6,4 +6,10 @@ class PagesController < ActionController::Base
 
   end
 
+  def game
+    @page_name = params[:game]
+
+    render @page_name
+  end
+
 end

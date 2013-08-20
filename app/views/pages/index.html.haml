@@ -1,27 +1,46 @@
 
-- content_for :sidebar_content do
+.row
 
-  .tease.pyroclasm
-    = image_tag "pages/pyro_logo.png", :class => "title"
-    %p.status
-      %span.label.label-warning Status
-      v1.0 Playable
+  .col-md-6
+    .tease.foolishgalaxy
+      %h1.title Foolish Galaxy
+      %p.status
+        %span.label.label-warning Status
+        v0.0.1 Pre-alpha, Playable
 
-    = link_to "Get it on the App Store", "/pryoclasm", :class => "btn btn-block btn-primary"
+      = link_to "Download Pre-alpha", "javascript:void(0);", :class => "btn btn-primary"
+      = link_to "Dev Log", "javascript:void(0);", :class => "btn btn-success"
 
-  .tease.forgecraft
-    %h1.title Forgecraft
-    %p.status
-      %span.label.label-warning Status
-      v0.1 Beta, Playable
+  .col-md-3
+    .tease.pyroclasm
+      = image_tag "pages/pyro_logo.png", :class => "title"
+      %p.status
+        %span.label.label-warning Status
+        v1.0 Playable
 
-    = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
+      = link_to "Get it on the App Store", "/pyroclasm", :class => "btn btn-block btn-primary"
 
 
-.panel
-  .panel-heading
-    %h2.panel-title Recent Posts
+  .col-md-3
+    .tease.forgecraft
+      %h1.title Forgecraft
+      %p.status
+        %span.label.label-warning Status
+        v0.1 Beta, Playable
 
-  .panel-body
+      = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
 
-    .thing{ :style => "height: 1200px;" }
+.row
+  .col-md-8
+
+    .panel
+      .panel-heading
+        %h2.panel-title Recent Posts
+
+      .panel-body
+
+  .col-md-4
+
+    :erb
+      <a class="twitter-timeline" href="https://twitter.com/foolishaggro" data-widget-id="369798873763418112">Foolish Aggro Tweets</a>
+      <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
