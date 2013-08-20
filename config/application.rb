@@ -53,6 +53,11 @@ module Discourse
       config.assets.precompile << "locales/#{file.match(/([a-z_A-Z]+\.js)\.erb$/)[1]}"
     end
 
+    config.assets.precompile += %w(
+      pages.css
+      pages.js
+    )
+
     # Activate observers that should always be running.
     config.active_record.observers = [
         :user_email_observer,
