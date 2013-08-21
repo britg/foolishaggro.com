@@ -4,7 +4,7 @@ class PagesController < ActionController::Base
 
   def index
     @admin_ids = User.where(:admin => true).map(&:id)
-    @topics = Topic.by_newest.where(:user_id => @admin_ids)
+    @topics = Topic.by_newest.visible.where(:user_id => @admin_ids, :archetype => Archetype.default)
   end
 
   def game
