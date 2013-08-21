@@ -34,6 +34,19 @@ role :web, 'foolishaggro.com', primary: true
 set :application, 'discourse'
 set :deploy_to, "/var/www/#{application}"
 
+RVM_RUBY = "ruby-2.0.0-p247"
+
+set :default_environment, {
+  'PATH' => ["/home/discourse/.rvm/gems/#{RVM_RUBY}/bin",
+             "/home/discourse/.rvm/gems/#{RVM_RUBY}@global/bin",
+             "/home/discourse/.rvm/rubies/#{RVM_RUBY}/bin",
+             "/home/discourse/.rvm/bin",
+             "$PATH"].join(":"),
+  'RUBY_VERSION' => "#{RVM_RUBY}",
+  'GEM_HOME' => "/home/discourse/.rvm/gems/#{RVM_RUBY}",
+  'GEM_PATH' => "/home/discourse/.rvm/gems/#{RVM_RUBY}:/home/discourse/.rvm/gems/#{RVM_RUBY}@global"
+}
+
 # Perform an initial bundle
 after "deploy:setup" do
   run "cd #{current_path} && bundle install"
@@ -55,7 +68,28 @@ namespace :deploy do
   task :restart, :roles => :app, :except => { :no_release => true } do
     run "cd #{current_path} && RUBY_GC_MALLOC_LIMIT=90000000 bundle exec thin -C config/thin.yml restart"
   end
+
+  task :setup_config, roles: :app do
+    run  "mkdir -p #{shared_path}/config/initializers"
+    run  "mkdir -p #{shared_path}/config/environments"
+    run  "mkdir -p #{shared_path}/sockets"
+    put  File.read("config/database.yml"), "#{shared_path}/config/database.yml"
+    put  File.read("config/redis.yml"), "#{shared_path}/config/redis.yml"
+    put  File.read("config/environments/production.rb"), "#{shared_path}/config/environments/production.rb"
+    put  File.read("config/initializers/secret_token.rb"), "#{shared_path}/config/initializers/secret_token.rb"
+    puts "Now edit the config files in #{shared_path}."
+  end
+
+  task :symlink_config, roles: :app do
+    run  "ln -nfs #{shared_path}/config/database.yml #{release_path}/config/database.yml"
+    run  "ln -nfs #{shared_path}/config/redis.yml #{release_path}/config/redis.yml"
+    run  "ln -nfs #{shared_path}/config/environments/production.rb #{release_path}/config/environments/production.rb"
+    run  "ln -nfs #{shared_path}/config/initializers/secret_token.rb #{release_path}/config/initializers/secret_token.rb"
+  end
 end
+
+after "deploy:setup", "deploy:setup_config"
+before "deploy:assets:precompile", "deploy:symlink_config"
 
 # Symlink config/nginx.conf to /etc/nginx/sites-enabled. Make sure to restart
 # nginx so that it picks up the configuration file.
@@ -66,7 +100,7 @@ namespace :config do
   end
 end
 
-after "deploy:setup", "config:nginx"
+#after "deploy:setup", "config:nginx"
 
 # Seed your database with the initial production image. Note that the production
 # image assumes an empty, unmigrated database.
@@ -78,4 +112,4 @@ namespace :db do
 end
 
 # Migrate the database with each deployment
-after  'deploy:update_code', 'deploy:migrate'
+#after  'deploy:update_code', 'deploy:migrate'

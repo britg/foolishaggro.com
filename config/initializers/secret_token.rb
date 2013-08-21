@@ -12,7 +12,6 @@
 if Rails.env.test? || Rails.env.development? || Rails.env == "profile"
   Discourse::Application.config.secret_token = "47f5390004bf6d25bb97083fb98e7cc133ab450ba814dd19638a78282b4ca291"
 else
-  raise "You must set a secret token in ENV['SECRET_TOKEN'] or in config/initializers/secret_token.rb" if ENV['SECRET_TOKEN'].blank?
-  Discourse::Application.config.secret_token = ENV['SECRET_TOKEN']
+  Discourse::Application.config.secret_token = "fb9a214256e4512ea22391d3b57a6101eccc2b7cd4fb7225b39b245306c9b68b2bbb84972fa1493dc68d31e9f7c24beabcaf6e9ee8538049ff57a21ba6520ad2"
 end
 
