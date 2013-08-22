@@ -21,8 +21,46 @@
     <%= yield :head %>
   </head>
 
+  <style>
+
+    #home-banner {
+      text-align: center;
+      background: url("<%= image_path("pages/pyroclasm_bg.jpg") %>") #262626;
+      background-size: cover;
+    }
+
+    #home-banner ul {
+      display: block;
+      margin: 0 auto;
+      padding: 10px;
+    }
+
+    #home-banner ul li {
+      list-style-type: none;
+      display: inline;
+      padding: 0 10px;
+    }
+
+    #home-banner ul li a {
+      color: #fff;
+      font-weight: bold;
+      text-shadow: 2px 2px #000;
+    }
+  </style>
+
   <body>
     <!--[if IE 9]><script type="text/javascript">ie = "new";</script><![endif]-->
+
+    <div id="home-banner">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="http://foolishaggro.com/t/about-us/30">About</a></li>
+        <li><a href="http://foolishaggro.com/t/contact-us/31">Contact</a></li>
+        <li><a href="http://foolishaggro.com/category/foolish-galaxy">Foolish Galaxy</a></li>
+        <li><a href="http://foolishaggro.com/category/pyroclasm">Pyroclasm</a></li>
+        <li><a href="http://foolishaggro.com/category/forgecraft">Forgecraft</a></li>
+      </ul>
+    </div>
 
     <%=SiteCustomization.custom_header(session[:preview_style])%>
     <section id='main'>
