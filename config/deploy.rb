@@ -69,6 +69,11 @@ namespace :deploy do
     run "cd #{current_path} && RUBY_GC_MALLOC_LIMIT=90000000 bundle exec thin -C config/thin.yml restart"
   end
 
+  task :quick do
+    run "cd #{current_path}; git pull origin #{branch}"
+    system("cap deploy:restart")
+  end
+
   task :setup_config, roles: :app do
     run  "mkdir -p #{shared_path}/config/initializers"
     run  "mkdir -p #{shared_path}/config/environments"

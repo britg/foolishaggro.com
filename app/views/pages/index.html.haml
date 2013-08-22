@@ -35,7 +35,8 @@
 
     .panel
       .panel-heading
-        %h2.panel-title Recent Posts
+        .btn.btn-primary.btn-xs.pull-right Visit forums
+        %h2.panel-title Recent Topics
 
       .panel-body
 
@@ -49,11 +50,11 @@
                 in
                 %span.label.label-info= cat.name
 
-            .content= simple_format(truncate(topic.posts.first.raw, length: 500, separator: ' '))
+            .content= topic.posts.first.excerpt.html_safe
 
             %br
 
-            = link_to "Read more...", topic.relative_url
+            = link_to "Read more", topic.relative_url, :class => "btn btn-primary"
 
             %hr
 
