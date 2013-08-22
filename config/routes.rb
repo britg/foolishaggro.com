@@ -266,6 +266,8 @@ Discourse::Application.routes.draw do
   get 'robots.txt' => 'robots_txt#index'
 
   root to: "pages#index"
+  get 'home' => "pages#index"
+  get 'games' => "pages#index"
 
   get 'pyroclasm' => "pages#game", :game => "pyroclasm"
   get 'foolishgalaxy' => "pages#game", :game => "foolishgalaxy"
