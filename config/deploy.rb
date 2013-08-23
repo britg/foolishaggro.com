@@ -66,7 +66,7 @@ namespace :deploy do
 
   desc 'Restart thin servers'
   task :restart, :roles => :app, :except => { :no_release => true } do
-    run "cd #{current_path} && RUBY_GC_MALLOC_LIMIT=90000000 bundle exec thin -C config/thin.yml restart"
+    run "cd #{current_path} && RUBY_GC_MALLOC_LIMIT=90000000 bundle exec thin -C config/thin.yml restart -O"
   end
 
   task :quick do
