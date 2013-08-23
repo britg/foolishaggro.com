@@ -1,5 +1,7 @@
 class ScoresController < ApplicationController
 
+  skip_before_filter :verify_authenticity_token
+
   # &type => level|player
   # &player_guid
   def index

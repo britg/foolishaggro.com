@@ -269,7 +269,7 @@ Discourse::Application.routes.draw do
   get 'home' => "pages#index"
   get 'games' => "pages#index"
 
-  get 'pyroclasm' => "pages#game", :game => "pyroclasm"
+  get 'pyroclasm' => redirect("/category/pyroclasm")
   get 'foolishgalaxy' => "pages#game", :game => "foolishgalaxy"
   resources :scores
 
