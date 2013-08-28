@@ -35,7 +35,7 @@
 
     .panel
       .panel-heading
-        .btn.btn-primary.btn-xs.pull-right Visit forums
+        = link_to "Visit forums", "/categories", :class => "btn btn-primary btn-xs pull-right"
         %h2.panel-title Recent Topics
 
       .panel-body
@@ -66,3 +66,7 @@
     :erb
       <a class="twitter-timeline" href="https://twitter.com/foolishaggro" data-widget-id="369798873763418112">Foolish Aggro Tweets</a>
       <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+
+    = link_to "Twitter", "https://twitter.com/foolishaggro", :class => "btn btn-block btn-info"
+    = link_to "Facebook", "https://www.facebook.com/foolishaggro", :class => "btn btn-block btn-primary"
+    = link_to "Google+", "https://plus.google.com/114088551259464978564", :rel => "publisher", :class => "btn btn-block btn-danger"
