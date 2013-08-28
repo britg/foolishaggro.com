@@ -13,6 +13,9 @@
     = favicon_link_tag 'pages/favicon.png'
     = favicon_link_tag 'pages/apple-touch-icon.png', :rel => 'apple-touch-icon-precomposed', :type => 'image/png'
 
+    = render "pages/ga"
+
+
   %body{ :class => params[:controller] }
 
     %header
