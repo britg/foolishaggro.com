@@ -144,7 +144,6 @@ header {
   }
 
   .by {
-    font-size: 16px;
     color: #ccc;
     margin-bottom: 20px;
   }
@@ -156,5 +155,9 @@ header {
   hr {
     border-color: #666;
   }
+}
+
+.video-thumb {
+  max-width: 100%;
 }
 

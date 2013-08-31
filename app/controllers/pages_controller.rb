@@ -4,6 +4,7 @@ class PagesController < ActionController::Base
 
   def index
     @admin_ids = User.where(:admin => true).map(&:id)
+    @videos = videos
     @topics = Topic.by_newest
                    .visible
                    .where(:user_id => @admin_ids,
@@ -24,6 +25,12 @@ class PagesController < ActionController::Base
 
   def contact
 
+  end
+
+  protected
+
+  def videos
+    YoutubeVideo.get_videos
   end
 
 end

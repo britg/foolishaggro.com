@@ -31,7 +31,7 @@
       = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
 
 .row
-  .col-md-8
+  .col-md-4
 
     .panel
       .panel-heading
@@ -42,7 +42,7 @@
 
         - @topics.each do |topic|
           .topic
-            %h2.title= link_to topic.title, topic.relative_url
+            %h4.title= link_to topic.title, topic.relative_url
             .by
               Posted by
               %strong.label.label-success= topic.user.username
@@ -54,11 +54,28 @@
 
             %br
 
-            = link_to "Read more", topic.relative_url, :class => "btn btn-primary"
+            = link_to "Read more", topic.relative_url, :class => "btn btn-primary btn-sm"
 
             %hr
 
     = link_to "Visit the forums for more discussions", "/latest", :class => "btn btn-primary btn-large btn-block"
+
+  .col-md-4
+
+    .panel
+      .panel-heading
+        = link_to "YouTube Channel", "http://www.youtube.com/foolishaggro", :class => "btn btn-danger btn-xs pull-right"
+        %h2.panel-title Recent Videos
+
+      .panel-body
+
+        - @videos.each do |video|
+          .topic
+            %h4.title= link_to video.title, video.video_url
+            = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url
+            .content= video.description
+
+            %hr
 
 
   .col-md-4
