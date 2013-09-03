@@ -1,6 +1,7 @@
 class YoutubeVideo
 
   FEED_URL = "https://gdata.youtube.com/feeds/api/users/foolishaggro/uploads?alt=json&fields=entry(title,content,published,media:group(media:player,media:thumbnail,yt:duration))&max-results=10"
+  PLAYLIST_URL = "https://gdata.youtube.com/feeds/api/playlists/PLjG5_CnrWHc8kVGwtMxz58Vhck_gq2fvL?alt=json&fields=entry(title,content,published,media:group(media:player,media:thumbnail,yt:duration))&max-results=10"
 
   attr_accessor :feed_data, :thumbnail_url, :video_url, :title,
     :description, :duration, :published_at

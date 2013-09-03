@@ -36,6 +36,10 @@
                 %li= link_to "Contact", "http://foolishaggro.com/t/contact-us/31"
                 %li= link_to "Forums", "/categories"
 
+              .social-media
+                = link_to image_tag("pages/twitch_logo.png", :class => "logo"), "http://twitch.tv/foolishaggro"
+                = link_to image_tag("pages/youtube_logo.png", :class => "logo"), "http://www.youtube.com/foolishaggro"
+
 
     #prime.container
       = yield

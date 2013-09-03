@@ -144,6 +144,7 @@ gem 'jquery-rails'
 gem 'anjlab-bootstrap-rails', :require => 'bootstrap-rails',
                               :github => 'anjlab/bootstrap-rails',
                               :branch => '3.0.0'
+gem 'rails_autolink'
 
 group :test do
   gem 'fakeweb', '~> 1.3.0', require: false

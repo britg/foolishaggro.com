@@ -71,11 +71,11 @@
 
         - @videos.each do |video|
           .topic
-            %h4.title= link_to video.title, video.video_url
-            = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url
-            .content= video.description
+            %h4.title= link_to video.title, video.video_url, :class => "video-link"
+            = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url, :class => "video-link"
 
             %hr
+
 
 
   .col-md-4

@@ -376,6 +376,8 @@ GEM
       rack (>= 1.0)
     rails-observers (0.1.2)
       activemodel (~> 4.0)
+    rails_autolink (1.1.0)
+      rails (> 3.1)
     raindrops (0.11.0)
     rake (10.1.0)
     rake-compiler (0.8.3)
@@ -553,6 +555,7 @@ DEPENDENCIES
   rack-mini-profiler (= 0.1.28)
   rails!
   rails-observers
+  rails_autolink
   rails_multisite!
   rake
   rb-fsevent
