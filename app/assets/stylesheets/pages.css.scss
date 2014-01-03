@@ -61,10 +61,10 @@ header {
 
 .social-media {
   .logo {
-    height: 30px;
+    height: 20px;
     float: right;
     margin-right: 10px;
-    margin-top: 10px;
+    margin-top: 16px;
   }
 }
 
@@ -74,11 +74,11 @@ header {
 }
 
 .panel {
-  background: url(image_path("pages/wild_oliva.png")) #262626;
+  background: #333333;
   border-color: #111;
 
   .panel-heading {
-    background: url(image_path("pages/dark_wall.png")) #171717;
+    background: #252525;
     border-color: #111;
   }
 }
