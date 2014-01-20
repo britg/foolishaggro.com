@@ -71,11 +71,6 @@ describe Invite do
           @invite.topics.should == [topic]
         end
 
-        it 'is pending in the invite list for the creator' do
-          InvitedList.new(inviter).pending.should == [@invite]
-        end
-
-
         context 'when added by another user' do
           let(:coding_horror) { Fabricate(:coding_horror) }
           let(:new_invite) { topic.invite_by_email(coding_horror, iceking) }
@@ -170,10 +165,29 @@ describe Invite do
         invite.redeem.trust_level.should == TrustLevel.levels[:leader]
       end
 
+      context "invited by a trust level 3 user" do
+        let(:leader) { Fabricate(:user, trust_level: TrustLevel.levels[:leader]) }
+        let(:invitation) { Fabricate(:invite, invited_by: leader) }
+
+        it "default_invitee_trust_level is 1, then invited user should be trust level 2" do
+          SiteSetting.stubs(:default_invitee_trust_level).returns(TrustLevel.levels[:basic])
+          invitation.redeem.trust_level.should == TrustLevel.levels[:regular]
+        end
+
+        it "default_invitee_trust_level is 2, then invited user should be trust level 2" do
+          SiteSetting.stubs(:default_invitee_trust_level).returns(TrustLevel.levels[:regular])
+          invitation.redeem.trust_level.should == TrustLevel.levels[:regular]
+        end
+
+        it "default_invitee_trust_level is 3, then invited user should be trust level 3" do
+          SiteSetting.stubs(:default_invitee_trust_level).returns(TrustLevel.levels[:leader])
+          invitation.redeem.trust_level.should == TrustLevel.levels[:leader]
+        end
+      end
     end
 
     context 'inviting when must_approve_users? is enabled' do
-      it 'correctly acitvates accounts' do
+      it 'correctly activates accounts' do
         SiteSetting.stubs(:must_approve_users).returns(true)
         user = invite.redeem
 
@@ -197,12 +211,6 @@ describe Invite do
         end
 
         it 'works correctly' do
-          # no longer in the pending list for that user
-          InvitedList.new(invite.invited_by).pending.should be_blank
-
-          # is redeeemed in the invite list for the creator
-          InvitedList.new(invite.invited_by).redeemed.should == [invite]
-
           # has set the user_id attribute
           invite.user.should == user
 
@@ -287,4 +295,50 @@ describe Invite do
     end
   end
 
+  describe '.find_all_invites_from' do
+    context 'with user that has invited' do
+      it 'returns invites' do
+        inviter = Fabricate(:user)
+        invite = Fabricate(:invite, invited_by: inviter)
+
+        invites = Invite.find_all_invites_from(inviter)
+
+        expect(invites).to include invite
+      end
+    end
+
+    context 'with user that has not invited' do
+      it 'does not return invites' do
+        user = Fabricate(:user)
+        invite = Fabricate(:invite)
+
+        invites = Invite.find_all_invites_from(user)
+
+        expect(invites).to be_empty
+      end
+    end
+  end
+
+  describe '.find_redeemed_invites_from' do
+    it 'returns redeemed invites only' do
+      inviter = Fabricate(:user)
+      pending_invite = Fabricate(
+        :invite,
+        invited_by: inviter,
+        user_id: nil,
+        email: 'pending@example.com'
+      )
+      redeemed_invite = Fabricate(
+        :invite,
+        invited_by: inviter,
+        user_id: 123,
+        email: 'redeemed@example.com'
+      )
+
+      invites = Invite.find_redeemed_invites_from(inviter)
+
+      expect(invites).to have(1).items
+      expect(invites.first).to eq redeemed_invite
+    end
+  end
 end

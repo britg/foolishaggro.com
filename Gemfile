@@ -12,32 +12,47 @@ end
 
 module ::Kernel
   def rails4?
-    !!ENV["RAILS4"]
+    !ENV["RAILS3"]
+  end
+
+  def rails_master?
+    rails4? && ENV["RAILS_MASTER"]
   end
 end
 
 if rails4?
-  Bundler::SharedHelpers.default_lockfile = Pathname.new("#{Bundler::SharedHelpers.default_gemfile}_rails4.lock")
+  rails_version = rails_master? ? 'rails_master' : 'rails4'
+
+  Bundler::SharedHelpers.default_lockfile = Pathname.new("#{Bundler::SharedHelpers.default_gemfile}_#{rails_version}.lock")
 
   # Bundler::Dsl.evaluate already called with an incorrect lockfile ... fix it
   class Bundler::Dsl
     # A bit messy, this can be called multiple times by bundler, avoid blowing the stack
     unless self.method_defined? :to_definition_unpatched
       alias_method :to_definition_unpatched, :to_definition
-      puts "Booting in Rails 4 mode"
     end
     def to_definition(bad_lockfile, unlock)
       to_definition_unpatched(Bundler::SharedHelpers.default_lockfile, unlock)
     end
   end
+else
+  # Note to be deprecated, in place of a dual boot master
+  puts "Booting in Rails 3 mode"
 end
 
+# see: https://github.com/mbleigh/seed-fu/pull/54
+# taking forever to get changes upstream in seed-fu
+gem 'seed-fu-discourse', require: 'seed-fu'
+
 if rails4?
-  gem 'rails', :git => 'git://github.com/rails/rails.git', :branch => '4-0-stable'
-  gem 'redis-rails', :git => 'git://github.com/SamSaffron/redis-store.git'
+  if rails_master?
+    gem 'rails', git: 'https://github.com/rails/rails.git'
+    gem 'actionpack-action_caching', git: 'https://github.com/rails/actionpack-action_caching.git'
+  else
+    gem 'rails'
+    gem 'actionpack-action_caching'
+  end
   gem 'rails-observers'
-  gem 'actionpack-action_caching'
-  gem 'seed-fu' , github: 'mbleigh/seed-fu'
 else
   # we had pain with the 3.2.13 upgrade so monkey patch the security fix
   # next time around we hope to upgrade
@@ -46,41 +61,44 @@ else
   # we are using a custom sprockets repo to work around: https://github.com/rails/rails/issues/8099#issuecomment-16137638
   # REVIEW EVERY RELEASE
   gem 'sprockets', git: 'https://github.com/SamSaffron/sprockets.git', branch: 'rails-compat'
-  gem 'redis-rails'
-  gem 'seed-fu'
   gem 'activerecord-postgres-hstore'
   gem 'active_attr'
 end
 
-gem 'redis'
+#gem 'redis-rails'
 gem 'hiredis'
-gem 'em-redis'
+gem 'redis', :require => ["redis", "redis/connection/hiredis"]
 
 gem 'active_model_serializers'
+
+gem 'html_truncator'
 
 # we had issues with latest, stick to the rev till we figure this out
 # PR that makes it all hang together welcome
 gem 'ember-rails'
-gem 'ember-source', '1.0.0.rc6.2'
-gem 'handlebars-source', '1.0.12'
+gem 'ember-source', '~> 1.2.0.1'
+gem 'handlebars-source', '~> 1.1.2'
 gem 'barber'
 
-gem 'vestal_versions', git: 'https://github.com/zhangyuan/vestal_versions'
-
-gem 'message_bus', git: 'https://github.com/SamSaffron/message_bus'
+gem 'message_bus'
 gem 'rails_multisite', path: 'vendor/gems/rails_multisite'
-gem 'simple_handlebars_rails', path: 'vendor/gems/simple_handlebars_rails'
 
 gem 'redcarpet', require: false
 gem 'airbrake', '3.1.2', require: false # errbit is broken with 3.1.3 for now
 gem 'sidetiq', '>= 0.3.6'
 gem 'eventmachine'
 gem 'fast_xs'
-gem 'fast_xor', git: 'https://github.com/CodeMonkeySteve/fast_xor.git'
-gem 'fastimage'
-gem 'fog', require: false
 
-gem 'email_reply_parser', git: 'https://github.com/lawrencepit/email_reply_parser.git'
+gem 'fast_xor'
+gem 'fastimage'
+gem 'fog', '1.18.0', require: false
+gem 'unf', require: false
+
+# see: https://twitter.com/samsaffron/status/412360162297393152
+# Massive amount of changes made in branch we use, no PR upstreamed
+# We need to get this sorted
+# https://github.com/samsaffron/email_reply_parser
+gem 'email_reply_parser-discourse', require: 'email_reply_parser'
 
 # note: for image_optim to correctly work you need
 # sudo apt-get install -y advancecomp gifsicle jpegoptim libjpeg-progs optipng pngcrush
@@ -97,10 +115,15 @@ gem 'openid-redis-store'
 gem 'omniauth-facebook'
 gem 'omniauth-twitter'
 gem 'omniauth-github'
-gem 'omniauth-browserid', git: 'https://github.com/callahad/omniauth-browserid.git', branch: 'observer_api'
+gem 'omniauth-oauth2', require: false
+# abandoned gem hard to tell what is going on, multiple PRs upstream being ignored:
+# https://twitter.com/samsaffron/status/412372111710109696
+# we use: gem 'omniauth-browserid', git: 'https://github.com/samsaffron/omniauth-browserid.git', branch: 'observer_api'
+gem 'omniauth-browserid-discourse', require: 'omniauth-browserid'
 gem 'omniauth-cas'
 gem 'oj'
-gem 'pg'
+# while resolving https://groups.google.com/forum/#!topic/ruby-pg/5_ylGmog1S4
+gem 'pg', '0.15.1'
 gem 'rake'
 
 
@@ -108,33 +131,22 @@ gem 'rest-client'
 gem 'rinku'
 gem 'sanitize'
 gem 'sass'
-gem 'sidekiq'
+gem 'sidekiq', '2.15.1'
 gem 'sidekiq-failures'
 gem 'sinatra', require: nil
 gem 'slim'  # required for sidekiq-web
-gem 'therubyracer', require: 'v8'
+
+# URGENT fix needed see: https://github.com/cowboyd/therubyracer/pull/280
+gem 'therubyracer-discourse', require: 'v8'
 gem 'thin', require: false
-gem 'diffy', '>= 3.0', require: false
 gem 'highline', require: false
-
-# Gem that enables support for plugins. It is required.
-gem 'discourse_plugin', path: 'vendor/gems/discourse_plugin'
-
-# Discourse Plugins (optional)
-# Polls and Tasks have been disabled for launch, we need think all sorts of stuff through before adding them back in
-#   biggest concern is core support for custom sort orders, but there is also styling that just gets mishmashed into our core theme.
-# gem 'discourse_poll', path: 'vendor/gems/discourse_poll'
-gem 'discourse_emoji', path: 'vendor/gems/discourse_emoji'
-# gem 'discourse_task', path: 'vendor/gems/discourse_task'
+gem 'rack-protection' # security
 
 # Gems used only for assets and not required
 # in production environments by default.
 # allow everywhere for now cause we are allowing asset debugging in prd
 group :assets do
-  gem 'sass'
   gem 'sass-rails'
-  # Sam: disabling for now, having issues with our jenkins build
-  # gem 'turbo-sprockets-rails3'
   gem 'uglifier'
 end
 
@@ -145,13 +157,9 @@ end
 
 group :test, :development do
   gem 'mock_redis'
-  gem 'listen', require: false
+  gem 'listen', '0.7.3', require: false
   gem 'certified', require: false
-  if rails4?
-    gem 'fabrication', github: 'paulelliott/fabrication', require: false
-  else
-    gem 'fabrication', require: false
-  end
+  gem 'fabrication', require: false
   gem 'qunit-rails'
   gem 'mocha', require: false
   gem 'rb-fsevent', require: RUBY_PLATFORM =~ /darwin/i ? 'rb-fsevent' : false
@@ -163,18 +171,19 @@ group :test, :development do
   gem 'rspec-given'
   gem 'pry-rails'
   gem 'pry-nav'
-  gem 'spork-rails', :github => 'sporkrb/spork-rails'
+  gem 'spork-rails'
 end
 
 group :development do
   gem 'better_errors'
   gem 'binding_of_caller'
   gem 'librarian', '>= 0.0.25', require: false
-  # https://github.com/ctran/annotate_models/pull/106
-  gem 'annotate', :git => 'https://github.com/SamSaffron/annotate_models.git'
+  gem 'annotate'
 end
 
-
+# Gem that enables support for plugins. It is required.
+# TODO: does this really need to be a gem ?
+gem 'discourse_plugin', path: 'vendor/gems/discourse_plugin'
 
 # this is an optional gem, it provides a high performance replacement
 # to String#blank? a method that is called quite frequently in current
@@ -187,15 +196,19 @@ gem 'lru_redux'
 # IMPORTANT: mini profiler monkey patches, so it better be required last
 #  If you want to amend mini profiler to do the monkey patches in the railstie
 #  we are open to it. by deferring require to the initializer we can configure disourse installs without it
-gem 'rack-mini-profiler', '0.1.28', require: false  # require: false #, git: 'git://github.com/SamSaffron/MiniProfiler'
+
+gem 'flamegraph', require: false
+gem 'rack-mini-profiler', require: false
 
 # used for caching, optional
-# redis-rack-cache is missing a sane expiry policy, it hogs redis
-# https://github.com/jodosha/redis-store/pull/183
-gem 'redis-rack-cache', git: 'https://github.com/SamSaffron/redis-rack-cache.git', require: false
-gem 'rack-cache', require: false
 gem 'rack-cors', require: false
 gem 'unicorn', require: false
+gem 'puma', require: false
+gem 'rbtrace', require: false, platform: :mri
+
+# required for feed importing and embedding
+gem 'ruby-readability', require: false
+gem 'simple-rss', require: false
 
 # perftools only works on 1.9 atm
 group :profile do

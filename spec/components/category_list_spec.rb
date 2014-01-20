@@ -4,48 +4,20 @@ require 'category_list'
 describe CategoryList do
 
   let(:user) { Fabricate(:user) }
+  let(:admin) { Fabricate(:admin) }
   let(:category_list) { CategoryList.new(Guardian.new user) }
-
-  context "with no categories" do
-
-    it "has no categories" do
-      category_list.categories.should be_blank
-    end
-
-    context "with an uncategorized topic" do
-      let!(:topic) { Fabricate(:topic)}
-      let(:category) { category_list.categories.first }
-
-      it "has the right category" do
-        category.should be_present
-        category.name.should == SiteSetting.uncategorized_name
-        category.slug.should == SiteSetting.uncategorized_name
-        category.topics_week.should == 1
-        category.featured_topics.should == [topic]
-        category.displayable_topics.should == [topic] # CategoryDetailedSerializer needs this attribute
-      end
-
-      it 'does not return an invisible topic' do
-        invisible_topic = Fabricate(:topic)
-        invisible_topic.update_status('visible', false, Fabricate(:admin))
-        expect(category.featured_topics).to_not include(invisible_topic)
-      end
-
-    end
-
-  end
 
   context "security" do
     it "properly hide secure categories" do
-      admin = Fabricate(:admin)
       user = Fabricate(:user)
 
       cat = Fabricate(:category)
-      topic = Fabricate(:topic, category: cat)
+      Fabricate(:topic, category: cat)
       cat.set_permissions(:admins => :full)
       cat.save
 
-      CategoryList.new(Guardian.new admin).categories.count.should == 1
+      # uncategorized + this
+      CategoryList.new(Guardian.new admin).categories.count.should == 2
       CategoryList.new(Guardian.new user).categories.count.should == 0
       CategoryList.new(Guardian.new nil).categories.count.should == 0
     end
@@ -61,20 +33,33 @@ describe CategoryList do
         category_list.categories.should be_blank
       end
 
-      it "returns empty the empty for those who can create them" do
+      it "returns empty categories for those who can create them" do
+        SiteSetting.stubs(:allow_uncategorized_topics).returns(true)
         Guardian.any_instance.expects(:can_create?).with(Category).returns(true)
         category_list.categories.should_not be_blank
       end
 
+      it "returns empty categories with descriptions" do
+        Fabricate(:category, description: 'The category description.')
+        Guardian.any_instance.expects(:can_create?).with(Category).returns(false)
+        category_list.categories.should_not be_blank
+      end
+
       it 'returns the empty category and a non-empty category for those who can create them' do
-        category_with_topics = Fabricate(:topic, category: Fabricate(:category))
+        SiteSetting.stubs(:allow_uncategorized_topics).returns(true)
+        Fabricate(:topic, category: Fabricate(:category))
         Guardian.any_instance.expects(:can_create?).with(Category).returns(true)
-        category_list.categories.should have(2).categories
+        category_list.categories.should have(3).categories
         category_list.categories.should include(topic_category)
       end
 
-    end
+      it "doesn't return empty uncategorized category to admins if allow_uncategorized_topics is false" do
+        SiteSetting.stubs(:allow_uncategorized_topics).returns(false)
+        CategoryList.new(Guardian.new(user)).categories.should be_empty
+        CategoryList.new(Guardian.new(admin)).categories.map(&:id).should_not include(SiteSetting.uncategorized_category_id)
+      end
 
+    end
 
     context "with a topic in a category" do
       let!(:topic) { Fabricate(:topic, category: topic_category)}
@@ -93,6 +78,41 @@ describe CategoryList do
       end
     end
 
+  end
+
+  describe 'category order' do
+    let(:category_ids) { CategoryList.new(Guardian.new(admin)).categories.map(&:id) - [SiteSetting.uncategorized_category_id] }
+
+    before do
+      uncategorized = Category.find(SiteSetting.uncategorized_category_id)
+      uncategorized.position = 100
+      uncategorized.save
+    end
+
+    it "returns topics in specified order" do
+      cat1, cat2 = Fabricate(:category, position: 1), Fabricate(:category, position: 0)
+      category_ids.should == [cat2.id, cat1.id]
+    end
+
+    it "returns default order categories" do
+      cat1, cat2 = Fabricate(:category, position: nil), Fabricate(:category, position: nil)
+      category_ids.should include(cat1.id)
+      category_ids.should include(cat2.id)
+    end
+
+    it "default always at the end" do
+      cat1, cat2, cat3 = Fabricate(:category, position: 0), Fabricate(:category, position: 2), Fabricate(:category, position: nil)
+      category_ids.should == [cat1.id, cat2.id, cat3.id]
+    end
+
+    it "handles duplicate position values" do
+      cat1, cat2, cat3, cat4 = Fabricate(:category, position: 0), Fabricate(:category, position: 0), Fabricate(:category, position: nil), Fabricate(:category, position: 0)
+      first_three = category_ids[0,3] # The order is not deterministic
+      first_three.should include(cat1.id)
+      first_three.should include(cat2.id)
+      first_three.should include(cat4.id)
+      category_ids[-1].should == cat3.id
+    end
   end
 
 end

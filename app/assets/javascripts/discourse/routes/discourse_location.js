@@ -191,7 +191,7 @@ Ember.DiscourseLocation = Ember.Object.extend({
     if (Em.isEmpty(params) || Em.isEmpty(Object.keys(params))) {
       return "";
     } else {
-      return "?" + $.param(params).replace(/%5B/g, "[").replace(/%5D/g, "]");
+      return "?" + decodeURIComponent($.param(params, true));
     }
   }.property('queryParams'),
 
@@ -216,7 +216,7 @@ Ember.DiscourseLocation = Ember.Object.extend({
     var guid = Ember.guidFor(this),
         self = this;
 
-    Ember.$(window).on('popstate.ember-location-'+guid, function(e) {
+    Ember.$(window).on('popstate.ember-location-'+guid, function() {
       // Ignore initial page load popstate event in Chrome
       if (!popstateFired) {
         popstateFired = true;

@@ -71,9 +71,10 @@ Discourse.SiteSetting = Discourse.Model.extend({
   **/
   save: function() {
     // Update the setting
-    var setting = this;
-    return Discourse.ajax("/admin/site_settings/" + (this.get('setting')), {
-      data: { value: this.get('value') },
+    var setting = this, data = {};
+    data[this.get('setting')] = this.get('value');
+    return Discourse.ajax("/admin/site_settings/" + this.get('setting'), {
+      data: data,
       type: 'PUT'
     }).then(function() {
       setting.set('originalValue', setting.get('value'));
@@ -81,10 +82,17 @@ Discourse.SiteSetting = Discourse.Model.extend({
   },
 
   validValues: function() {
-    var vals;
+    var vals, setting;
     vals = Em.A();
+    setting = this;
     _.each(this.get('valid_values'), function(v) {
-      if(v.length > 0) vals.addObject({ name: v, value: v });
+      if (v.name && v.name.length > 0) {
+        if (setting.translate_names) {
+          vals.addObject({name: I18n.t(v.name), value: v.value});
+        } else {
+          vals.addObject(v);
+        }
+      }
     });
     return vals;
   }.property('valid_values'),
@@ -96,21 +104,25 @@ Discourse.SiteSetting = Discourse.Model.extend({
 
 Discourse.SiteSetting.reopenClass({
 
-  /**
-    Retrieve all settings from the server
-
-    @method findAll
-  **/
   findAll: function() {
-    var result = Em.A();
-    Discourse.ajax("/admin/site_settings").then(function (settings) {
+    return Discourse.ajax("/admin/site_settings").then(function (settings) {
+      // Group the results by category
+      var categoryNames = [],
+          categories = {},
+          result = Em.A();
       _.each(settings.site_settings,function(s) {
         s.originalValue = s.value;
-        result.pushObject(Discourse.SiteSetting.create(s));
+        if (!categoryNames.contains(s.category)) {
+          categoryNames.pushObject(s.category);
+          categories[s.category] = Em.A();
+        }
+        categories[s.category].pushObject(Discourse.SiteSetting.create(s));
       });
-      result.set('diags', settings.diags);
+      _.each(categoryNames, function(n) {
+        result.pushObject({nameKey: n, name: I18n.t('admin.site_settings.categories.' + n), siteSettings: categories[n]});
+      });
+      return result;
     });
-    return result;
   },
 
   update: function(key, value) {
@@ -119,6 +131,7 @@ Discourse.SiteSetting.reopenClass({
       data: { value: value }
     });
   }
+
 });
 
 

@@ -4,12 +4,16 @@
   @method breakUp
   @for Handlebars
 **/
-Handlebars.registerHelper('breakUp', function(property, options) {
-  var prop, result, tokens;
-  prop = Ember.Handlebars.get(this, property, options);
+Handlebars.registerHelper('breakUp', function(property, hint, options) {
+  var prop = Ember.Handlebars.get(this, property, options);
   if (!prop) return "";
+  if (typeof(hint) === 'string') {
+    hint = Ember.Handlebars.get(this, hint, options);
+  } else {
+    hint = undefined;
+  }
 
-  return Discourse.Formatter.breakUp(prop, 13);
+  return new Handlebars.SafeString(Discourse.Formatter.breakUp(prop, hint));
 });
 
 /**
@@ -29,11 +33,31 @@ Handlebars.registerHelper('shorten', function(property, options) {
   @for Handlebars
 **/
 Handlebars.registerHelper('topicLink', function(property, options) {
-  var title, topic;
-  topic = Ember.Handlebars.get(this, property, options);
-  title = topic.get('fancy_title') || topic.get('title');
-  return "<a href='" + (topic.get('lastReadUrl')) + "' class='title'>" + title + "</a>";
+  var topic = Ember.Handlebars.get(this, property, options),
+      title = topic.get('fancy_title') || topic.get('title');
+  return "<a href='" + topic.get('lastUnreadUrl') + "' class='title'>" + title + "</a>";
 });
+
+
+/**
+  Produces a link to a category given a category object and helper options
+
+  @method categoryLinkHTML
+  @param {Discourse.Category} category to link to
+  @param {Object} options standard from handlebars
+**/
+function categoryLinkHTML(category, options) {
+  var categoryOptions = {};
+  if (options.hash) {
+    if (options.hash.allowUncategorized) {
+      categoryOptions.allowUncategorized = true;
+    }
+    if (options.hash.categories) {
+      categoryOptions.categories = Em.Handlebars.get(this, options.hash.categories, options);
+    }
+  }
+  return new Handlebars.SafeString(Discourse.HTML.categoryLink(category, categoryOptions));
+}
 
 /**
   Produces a link to a category
@@ -42,10 +66,12 @@ Handlebars.registerHelper('topicLink', function(property, options) {
   @for Handlebars
 **/
 Handlebars.registerHelper('categoryLink', function(property, options) {
-  var category = Ember.Handlebars.get(this, property, options);
-  return new Handlebars.SafeString(Discourse.Utilities.categoryLink(category));
+  return categoryLinkHTML(Ember.Handlebars.get(this, property, options), options);
 });
 
+Handlebars.registerHelper('categoryLinkRaw', function(property, options) {
+  return categoryLinkHTML(property, options);
+});
 
 /**
   Produces a bound link to a category
@@ -53,9 +79,7 @@ Handlebars.registerHelper('categoryLink', function(property, options) {
   @method boundCategoryLink
   @for Handlebars
 **/
-Ember.Handlebars.registerBoundHelper('boundCategoryLink', function(category) {
-  return new Handlebars.SafeString(Discourse.Utilities.categoryLink(category));
-});
+Ember.Handlebars.registerBoundHelper('boundCategoryLink', categoryLinkHTML);
 
 /**
   Produces a link to a route with support for i18n on the title
@@ -69,9 +93,9 @@ Handlebars.registerHelper('titledLinkTo', function(name, object) {
     options.hash.title = I18n.t(options.hash.titleKey);
   }
   if (arguments.length === 3) {
-    return Ember.Handlebars.helpers.linkTo.call(this, name, object, options);
+    return Ember.Handlebars.helpers['link-to'].call(this, name, object, options);
   } else {
-    return Ember.Handlebars.helpers.linkTo.call(this, name, options);
+    return Ember.Handlebars.helpers['link-to'].call(this, name, options);
   }
 });
 
@@ -176,12 +200,12 @@ Ember.Handlebars.registerBoundHelper('boundAvatar', function(user, options) {
 }, 'avatar_template', 'uploaded_avatar_template', 'gravatar_template');
 
 /**
-  Nicely format a date without a binding since the date doesn't need to change.
+  Nicely format a date without binding or returning HTML
 
-  @method unboundDate
+  @method rawDate
   @for Handlebars
 **/
-Handlebars.registerHelper('unboundDate', function(property, options) {
+Handlebars.registerHelper('rawDate', function(property, options) {
   var dt = new Date(Ember.Handlebars.get(this, property, options));
   return Discourse.Formatter.longDate(dt);
 });
@@ -189,7 +213,7 @@ Handlebars.registerHelper('unboundDate', function(property, options) {
 /**
   Live refreshing age helper
 
-  @method unboundDate
+  @method unboundAge
   @for Handlebars
 **/
 Handlebars.registerHelper('unboundAge', function(property, options) {
@@ -251,40 +275,43 @@ Ember.Handlebars.registerHelper('float', function(property, options) {
   @for Handlebars
 **/
 Handlebars.registerHelper('number', function(property, options) {
-  var n, orig, title, result;
-  orig = parseInt(Ember.Handlebars.get(this, property, options), 10);
-  if (isNaN(orig)) {
-    orig = 0;
-  }
-  title = orig;
+
+  var orig = parseInt(Ember.Handlebars.get(this, property, options), 10);
+  if (isNaN(orig)) { orig = 0; }
+
+  var title = orig;
   if (options.hash.numberKey) {
-    title = I18n.t(options.hash.numberKey, {
-      number: orig
-    });
+    title = I18n.t(options.hash.numberKey, { number: orig });
   }
+
   // Round off the thousands to one decimal place
-  n = orig;
+  var n = orig;
   if (orig > 999 && !options.hash.noTitle) {
     n = (orig / 1000).toFixed(1) + "K";
   }
 
-  result = "<span class='number'";
-
-  if(n !== title) {
-    result += " title='" + title + "'";
+  var classNames = 'number';
+  if (options.hash['class']) {
+    classNames += ' ' + Ember.Handlebars.get(this, options.hash['class'], options);
   }
+  var result = "<span class='" + classNames + "'";
 
+  if (n !== title) {
+    result += " title='" + Handlebars.Utils.escapeExpression(title) + "'";
+  }
   result += ">" + n + "</span>";
+
   return new Handlebars.SafeString(result);
 });
 
 /**
-  Display logic for dates.
+  Display logic for dates. It is unbound in Ember but will use jQuery to
+  update the dates on a regular interval.
 
-  @method date
+  @method unboundDate
   @for Handlebars
 **/
-Handlebars.registerHelper('date', function(property, options) {
+Handlebars.registerHelper('unboundDate', function(property, options) {
   var leaveAgo;
   if (property.hash) {
     if (property.hash.leaveAgo) {
@@ -294,24 +321,29 @@ Handlebars.registerHelper('date', function(property, options) {
       property = property.hash.path;
     }
   }
+
   var val = Ember.Handlebars.get(this, property, options);
   if (val) {
     var date = new Date(val);
     return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(date, {format: 'medium', title: true, leaveAgo: leaveAgo}));
   }
+});
 
+Ember.Handlebars.registerBoundHelper('date', function(dt) {
+  return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(new Date(dt), {format: 'medium', title: true }));
 });
 
 /**
-  Produces a link to the FAQ
+  Look for custom html content in the preload store.
 
-  @method faqLink
+  @method customHTML
   @for Handlebars
 **/
-Handlebars.registerHelper('faqLink', function(property, options) {
-  return new Handlebars.SafeString(
-    "<a href='" +
-    (Discourse.SiteSettings.faq_url.length > 0 ? Discourse.SiteSettings.faq_url : Discourse.getURL('/faq')) +
-    "'>" + I18n.t('faq') + "</a>"
-  );
+Handlebars.registerHelper('customHTML', function(property) {
+  var html = PreloadStore.get("customHTML");
+
+  if (html && html[property] && html[property].length) {
+    return new Handlebars.SafeString(html[property]);
+  }
+
 });

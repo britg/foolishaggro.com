@@ -10,34 +10,26 @@ Discourse.ModalBodyView = Discourse.View.extend({
 
   // Focus on first element
   didInsertElement: function() {
+    var self = this;
+
     $('#discourse-modal').modal('show');
 
-    var controller = this.get('controller');
-    $('#discourse-modal').on('hide.discourse', function() {
-      controller.send('closeModal');
+    $('#discourse-modal').one("hide", function () {
+      self.get("controller").send("closeModal");
     });
 
     $('#modal-alert').hide();
 
-    var modalBodyView = this;
-    Em.run.schedule('afterRender', function() {
-      modalBodyView.$('input:first').focus();
-    });
+    if (!Discourse.Mobile.mobileView) {
+      Em.run.schedule('afterRender', function() {
+        self.$('input:first').focus();
+      });
+    }
 
     var title = this.get('title');
     if (title) {
       this.set('controller.controllers.modal.title', title);
     }
-  },
-
-  willDestroyElement: function() {
-    $('#discourse-modal').off('hide.discourse');
-  },
-
-  // Pass the errors to our errors view
-  displayErrors: function(errors, callback) {
-    this.set('parentView.parentView.modalErrorsView.errors', errors);
-    if (typeof callback === "function") callback();
   },
 
   flashMessageChanged: function() {

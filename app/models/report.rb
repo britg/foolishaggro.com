@@ -11,7 +11,7 @@ class Report
     @prev30Days = nil
   end
 
-  def as_json
+  def as_json(options = nil)
     {
      type: self.type,
      title: I18n.t("reports.#{self.type}.title"),
@@ -38,7 +38,7 @@ class Report
   end
 
   def self.report_signups(report)
-    report_about report, User, :count_by_signup_date
+    report_about report, User.real, :count_by_signup_date
   end
 
   def self.report_topics(report)
@@ -76,12 +76,12 @@ class Report
 
   def self.report_users_by_trust_level(report)
     report.data = []
-    User.counts_by_trust_level.each do |level, count|
+    User.real.group('trust_level').count.each do |level, count|
       report.data << {x: level.to_i, y: count}
     end
   end
 
-  def self.report_favorites(report)
+  def self.report_starred(report)
     basic_report_about report, Topic, :starred_counts_per_day
     query = TopicUser.where(starred: true)
     report.total = query.count

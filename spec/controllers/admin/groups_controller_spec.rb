@@ -21,7 +21,8 @@ describe Admin::GroupsController do
       "id"=>group.id,
       "name"=>group.name,
       "user_count"=>1,
-      "automatic"=>false
+      "automatic"=>false,
+      "alias_level"=>0
     }]
   end
 
@@ -72,7 +73,7 @@ describe Admin::GroupsController do
           usernames: usernames,
           name: " bob "
         }
-      }.should_not raise_error(ActiveRecord::RecordInvalid)
+      }.should_not raise_error()
       Group.where(name: "bob").count.should == 1
     end
   end

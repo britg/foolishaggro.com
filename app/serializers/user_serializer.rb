@@ -10,18 +10,21 @@ class UserSerializer < BasicUserSerializer
              :website,
              :can_edit,
              :can_edit_username,
+             :can_edit_email,
              :stats,
              :can_send_private_message_to_user,
              :bio_excerpt,
              :trust_level,
              :moderator,
              :admin,
-             :title
+             :title,
+             :suspend_reason,
+             :suspended_till
 
   has_one :invited_by, embed: :object, serializer: BasicUserSerializer
 
   def self.private_attributes(*attrs)
-    attributes *attrs
+    attributes(*attrs)
     attrs.each do |attr|
       define_method "include_#{attr}?" do
         can_edit
@@ -46,12 +49,21 @@ class UserSerializer < BasicUserSerializer
                      :email_digests,
                      :email_private_messages,
                      :email_direct,
+                     :email_always,
                      :digest_after_days,
+                     :watch_new_topics,
                      :auto_track_topics_after_msecs,
                      :new_topic_duration_minutes,
                      :external_links_in_new_tab,
                      :dynamic_favicon,
-                     :enable_quoting
+                     :enable_quoting,
+                     :use_uploaded_avatar,
+                     :has_uploaded_avatar,
+                     :gravatar_template,
+                     :uploaded_avatar_template,
+                     :muted_category_ids,
+                     :tracked_category_ids,
+                     :watched_category_ids
 
 
   def auto_track_topics_after_msecs
@@ -74,8 +86,38 @@ class UserSerializer < BasicUserSerializer
     scope.can_edit_username?(object)
   end
 
+  def can_edit_email
+    scope.can_edit_email?(object)
+  end
+
   def stats
     UserAction.stats(object.id, scope)
   end
 
+  def gravatar_template
+    User.gravatar_template(object.email)
+  end
+
+  def include_suspended?
+    object.suspended?
+  end
+  def include_suspend_reason?
+    object.suspended?
+  end
+
+  def include_suspended_till?
+    object.suspended?
+  end
+
+  def muted_category_ids
+    CategoryUser.lookup(object, :muted).pluck(:category_id)
+  end
+
+  def tracked_category_ids
+    CategoryUser.lookup(object, :tracking).pluck(:category_id)
+  end
+
+  def watched_category_ids
+    CategoryUser.lookup(object, :watching).pluck(:category_id)
+  end
 end

@@ -37,7 +37,15 @@ describe UserNotifications do
       its(:to) { should == [user.email] }
       its(:subject) { should be_present }
       its(:from) { should == [SiteSetting.notification_email] }
-      its(:body) { should be_present }
+
+      it 'should have a html body' do
+        subject.html_part.body.to_s.should be_present
+      end
+
+      it 'should have a text body' do
+        subject.html_part.body.to_s.should be_present
+      end
+
     end
   end
 
@@ -56,6 +64,9 @@ describe UserNotifications do
       # 1 unsubscribe
       mail.html_part.to_s.scan(/To unsubscribe/).count.should == 1
 
+      # side effect, topic user is updated with post number
+      tu = TopicUser.get(post.topic_id, response.user)
+      tu.last_emailed_post_number.should == response.post_number
     end
   end
 
@@ -129,7 +140,7 @@ describe UserNotifications do
       end
 
       it "has a from alias" do
-        expects_build_with(has_entry(:from_alias, "#{username} via #{SiteSetting.title}"))
+        expects_build_with(has_entry(:from_alias, "#{username}"))
       end
     end
   end

@@ -17,7 +17,7 @@ describe PostCreator do
     let(:image_sizes) { {'http://an.image.host/image.jpg' => {"width" => 111, "height" => 222}} }
 
     let(:creator) { PostCreator.new(user, basic_topic_params) }
-    let(:creator_with_category) { PostCreator.new(user, basic_topic_params.merge(category: category.name )) }
+    let(:creator_with_category) { PostCreator.new(user, basic_topic_params.merge(category: category.id )) }
     let(:creator_with_meta_data) { PostCreator.new(user, basic_topic_params.merge(meta_data: {hello: "world"} )) }
     let(:creator_with_image_sizes) { PostCreator.new(user, basic_topic_params.merge(image_sizes: image_sizes)) }
 
@@ -40,6 +40,17 @@ describe PostCreator do
       it "has errors" do
         creator_invalid_title.create
         expect(creator_invalid_title.errors).to be_present
+      end
+
+    end
+
+    context "invalid raw" do
+
+      let(:creator_invalid_raw) { PostCreator.new(user, basic_topic_params.merge(raw: '')) }
+
+      it "has errors" do
+        creator_invalid_raw.create
+        expect(creator_invalid_raw.errors).to be_present
       end
 
     end
@@ -75,7 +86,7 @@ describe PostCreator do
         reply = nil
 
         messages = MessageBus.track_publish do
-          created_post = PostCreator.new(admin, basic_topic_params.merge(category: cat.name)).create
+          created_post = PostCreator.new(admin, basic_topic_params.merge(category: cat.id)).create
           reply = PostCreator.new(admin, raw: "this is my test reply 123 testing", topic_id: created_post.topic_id).create
         end
 
@@ -163,21 +174,23 @@ describe PostCreator do
         topic_user.seen_post_count.should == first_post.post_number
 
         user2 = Fabricate(:coding_horror)
-        user2.topic_reply_count.should == 0
-        first_post.user.reload.topic_reply_count.should == 0
+        user2.user_stat.topic_reply_count.should == 0
+
+        first_post.user.user_stat.reload.topic_reply_count.should == 0
 
         PostCreator.new(user2, topic_id: first_post.topic_id, raw: "this is my test post 123").create
-        user2.reload.topic_reply_count.should == 1
-        first_post.user.reload.topic_reply_count.should == 0
+
+        first_post.user.user_stat.reload.topic_reply_count.should == 0
+
+        user2.user_stat.reload.topic_reply_count.should == 1
       end
     end
 
     context 'when auto-close param is given' do
-      it 'ensures the user can auto-close the topic' do
+      it 'ensures the user can auto-close the topic, but ignores auto-close param silently' do
         Guardian.any_instance.stubs(:can_moderate?).returns(false)
-        expect {
-          PostCreator.new(user, basic_topic_params.merge(auto_close_days: 2)).create
-        }.to raise_error(Discourse::InvalidAccess)
+        post = PostCreator.new(user, basic_topic_params.merge(auto_close_time: 2)).create
+        post.topic.auto_close_at.should be_nil
       end
     end
   end
@@ -310,6 +323,14 @@ describe PostCreator do
       # does not notify an unrelated user
       unrelated.notifications.count.should == 0
       post.topic.subtype.should == TopicSubtype.user_to_user
+
+      # if a mod replies they should be added to the allowed user list
+      mod = Fabricate(:moderator)
+      PostCreator.create(mod, raw: 'hi there welcome topic, I am a mod',
+                         topic_id: post.topic_id)
+
+      post.topic.reload
+      post.topic.topic_allowed_users.where(user_id: mod.id).count.should == 1
     end
   end
 
@@ -373,5 +394,17 @@ describe PostCreator do
       creator.errors.should be_nil
     end
   end
+
+  describe "word_count" do
+    it "has a word count" do
+      creator = PostCreator.new(user, title: 'some inspired poetry for a rainy day', raw: 'mary had a little lamb, little lamb, little lamb. mary had a little lamb')
+      post = creator.create
+      post.word_count.should == 14
+
+      post.topic.reload
+      post.topic.word_count.should == 14
+    end
+  end
+
 end
 

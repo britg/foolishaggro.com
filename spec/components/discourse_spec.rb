@@ -16,19 +16,19 @@ describe Discourse do
   end
 
   context 'base_url' do
-    context 'when ssl is off' do
+    context 'when https is off' do
       before do
-        SiteSetting.expects(:use_ssl?).returns(false)
+        SiteSetting.expects(:use_https?).returns(false)
       end
 
-      it 'has a non-ssl base url' do
+      it 'has a non https base url' do
         Discourse.base_url.should == "http://foo.com"
       end
     end
 
-    context 'when ssl is on' do
+    context 'when https is on' do
       before do
-        SiteSetting.expects(:use_ssl?).returns(true)
+        SiteSetting.expects(:use_https?).returns(true)
       end
 
       it 'has a non-ssl base url' do
@@ -47,20 +47,19 @@ describe Discourse do
     end
   end
 
-
-  context '#system_user' do
+  context '#site_contact_user' do
 
     let!(:admin) { Fabricate(:admin) }
     let!(:another_admin) { Fabricate(:admin) }
 
-    it 'returns the user specified by the site setting system_username' do
-      SiteSetting.stubs(:system_username).returns(another_admin.username)
-      Discourse.system_user.should == another_admin
+    it 'returns the user specified by the site setting site_contact_username' do
+      SiteSetting.stubs(:site_contact_username).returns(another_admin.username)
+      Discourse.site_contact_user.should == another_admin
     end
 
     it 'returns the first admin user otherwise' do
-      SiteSetting.stubs(:system_username).returns(nil)
-      Discourse.system_user.should == admin
+      SiteSetting.stubs(:site_contact_username).returns(nil)
+      Discourse.site_contact_user.should == admin
     end
 
   end
@@ -68,12 +67,12 @@ describe Discourse do
   context "#store" do
 
     it "returns LocalStore by default" do
-      Discourse.store.should be_a(LocalStore)
+      Discourse.store.should be_a(FileStore::LocalStore)
     end
 
     it "returns S3Store when S3 is enabled" do
       SiteSetting.expects(:enable_s3_uploads?).returns(true)
-      Discourse.store.should be_a(S3Store)
+      Discourse.store.should be_a(FileStore::S3Store)
     end
 
   end

@@ -18,7 +18,7 @@ Discourse::Application.configure do
   config.active_support.deprecation = :log
 
   # Only use best-standards-support built into browsers
-  config.action_dispatch.best_standards_support = :builtin
+  config.action_dispatch.best_standards_support = :builtin unless rails4?
 
   # Do not compress assets
   config.assets.compress = false
@@ -43,6 +43,10 @@ Discourse::Application.configure do
   config.enable_mini_profiler = true
 
   require 'middleware/turbo_dev'
+  require 'middleware/missing_avatars'
   config.middleware.insert 0, Middleware::TurboDev
+  config.middleware.insert 1, Middleware::MissingAvatars
+
+  config.enable_anon_caching = false
 end
 

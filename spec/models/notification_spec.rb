@@ -109,7 +109,7 @@ describe Notification do
   describe '@mention' do
 
     it "calls email_user_mentioned on creating a notification" do
-      UserEmailObserver.any_instance.expects(:email_user_mentioned).with(instance_of(Notification))
+      UserEmailObserver.any_instance.expects(:after_commit).with(instance_of(Notification))
       Fabricate(:notification)
     end
 
@@ -117,7 +117,7 @@ describe Notification do
 
   describe '@mention' do
     it "calls email_user_quoted on creating a quote notification" do
-      UserEmailObserver.any_instance.expects(:email_user_quoted).with(instance_of(Notification))
+      UserEmailObserver.any_instance.expects(:after_commit).with(instance_of(Notification))
       Fabricate(:quote_notification)
     end
   end
@@ -129,13 +129,17 @@ describe Notification do
       @target = @post.topic.topic_allowed_users.reject{|a| a.user_id == @post.user_id}[0].user
     end
 
-    it 'should create a private message notification' do
+    it 'should create and rollup private message notifications' do
       @target.notifications.first.notification_type.should == Notification.types[:private_message]
+      @post.user.unread_notifications.should == 0
+      @target.unread_private_messages.should == 1
+
+      Fabricate(:post, topic: @topic, user: @topic.user)
+      @target.reload
+      @target.unread_private_messages.should == 1
+
     end
 
-    it 'should not add a pm notification for the creator' do
-      @post.user.unread_notifications.should == 0
-    end
   end
 
   describe '.post' do
@@ -165,7 +169,7 @@ describe Notification do
     it 'correctly updates the read state' do
       user = Fabricate(:user)
 
-      pm = Notification.create!(read: false,
+      Notification.create!(read: false,
                            user_id: user.id,
                            topic_id: 2,
                            post_number: 1,
@@ -192,7 +196,7 @@ describe Notification do
     it "marks multiple posts as read if needed" do
       user = Fabricate(:user)
 
-      notifications = (1..3).map do |i|
+      (1..3).map do |i|
         Notification.create!(read: false, user_id: user.id, topic_id: 2, post_number: i, data: '[]', notification_type: 1)
       end
       Notification.create!(read: true, user_id: user.id, topic_id: 2, post_number: 4, data: '[]', notification_type: 1)

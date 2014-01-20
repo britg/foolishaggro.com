@@ -7,6 +7,7 @@ describe Guardian do
   let(:user) { build(:user) }
   let(:moderator) { build(:moderator) }
   let(:admin) { build(:admin) }
+  let(:leader) { build(:user, trust_level: 3) }
   let(:another_admin) { build(:admin) }
   let(:coding_horror) { build(:coding_horror) }
 
@@ -175,7 +176,30 @@ describe Guardian do
       Guardian.new(admin).can_impersonate?(another_admin).should be_false
       Guardian.new(admin).can_impersonate?(user).should be_true
       Guardian.new(admin).can_impersonate?(moderator).should be_true
+
+      Rails.configuration.stubs(:developer_emails).returns([admin.email])
+      Guardian.new(admin).can_impersonate?(another_admin).should be_true
     end
+  end
+
+  describe 'can_invite_to_forum?' do
+    let(:user) { Fabricate.build(:user) }
+    let(:moderator) { Fabricate.build(:moderator) }
+
+    it "doesn't allow anonymous users to invite" do
+      Guardian.new.can_invite_to_forum?.should be_false
+    end
+
+    it 'returns true when the site requires approving users and is mod' do
+      SiteSetting.expects(:must_approve_users?).returns(true)
+      Guardian.new(moderator).can_invite_to_forum?.should be_true
+    end
+
+    it 'returns false when the site requires approving users and is regular' do
+      SiteSetting.expects(:must_approve_users?).returns(true)
+      Guardian.new(user).can_invite_to_forum?.should be_false
+    end
+
   end
 
   describe 'can_invite_to?' do
@@ -195,7 +219,7 @@ describe Guardian do
       Guardian.new(moderator).can_invite_to?(topic).should be_true
     end
 
-    it 'returns true when the site requires approving users and is regular' do
+    it 'returns false when the site requires approving users and is regular' do
       SiteSetting.expects(:must_approve_users?).returns(true)
       Guardian.new(coding_horror).can_invite_to?(topic).should be_false
     end
@@ -282,6 +306,21 @@ describe Guardian do
         category.set_permissions(:everyone => :create_post)
         category.save
         Guardian.new(user).can_create?(Topic,category).should be_false
+      end
+
+      it "is true for new users by default" do
+        Guardian.new(user).can_create?(Topic,Fabricate(:category)).should be_true
+      end
+
+      it "is false if user has not met minimum trust level" do
+        SiteSetting.stubs(:min_trust_to_create_topic).returns(1)
+        Guardian.new(build(:user, trust_level: 0)).can_create?(Topic,Fabricate(:category)).should be_false
+      end
+
+      it "is true if user has met or exceeded the minimum trust level" do
+        SiteSetting.stubs(:min_trust_to_create_topic).returns(1)
+        Guardian.new(build(:user, trust_level: 1)).can_create?(Topic,Fabricate(:category)).should be_true
+        Guardian.new(build(:user, trust_level: 2)).can_create?(Topic,Fabricate(:category)).should be_true
       end
     end
 
@@ -472,7 +511,7 @@ describe Guardian do
   describe 'can_edit?' do
 
     it 'returns false with a nil object' do
-      Guardian.new(user).can_edit?(nil).should be_false
+      Guardian.new(user).can_edit?(nil).should == false
     end
 
     describe 'a Post' do
@@ -506,40 +545,71 @@ describe Guardian do
       it 'returns true as an admin' do
         Guardian.new(admin).can_edit?(post).should be_true
       end
+
+      context 'post is older than post_edit_time_limit' do
+        let(:old_post) { build(:post, topic: topic, user: topic.user, created_at: 6.minutes.ago) }
+        before do
+          SiteSetting.stubs(:post_edit_time_limit).returns(5)
+        end
+
+        it 'returns false to the author of the post' do
+          Guardian.new(old_post.user).can_edit?(old_post).should == false
+        end
+
+        it 'returns true as a moderator' do
+          Guardian.new(moderator).can_edit?(old_post).should eq(true)
+        end
+
+        it 'returns true as an admin' do
+          Guardian.new(admin).can_edit?(old_post).should eq(true)
+        end
+
+        it 'returns false for another regular user trying to edit your post' do
+          Guardian.new(coding_horror).can_edit?(old_post).should == false
+        end
+      end
     end
 
     describe 'a Topic' do
 
       it 'returns false when not logged in' do
-        Guardian.new.can_edit?(topic).should be_false
+        Guardian.new.can_edit?(topic).should == false
       end
 
       it 'returns true for editing your own post' do
-        Guardian.new(topic.user).can_edit?(topic).should be_true
+        Guardian.new(topic.user).can_edit?(topic).should eq(true)
       end
 
 
       it 'returns false as a regular user' do
-        Guardian.new(coding_horror).can_edit?(topic).should be_false
+        Guardian.new(coding_horror).can_edit?(topic).should == false
       end
 
       context 'not archived' do
         it 'returns true as a moderator' do
-          Guardian.new(moderator).can_edit?(topic).should be_true
+          Guardian.new(moderator).can_edit?(topic).should eq(true)
         end
 
         it 'returns true as an admin' do
-          Guardian.new(admin).can_edit?(topic).should be_true
+          Guardian.new(admin).can_edit?(topic).should eq(true)
+        end
+
+        it 'returns true at trust level 3' do
+          Guardian.new(leader).can_edit?(topic).should eq(true)
         end
       end
 
       context 'archived' do
         it 'returns false as a moderator' do
-          Guardian.new(moderator).can_edit?(build(:topic, user: user, archived: true)).should be_false
+          Guardian.new(moderator).can_edit?(build(:topic, user: user, archived: true)).should == false
         end
 
         it 'returns false as an admin' do
-          Guardian.new(admin).can_edit?(build(:topic, user: user, archived: true)).should be_false
+          Guardian.new(admin).can_edit?(build(:topic, user: user, archived: true)).should == false
+        end
+
+        it 'returns false at trust level 3' do
+          Guardian.new(leader).can_edit?(build(:topic, user: user, archived: true)).should == false
         end
       end
     end
@@ -669,9 +739,6 @@ describe Guardian do
 
   end
 
-
-
-
   context 'can_delete?' do
 
     it 'returns false with a nil object' do
@@ -679,6 +746,10 @@ describe Guardian do
     end
 
     context 'a Topic' do
+      before do
+        # pretend we have a real topic
+        topic.id = 9999999
+      end
 
       it 'returns false when not logged in' do
         Guardian.new.can_delete?(topic).should be_false
@@ -734,6 +805,50 @@ describe Guardian do
       it 'returns true when an admin' do
         Guardian.new(admin).can_delete?(post).should be_true
       end
+
+      context 'post is older than post_edit_time_limit' do
+        let(:old_post) { build(:post, topic: topic, user: topic.user, post_number: 2, created_at: 6.minutes.ago) }
+        before do
+          SiteSetting.stubs(:post_edit_time_limit).returns(5)
+        end
+
+        it 'returns false to the author of the post' do
+          Guardian.new(old_post.user).can_delete?(old_post).should eq(false)
+        end
+
+        it 'returns true as a moderator' do
+          Guardian.new(moderator).can_delete?(old_post).should eq(true)
+        end
+
+        it 'returns true as an admin' do
+          Guardian.new(admin).can_delete?(old_post).should eq(true)
+        end
+
+        it "returns false when it's the OP, even as a moderator" do
+          old_post.post_number = 1
+          Guardian.new(moderator).can_delete?(old_post).should eq(false)
+        end
+
+        it 'returns false for another regular user trying to delete your post' do
+          Guardian.new(coding_horror).can_delete?(old_post).should eq(false)
+        end
+      end
+
+      context 'the topic is archived' do
+        before do
+          post.topic.archived = true
+        end
+
+        it "allows a staff member to delete it" do
+          Guardian.new(moderator).can_delete?(post).should be_true
+        end
+
+        it "doesn't allow a regular user to delete it" do
+          Guardian.new(post.user).can_delete?(post).should be_false
+        end
+
+      end
+
     end
 
     context 'a Category' do
@@ -761,23 +876,29 @@ describe Guardian do
         Guardian.new(moderator).can_delete?(category).should be_false
       end
 
+      it "can't be deleted if it is the Uncategorizied Category" do
+        uncategorized_cat_id = SiteSetting.uncategorized_category_id
+        uncategorized_category = Category.find(uncategorized_cat_id)
+        Guardian.new(admin).can_delete?(uncategorized_category).should be_false
+      end
+
     end
 
-    context 'can_ban?' do
-      it 'returns false when a user tries to ban another user' do
-        Guardian.new(user).can_ban?(coding_horror).should be_false
+    context 'can_suspend?' do
+      it 'returns false when a user tries to suspend another user' do
+        Guardian.new(user).can_suspend?(coding_horror).should be_false
       end
 
-      it 'returns true when an admin tries to ban another user' do
-        Guardian.new(admin).can_ban?(coding_horror).should be_true
+      it 'returns true when an admin tries to suspend another user' do
+        Guardian.new(admin).can_suspend?(coding_horror).should be_true
       end
 
-      it 'returns true when a moderator tries to ban another user' do
-        Guardian.new(moderator).can_ban?(coding_horror).should be_true
+      it 'returns true when a moderator tries to suspend another user' do
+        Guardian.new(moderator).can_suspend?(coding_horror).should be_true
       end
 
-      it 'returns false when staff tries to ban staff' do
-        Guardian.new(admin).can_ban?(moderator).should be_false
+      it 'returns false when staff tries to suspend staff' do
+        Guardian.new(admin).can_suspend?(moderator).should be_false
       end
     end
 
@@ -1150,7 +1271,7 @@ describe Guardian do
       let(:target_user) { build(:user, created_at: 1.minute.ago) }
       include_examples "staff can always change usernames"
 
-      it "is true for the user to change his own username" do
+      it "is true for the user to change their own username" do
         Guardian.new(target_user).can_edit_username?(target_user).should be_true
       end
     end
@@ -1162,10 +1283,85 @@ describe Guardian do
 
       let(:target_user) { build(:user, created_at: 4.days.ago) }
 
+      context 'with no posts' do
+        include_examples "staff can always change usernames"
+        it "is true for the user to change their own username" do
+          Guardian.new(target_user).can_edit_username?(target_user).should be_true
+        end
+      end
+
+      context 'with posts' do
+        before { target_user.stubs(:post_count).returns(1) }
+        include_examples "staff can always change usernames"
+        it "is false for the user to change their own username" do
+          Guardian.new(target_user).can_edit_username?(target_user).should be_false
+        end
+      end
+    end
+
+    context 'when editing is disabled in preferences' do
+      before do
+        SiteSetting.stubs(:username_change_period).returns(0)
+      end
+
       include_examples "staff can always change usernames"
 
-      it "is false for the user to change his own username" do
-        Guardian.new(target_user).can_edit_username?(target_user).should be_false
+      it "is false for the user to change their own username" do
+        Guardian.new(user).can_edit_username?(user).should be_false
+      end
+    end
+  end
+
+  describe "can_edit_email?" do
+    context 'when allowed in settings' do
+      before do
+        SiteSetting.stubs(:email_editable?).returns(true)
+      end
+
+      it "is false when not logged in" do
+        Guardian.new(nil).can_edit_email?(build(:user, created_at: 1.minute.ago)).should be_false
+      end
+
+      it "is false for regular users to edit another user's email" do
+        Guardian.new(build(:user)).can_edit_email?(build(:user, created_at: 1.minute.ago)).should be_false
+      end
+
+      it "is true for a regular user to edit their own email" do
+        Guardian.new(user).can_edit_email?(user).should be_true
+      end
+
+      it "is true for moderators" do
+        Guardian.new(moderator).can_edit_email?(user).should be_true
+      end
+
+      it "is true for admins" do
+        Guardian.new(admin).can_edit_email?(user).should be_true
+      end
+    end
+
+    context 'when not allowed in settings' do
+      before do
+        SiteSetting.stubs(:email_editable?).returns(false)
+      end
+
+      it "is false when not logged in" do
+        Guardian.new(nil).can_edit_email?(build(:user, created_at: 1.minute.ago)).should be_false
+      end
+
+      it "is false for regular users to edit another user's email" do
+        Guardian.new(build(:user)).can_edit_email?(build(:user, created_at: 1.minute.ago)).should be_false
+      end
+
+      it "is false for a regular user to edit their own email" do
+        Guardian.new(user).can_edit_email?(user).should be_false
+      end
+
+      it "is true for admins" do
+        Guardian.new(admin).can_edit_email?(user).should be_true
+      end
+
+      it "is true for moderators" do
+        Guardian.new(moderator).can_edit_email?(user).should be_true
       end
     end
   end

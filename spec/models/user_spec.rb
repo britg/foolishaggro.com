@@ -1,78 +1,45 @@
 require 'spec_helper'
+require_dependency 'user'
 
 describe User do
 
-  it { should have_many :posts }
-  it { should have_many :notifications }
-  it { should have_many :topic_users }
-  it { should have_many :post_actions }
-  it { should have_many :user_actions }
-  it { should have_many :topics }
-  it { should have_many :user_open_ids }
-  it { should have_many :post_timings }
-  it { should have_many :email_tokens }
-  it { should have_many :views }
-  it { should have_many :user_visits }
-  it { should belong_to :approved_by }
-  it { should have_many :email_logs }
-  it { should have_many :topic_allowed_users }
-  it { should have_many :invites }
+  it { should have_many(:posts) }
+  it { should have_many(:notifications).dependent(:destroy) }
+  it { should have_many(:topic_users).dependent(:destroy) }
+  it { should have_many(:topics) }
+  it { should have_many(:user_open_ids).dependent(:destroy) }
+  it { should have_many(:user_actions).dependent(:destroy) }
+  it { should have_many(:post_actions).dependent(:destroy) }
+  it { should have_many(:email_logs).dependent(:destroy) }
+  it { should have_many(:post_timings) }
+  it { should have_many(:topic_allowed_users).dependent(:destroy) }
+  it { should have_many(:topics_allowed) }
+  it { should have_many(:email_tokens).dependent(:destroy) }
+  it { should have_many(:views) }
+  it { should have_many(:user_visits).dependent(:destroy) }
+  it { should have_many(:invites).dependent(:destroy) }
+  it { should have_many(:topic_links).dependent(:destroy) }
+  it { should have_many(:uploads) }
+
+  it { should have_one(:facebook_user_info).dependent(:destroy) }
+  it { should have_one(:twitter_user_info).dependent(:destroy) }
+  it { should have_one(:github_user_info).dependent(:destroy) }
+  it { should have_one(:cas_user_info).dependent(:destroy) }
+  it { should have_one(:oauth2_user_info).dependent(:destroy) }
+  it { should have_one(:user_stat).dependent(:destroy) }
+  it { should belong_to(:approved_by) }
+
+  it { should have_many(:group_users).dependent(:destroy) }
+  it { should have_many(:groups) }
+  it { should have_many(:secure_categories) }
+
+  it { should have_one(:user_search_data).dependent(:destroy) }
+  it { should have_one(:api_key).dependent(:destroy) }
+
+  it { should belong_to(:uploaded_avatar).dependent(:destroy) }
 
   it { should validate_presence_of :username }
   it { should validate_presence_of :email }
-
-  context '#update_view_counts' do
-
-    let(:user) { Fabricate(:user) }
-
-    context 'topics_entered' do
-      context 'without any views' do
-        it "doesn't increase the user's topics_entered" do
-          lambda { User.update_view_counts; user.reload }.should_not change(user, :topics_entered)
-        end
-      end
-
-      context 'with a view' do
-        let(:topic) { Fabricate(:topic) }
-        let!(:view) { View.create_for(topic, '127.0.0.1', user) }
-
-        it "adds one to the topics entered" do
-          User.update_view_counts
-          user.reload
-          user.topics_entered.should == 1
-        end
-
-        it "won't record a second view as a different topic" do
-          View.create_for(topic, '127.0.0.1', user)
-          User.update_view_counts
-          user.reload
-          user.topics_entered.should == 1
-        end
-
-      end
-    end
-
-    context 'posts_read_count' do
-      context 'without any post timings' do
-        it "doesn't increase the user's posts_read_count" do
-          lambda { User.update_view_counts; user.reload }.should_not change(user, :posts_read_count)
-        end
-      end
-
-      context 'with a post timing' do
-        let!(:post) { Fabricate(:post) }
-        let!(:post_timings) do
-          PostTiming.record_timing(msecs: 1234, topic_id: post.topic_id, user_id: user.id, post_number: post.post_number)
-        end
-
-        it "increases posts_read_count" do
-          User.update_view_counts
-          user.reload
-          user.posts_read_count.should == 1
-        end
-      end
-    end
-  end
 
   context '.enqueue_welcome_message' do
     let(:user) { Fabricate(:user) }
@@ -256,13 +223,26 @@ describe User do
     it { should_not be_approved }
     its(:approved_at) { should be_blank }
     its(:approved_by_id) { should be_blank }
-    its(:email_digests) { should be_true }
     its(:email_private_messages) { should be_true }
     its(:email_direct ) { should be_true }
-    its(:time_read) { should == 0}
 
-    # Default to digests after one week
-    its(:digest_after_days) { should == 7 }
+    context 'digest emails' do
+      it 'defaults to digests every week' do
+        subject.email_digests.should be_true
+        subject.digest_after_days.should == 7
+      end
+
+      it 'uses default_digest_email_frequency' do
+        SiteSetting.stubs(:default_digest_email_frequency).returns(1)
+        subject.email_digests.should be_true
+        subject.digest_after_days.should == 1
+      end
+
+      it 'disables digests by default if site setting says so' do
+        SiteSetting.stubs(:default_digest_email_frequency).returns('')
+        subject.email_digests.should be_false
+      end
+    end
 
     context 'after_save' do
       before do
@@ -272,8 +252,21 @@ describe User do
       its(:email_tokens) { should be_present }
       its(:bio_cooked) { should be_present }
       its(:bio_summary) { should be_present }
-      its(:topics_entered) { should == 0 }
-      its(:posts_read_count) { should == 0 }
+    end
+  end
+
+  describe 'ip address validation' do
+    it 'validates ip_address for new users' do
+      u = Fabricate.build(:user)
+      AllowedIpAddressValidator.any_instance.expects(:validate_each).with(u, :ip_address, u.ip_address)
+      u.valid?
+    end
+
+    it 'does not validate ip_address when updating an existing user' do
+      u = Fabricate(:user)
+      u.ip_address = '87.123.23.11'
+      AllowedIpAddressValidator.any_instance.expects(:validate_each).never
+      u.valid?
     end
   end
 
@@ -641,7 +634,7 @@ describe User do
     end
 
     it "should have 0 for days_visited" do
-      user.days_visited.should == 0
+      user.user_stat.days_visited.should == 0
     end
 
     describe 'with no previous values' do
@@ -662,7 +655,7 @@ describe User do
 
       it "should have 0 for days_visited" do
         user.reload
-        user.days_visited.should == 1
+        user.user_stat.days_visited.should == 1
       end
 
       it "should log a user_visit with the date" do
@@ -683,7 +676,7 @@ describe User do
         end
 
         it "doesn't increase days_visited twice" do
-          user.days_visited.should == 1
+          user.user_stat.days_visited.should == 1
         end
 
       end
@@ -706,15 +699,6 @@ describe User do
       end
 
     end
-  end
-
-  describe '#create_for_email' do
-    let(:subject) { User.create_for_email('walter.white@email.com') }
-    it { should be_present }
-    its(:username) { should == 'walter_white' }
-    its(:name) { should == 'walter_white'}
-    it { should_not be_active }
-    its(:email) { should == 'walter.white@email.com' }
   end
 
   describe 'email_confirmed?' do
@@ -778,48 +762,40 @@ describe User do
     context "with a user that has a link in their bio" do
       let(:user) { Fabricate.build(:user, bio_raw: "im sissy and i love http://ponycorns.com") }
 
-      before do
-        # Let's cook that bio up good
+      it "includes the link as nofollow if the user is not new" do
         user.send(:cook)
-      end
-
-      it "includes the link if the user is not new" do
         expect(user.bio_excerpt).to eq("im sissy and i love <a href='http://ponycorns.com' rel='nofollow'>http://ponycorns.com</a>")
         expect(user.bio_processed).to eq("<p>im sissy and i love <a href=\"http://ponycorns.com\" rel=\"nofollow\">http://ponycorns.com</a></p>")
       end
 
       it "removes the link if the user is new" do
         user.trust_level = TrustLevel.levels[:newuser]
+        user.send(:cook)
         expect(user.bio_excerpt).to eq("im sissy and i love http://ponycorns.com")
         expect(user.bio_processed).to eq("<p>im sissy and i love http://ponycorns.com</p>")
       end
-    end
 
-  end
+      it "includes the link without nofollow if the user is trust level 3 or higher" do
+        user.trust_level = TrustLevel.levels[:leader]
+        user.send(:cook)
+        expect(user.bio_excerpt).to eq("im sissy and i love <a href='http://ponycorns.com'>http://ponycorns.com</a>")
+        expect(user.bio_processed).to eq("<p>im sissy and i love <a href=\"http://ponycorns.com\">http://ponycorns.com</a></p>")
+      end
 
-  describe 'update_time_read!' do
-    let(:user) { Fabricate(:user) }
+      it "removes nofollow from links in bio when trust level is increased" do
+        user.save
+        user.change_trust_level!(:leader)
+        expect(user.bio_excerpt).to eq("im sissy and i love <a href='http://ponycorns.com'>http://ponycorns.com</a>")
+        expect(user.bio_processed).to eq("<p>im sissy and i love <a href=\"http://ponycorns.com\">http://ponycorns.com</a></p>")
+      end
 
-    it 'makes no changes if nothing is cached' do
-      $redis.expects(:get).with("user-last-seen:#{user.id}").returns(nil)
-      user.update_time_read!
-      user.reload
-      user.time_read.should == 0
-    end
-
-    it 'makes a change if time read is below threshold' do
-      $redis.expects(:get).with("user-last-seen:#{user.id}").returns(Time.now - 10.0)
-      user.update_time_read!
-      user.reload
-      user.time_read.should == 10
-    end
-
-    it 'makes no change if time read is above threshold' do
-      t = Time.now - 1 - User::MAX_TIME_READ_DIFF
-      $redis.expects(:get).with("user-last-seen:#{user.id}").returns(t)
-      user.update_time_read!
-      user.reload
-      user.time_read.should == 0
+      it "adds nofollow to links in bio when trust level is decreased" do
+        user.trust_level = TrustLevel.levels[:leader]
+        user.save
+        user.change_trust_level!(:regular)
+        expect(user.bio_excerpt).to eq("im sissy and i love <a href='http://ponycorns.com' rel='nofollow'>http://ponycorns.com</a>")
+        expect(user.bio_processed).to eq("<p>im sissy and i love <a href=\"http://ponycorns.com\" rel=\"nofollow\">http://ponycorns.com</a></p>")
+      end
     end
 
   end
@@ -842,19 +818,214 @@ describe User do
     end
   end
 
-  describe '#find_by_username_or_email' do
-    it 'works correctly' do
-      bob = Fabricate(:user, username: 'bob', name: 'bobs', email: 'bob@bob.com')
-      bob2 = Fabricate(:user, username: 'bob2', name: 'bobs', email: 'bob2@bob.com')
+  describe '.find_by_username_or_email' do
+    it 'finds users' do
+      bob = Fabricate(:user, username: 'bob', email: 'bob@example.com')
+      found_user = User.find_by_username_or_email('Bob')
+      expect(found_user).to eq bob
 
-      expect(User.find_by_username_or_email('bob22@bob.com')).to eq(nil)
-      expect(User.find_by_username_or_email('bobs')).to eq(nil)
+      found_user = User.find_by_username_or_email('bob@Example.com')
+      expect(found_user).to eq bob
 
-      expect(User.find_by_username_or_email('bob2')).to eq(bob2)
-      expect(User.find_by_username_or_email('bob2@BOB.com')).to eq(bob2)
+      found_user = User.find_by_username_or_email('Bob@Example.com')
+      expect(found_user).to be_nil
 
-      expect(User.find_by_username_or_email('bob')).to eq(bob)
-      expect(User.find_by_username_or_email('bob@BOB.com')).to eq(bob)
+      found_user = User.find_by_username_or_email('bob1')
+      expect(found_user).to be_nil
+
+      found_user = User.find_by_email('bob@Example.com')
+      expect(found_user).to eq bob
+
+      found_user = User.find_by_email('bob')
+      expect(found_user).to be_nil
+
+      found_user = User.find_by_username('bOb')
+      expect(found_user).to eq bob
+    end
+
+  end
+
+  describe "#added_a_day_ago?" do
+    context "when user is more than a day old" do
+      subject(:user) { Fabricate(:user, created_at: Date.today - 2.days) }
+
+      it "returns false" do
+        expect(user).to_not be_added_a_day_ago
+      end
+    end
+
+    context "is less than a day old" do
+      subject(:user) { Fabricate(:user) }
+
+      it "returns true" do
+        expect(user).to be_added_a_day_ago
+      end
     end
   end
+
+  describe "#upload_avatar" do
+    let(:upload) { Fabricate(:upload) }
+    let(:user)   { Fabricate(:user) }
+
+    it "should update user's avatar" do
+      expect(user.upload_avatar(upload)).to be_true
+    end
+  end
+
+  describe 'api keys' do
+    let(:admin) { Fabricate(:admin) }
+    let(:other_admin) { Fabricate(:admin) }
+    let(:user) { Fabricate(:user) }
+
+    describe '.generate_api_key' do
+
+      it "generates an api key when none exists, and regenerates when it does" do
+        expect(user.api_key).to be_blank
+
+        # Generate a key
+        api_key = user.generate_api_key(admin)
+        expect(api_key.user).to eq(user)
+        expect(api_key.key).to be_present
+        expect(api_key.created_by).to eq(admin)
+
+        user.reload
+        expect(user.api_key).to eq(api_key)
+
+        # Regenerate a key. Keeps the same record, updates the key
+        new_key = user.generate_api_key(other_admin)
+        expect(new_key.id).to eq(api_key.id)
+        expect(new_key.key).to_not eq(api_key.key)
+        expect(new_key.created_by).to eq(other_admin)
+      end
+
+    end
+
+    describe '.revoke_api_key' do
+
+      it "revokes an api key when exists" do
+        expect(user.api_key).to be_blank
+
+        # Revoke nothing does nothing
+        user.revoke_api_key
+        user.reload
+        expect(user.api_key).to be_blank
+
+        # When a key is present it is removed
+        user.generate_api_key(admin)
+        user.reload
+        user.revoke_api_key
+        user.reload
+        expect(user.api_key).to be_blank
+      end
+
+    end
+
+  end
+
+  describe "posted too much in topic" do
+    let!(:user) { Fabricate(:user, trust_level: TrustLevel.levels[:newuser]) }
+    let!(:topic) { Fabricate(:post).topic }
+
+    before do
+      # To make testing easier, say 1 reply is too much
+      SiteSetting.stubs(:newuser_max_replies_per_topic).returns(1)
+    end
+
+    context "for a user who didn't create the topic" do
+      let!(:post) { Fabricate(:post, topic: topic, user: user) }
+
+      it "does not return true for staff" do
+        user.stubs(:staff?).returns(true)
+        user.posted_too_much_in_topic?(topic.id).should be_false
+      end
+
+      it "returns true when the user has posted too much" do
+        user.posted_too_much_in_topic?(topic.id).should be_true
+      end
+    end
+
+    it "returns false for a user who created the topic" do
+      topic_user = topic.user
+      topic_user.trust_level = TrustLevel.levels[:newuser]
+      topic.user.posted_too_much_in_topic?(topic.id).should be_false
+    end
+
+  end
+
+  describe "#find_email" do
+
+    let(:user) { Fabricate(:user, email: "bob@example.com") }
+
+    context "when email is exists in the email logs" do
+      before { user.stubs(:last_sent_email_address).returns("bob@lastemail.com") }
+
+      it "returns email from the logs" do
+        expect(user.find_email).to eq("bob@lastemail.com")
+      end
+    end
+
+    context "when email does not exist in the email logs" do
+      before { user.stubs(:last_sent_email_address).returns(nil) }
+
+      it "fetches the user's email" do
+        expect(user.find_email).to eq(user.email)
+      end
+    end
+  end
+
+  describe "#gravatar_template" do
+
+    it "returns a gravatar based template" do
+      User.gravatar_template("em@il.com").should == "//www.gravatar.com/avatar/6dc2fde946483a1d8a84b89345a1b638.png?s={size}&r=pg&d=identicon"
+    end
+
+  end
+
+  describe ".small_avatar_url" do
+
+    let(:user) { build(:user, use_uploaded_avatar: true, uploaded_avatar_template: "/uploaded/avatar/template/{size}.png") }
+
+    it "returns a 45-pixel-wide avatar" do
+      user.small_avatar_url.should == "//test.localhost/uploaded/avatar/template/45.png"
+    end
+
+  end
+
+  describe ".uploaded_avatar_path" do
+
+    let(:user) { build(:user, use_uploaded_avatar: true, uploaded_avatar_template: "/uploaded/avatar/template/{size}.png") }
+
+    it "returns nothing when uploaded avatars are not allowed" do
+      SiteSetting.expects(:allow_uploaded_avatars).returns(false)
+      user.uploaded_avatar_path.should be_nil
+    end
+
+    it "returns a schemaless avatar template" do
+      user.uploaded_avatar_path.should == "//test.localhost/uploaded/avatar/template/{size}.png"
+    end
+
+    it "returns a schemaless cdn-based avatar template" do
+      Rails.configuration.action_controller.stubs(:asset_host).returns("http://my.cdn.com")
+      user.uploaded_avatar_path.should == "//my.cdn.com/uploaded/avatar/template/{size}.png"
+    end
+
+  end
+
+  describe ".avatar_template" do
+
+    let(:user) { build(:user, email: "em@il.com") }
+
+    it "returns the uploaded_avatar_path by default" do
+      user.expects(:uploaded_avatar_path).returns("//discourse.org/uploaded/avatar.png")
+      user.avatar_template.should == "//discourse.org/uploaded/avatar.png"
+    end
+
+    it "returns the gravatar when no avatar has been uploaded" do
+      user.expects(:uploaded_avatar_path)
+      User.expects(:gravatar_template).with(user.email).returns("//gravatar.com/avatar.png")
+      user.avatar_template.should == "//gravatar.com/avatar.png"
+    end
+
+  end
+
 end

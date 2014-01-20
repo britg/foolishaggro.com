@@ -7,10 +7,6 @@ class PostCreator
 
   attr_reader :errors, :opts
 
-  def self.create(user,opts)
-    self.new(user,opts).create
-  end
-
   # Acceptable options:
   #
   #   raw                     - raw text of post
@@ -69,17 +65,27 @@ class PostCreator
       update_topic_stats
       update_user_counts
       publish
+      ensure_in_allowed_users if guardian.is_staff?
       @post.advance_draft_sequence
       @post.save_reply_relationships
     end
 
     if @spam
-      GroupMessage.create( Group[:moderators].name, :spam_post_blocked, {user: @user, limit_once_per: 24.hours} )
+      GroupMessage.create( Group[:moderators].name,
+                           :spam_post_blocked,
+                           { user: @user,
+                             limit_once_per: 24.hours,
+                             message_params: {domains: @post.linked_hosts.keys.join(', ')} } )
+    elsif @post && !@post.errors.present? && !@opts[:skip_validations]
+      SpamRulesEnforcer.enforce!(@post)
     end
+
+    track_latest_on_category
 
     enqueue_jobs
     @post
   end
+
 
   def self.create(user, opts)
     PostCreator.new(user, opts).create
@@ -90,6 +96,7 @@ class PostCreator
       post.reply_to_user_id ||= Post.select(:user_id).where(topic_id: post.topic_id, post_number: post.reply_to_post_number).first.try(:user_id)
     end
 
+    post.word_count = post.raw.scan(/\w+/).size
     post.post_number ||= Topic.next_post_number(post.topic_id, post.reply_to_post_number.present?)
 
     cooking_options = post.cooking_options || {}
@@ -104,6 +111,23 @@ class PostCreator
 
   protected
 
+  def track_latest_on_category
+    if @post && @post.errors.count == 0 && @topic && @topic.category_id
+      Category.where(id: @topic.category_id).update_all(latest_post_id: @post.id)
+      if @post.post_number == 1
+        Category.where(id: @topic.category_id).update_all(latest_topic_id: @topic.id)
+      end
+    end
+  end
+
+  def ensure_in_allowed_users
+    return unless @topic.private_message?
+
+    unless @topic.topic_allowed_users.where(user_id: @user.id).exists?
+      @topic.topic_allowed_users.create!(user_id: @user.id)
+    end
+  end
+
   def secure_group_ids(topic)
     @secure_group_ids ||= if topic.category && topic.category.read_restricted?
       topic.category.secure_group_ids
@@ -117,7 +141,6 @@ class PostCreator
   end
 
   def after_topic_create
-
     # Don't publish invisible topics
     return unless @topic.visible?
 
@@ -176,6 +199,7 @@ class PostCreator
     # Update attributes on the topic - featured users and last posted.
     attrs = {last_posted_at: @post.created_at, last_post_user_id: @post.user_id}
     attrs[:bumped_at] = @post.created_at unless @post.no_bump
+    attrs[:word_count] = (@topic.word_count || 0) + @post.word_count
     @topic.update_attributes(attrs)
   end
 
@@ -189,6 +213,7 @@ class PostCreator
       post.send("#{a}=", @opts[a]) if @opts[a].present?
     end
 
+    post.cook_method = @opts[:cook_method] if @opts[:cook_method].present?
     post.extract_quoted_post_numbers
     post.created_at = Time.zone.parse(@opts[:created_at].to_s) if @opts[:created_at].present?
     @post = post
@@ -211,9 +236,7 @@ class PostCreator
   end
 
   def store_unique_post_key
-    if SiteSetting.unique_posts_mins > 0
-      $redis.setex(@post.unique_post_key, SiteSetting.unique_posts_mins.minutes.to_i, "1")
-    end
+    @post.store_unique_post_key
   end
 
   def consider_clearing_flags
@@ -225,7 +248,8 @@ class PostCreator
   def update_user_counts
     # We don't count replies to your own topics
     if @user.id != @topic.user_id
-      @user.update_topic_reply_count
+      @user.user_stat.update_topic_reply_count
+      @user.user_stat.save!
     end
 
     @user.last_posted_at = @post.created_at

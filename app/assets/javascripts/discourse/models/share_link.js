@@ -13,9 +13,7 @@ Discourse.ShareLink = Discourse.Model.extend({
     return Discourse.ShareLink.urlFor(this.get('target'), this.get('link'), this.get('topicTitle'));
   }.property('target', 'link', 'topicTitle'),
 
-  title: function() {
-    return I18n.t("share." + this.get('target'));
-  }.property('target'),
+  title: Discourse.computed.i18n('target', 'share.%@'),
 
   iconClass: function() {
     return Discourse.ShareLink.iconClasses[this.get('target')];
@@ -61,10 +59,10 @@ Discourse.ShareLink.reopenClass({
   },
 
   iconClasses: {
-    twitter: 'icon-twitter',
-    facebook: 'icon-facebook-sign',
-    'google+': 'icon-google-plus',
-    email: 'icon-envelope'
+    twitter: 'fa-twitter',
+    facebook: 'fa-facebook-square',
+    'google+': 'fa-google-plus',
+    email: 'fa-envelope'
   },
 
   popupHeights: {

@@ -24,7 +24,7 @@ Discourse.Topic = Discourse.Model.extend({
     return a !== 'regular' && a !== 'private_message';
   }.property('archetype'),
 
-  convertArchetype: function(archetype) {
+  convertArchetype: function() {
     var a = this.get('archetype');
     if (a !== 'regular' && a !== 'private_message') {
       this.set('archetype', 'regular');
@@ -78,16 +78,26 @@ Discourse.Topic = Discourse.Model.extend({
     return this.urlForPostNumber(this.get('last_read_post_number'));
   }.property('url', 'last_read_post_number'),
 
+  lastUnreadUrl: function() {
+    var postNumber = Math.min(this.get('last_read_post_number') + 1, this.get('highest_post_number'));
+    return this.urlForPostNumber(postNumber);
+  }.property('url', 'last_read_post_number', 'highest_post_number'),
+
   lastPostUrl: function() {
     return this.urlForPostNumber(this.get('highest_post_number'));
   }.property('url', 'highest_post_number'),
+
+  lastPosterUrl: function() {
+    return Discourse.getURL("/users/") + this.get("last_poster.username");
+  }.property('last_poster'),
 
   // The amount of new posts to display. It might be different than what the server
   // tells us if we are still asynchronously flushing our "recently read" data.
   // So take what the browser has seen into consideration.
   displayNewPosts: function() {
-    var delta, highestSeen, result;
-    if (highestSeen = Discourse.Session.currentProp('highestSeenByTopic')[this.get('id')]) {
+    var delta, result;
+    var highestSeen = Discourse.Session.currentProp('highestSeenByTopic')[this.get('id')];
+    if (highestSeen) {
       delta = highestSeen - this.get('last_read_post_number');
       if (delta > 0) {
         result = this.get('new_posts') - delta;
@@ -136,19 +146,31 @@ Discourse.Topic = Discourse.Model.extend({
 
   toggleStatus: function(property) {
     this.toggleProperty(property);
+    if (property === 'closed' && this.get('closed')) {
+      this.set('details.auto_close_at', null);
+    }
     return Discourse.ajax(this.get('url') + "/status", {
       type: 'PUT',
       data: {status: property, enabled: this.get(property) ? 'true' : 'false' }
     });
   },
 
-  favoriteTooltipKey: function() {
-    return this.get('starred') ? 'favorite.help.unstar' : 'favorite.help.star';
+  starTooltipKey: function() {
+    return this.get('starred') ? 'starred.help.unstar' : 'starred.help.star';
   }.property('starred'),
 
-  favoriteTooltip: function() {
-    return I18n.t(this.get('favoriteTooltipKey'));
-  }.property('favoriteTooltipKey'),
+  starTooltip: function() {
+    return I18n.t(this.get('starTooltipKey'));
+  }.property('starTooltipKey'),
+
+  estimatedReadingTime: function() {
+    var wordCount = this.get('word_count');
+    if (!wordCount) return;
+
+    // Avg for 500 words per minute when you account for skimming
+    var minutes = Math.floor(wordCount / 500.0);
+    return minutes;
+  }.property('word_count'),
 
   toggleStar: function() {
     var topic = this;
@@ -186,11 +208,16 @@ Discourse.Topic = Discourse.Model.extend({
     });
   },
 
-  // Invite a user to this topic
-  inviteUser: function(user) {
+  /**
+    Invite a user to this topic
+
+    @method createInvite
+    @param {String} emailOrUsername The email or username of the user to be invited
+  **/
+  createInvite: function(emailOrUsername) {
     return Discourse.ajax("/t/" + this.get('id') + "/invite", {
       type: 'POST',
-      data: { user: user }
+      data: { user: emailOrUsername }
     });
   },
 
@@ -206,7 +233,7 @@ Discourse.Topic = Discourse.Model.extend({
   },
 
   // Recover this topic if deleted
-  recover: function(deleted_by) {
+  recover: function() {
     this.setProperties({
       deleted_at: null,
       deleted_by: null,
@@ -299,14 +326,13 @@ Discourse.Topic.reopenClass({
 
   // Load a topic, but accepts a set of filters
   find: function(topicId, opts) {
-    var data, promise, url;
-    url = Discourse.getURL("/t/") + topicId;
+    var url = Discourse.getURL("/t/") + topicId;
 
     if (opts.nearPost) {
       url += "/" + opts.nearPost;
     }
 
-    data = {};
+    var data = {};
     if (opts.postsAfter) {
       data.posts_after = opts.postsAfter;
     }
@@ -325,9 +351,9 @@ Discourse.Topic.reopenClass({
       });
     }
 
-    // Add the best of filter if we have it
-    if (opts.bestOf === true) {
-      data.best_of = true;
+    // Add the summary of filter if we have it
+    if (opts.summary === true) {
+      data.summary = true;
     }
 
     // Check the preload store. If not, load it via JSON
@@ -340,7 +366,7 @@ Discourse.Topic.reopenClass({
       data: {destination_topic_id: destinationTopicId}
     }).then(function (result) {
       if (result.success) return result;
-      promise.reject();
+      promise.reject(new Error("error merging topic"));
     });
     return promise;
   },
@@ -351,7 +377,7 @@ Discourse.Topic.reopenClass({
       data: opts
     }).then(function (result) {
       if (result.success) return result;
-      promise.reject();
+      promise.reject(new Error("error moving posts topic"));
     });
     return promise;
   }

@@ -44,6 +44,10 @@ class UserNotifications < ActionMailer::Base
     # Don't send email unless there is content in it
     if @featured_topics.present?
       @featured_topics, @new_topics = @featured_topics[0..4], @featured_topics[5..-1]
+
+      # Sort the new topics by score
+      @new_topics.sort! {|a, b| (b.score || 0) - (a.score || 0) } if @new_topics.present?
+
       @markdown_linker = MarkdownLinker.new(Discourse.base_url)
 
       build_email user.email,
@@ -109,11 +113,20 @@ class UserNotifications < ActionMailer::Base
     notification_type = opts[:notification_type] || Notification.types[@notification.notification_type].to_s
 
     context = ""
+    tu = TopicUser.get(@post.topic_id, user)
+
     context_posts = Post.where(topic_id: @post.topic_id)
                         .where("post_number < ?", @post.post_number)
                         .where(user_deleted: false)
                         .order('created_at desc')
                         .limit(SiteSetting.email_posts_context)
+
+    if tu && tu.last_emailed_post_number
+      context_posts = context_posts.where("post_number > ?", tu.last_emailed_post_number)
+    end
+
+    # make .present? cheaper
+    context_posts = context_posts.to_a
 
     if context_posts.present?
       context << "---\n*#{I18n.t('user_notifications.previous_discussion')}*\n"
@@ -150,8 +163,10 @@ class UserNotifications < ActionMailer::Base
 
     # If we have a display name, change the from address
     if username.present?
-      email_opts[:from_alias] = I18n.t(:via, username: username, site_name: SiteSetting.title)
+      email_opts[:from_alias] = username
     end
+
+    TopicUser.change(user.id, @post.topic_id, last_emailed_post_number: @post.post_number)
 
     build_email(user.email, email_opts)
   end

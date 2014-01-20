@@ -48,7 +48,7 @@ If you have a mail server responsible for handling the egress of email from your
 Install necessary packages:
 
     # Run these commands as your normal login (e.g. "michael")
-    sudo apt-get -y install build-essential libssl-dev libyaml-dev git libtool libxslt-dev libxml2-dev libpq-dev gawk curl pngcrush python-software-properties
+    sudo apt-get -y install build-essential libssl-dev libyaml-dev git libtool libxslt-dev libxml2-dev libpq-dev gawk curl pngcrush imagemagick python-software-properties
 
     # If you're on Ubuntu >= 12.10, change:
     # python-software-properties to software-properties-common
@@ -123,21 +123,17 @@ Install RVM
     # As 'discourse'
     # Install RVM
     \curl -s -S -L https://get.rvm.io | bash -s stable
-    . ~/.bash_profile
-
-    # rvm added shell initialization code to ~/.bash_profile,
-    # move it to ~/.profile instead
-    cat ~/.bash_profile >> ~/.profile
-    rm ~/.bash_profile
+    . ~/.rvm/scripts/rvm
 
     # Install necessary packages for building ruby (this will only work if
     # you've given discourse sudo permissions, which is *not* the default)
     # rvm requirements
 
-    # If discourse does not have sudo permissions (likely the case), run:
+    # NOTE: rvm will tell you which packages you (or your sysadmin) need
+    # to install during this step. As discourse does not have sudo 
+    # permissions (likely the case), run:
     rvm --autolibs=read-fail requirements
-    # and rvm will tell you which packages you (or your sysadmin) need
-    # to install before it can proceed. Do that and then resume next:
+    # repeat until it fully executes 
 
 Continue with Discourse installation
 
@@ -167,38 +163,25 @@ Configure Discourse:
 
     # Run these commands as the discourse user
     cd /var/www/discourse/config
-    cp database.yml.production-sample database.yml
-    cp redis.yml.sample redis.yml
+    cp discourse_quickstart.conf discourse.conf
     cp discourse.pill.sample discourse.pill
-    cp environments/production.rb.sample environments/production.rb
 
-Edit /var/www/discourse/config/database.yml
+Editing /var/www/discourse/config/discourse.conf:
 
-- change production database name if appropriate
+Database/Hostname:
 - change database username/password if appropriate
-- if you are hosting multiple Discourse forums on the same server (multisite), set `db_id`
-- change `host_names` to the name you'll use to access the discourse site, e.g. "forum.example.com"
+- change `hostname` to the name you'll use to access the discourse site, e.g. "forum.example.com"
 
-Edit /var/www/discourse/config/redis.yml
-
+Redis:
 - no changes if this is the only application using redis, but have a look
 
-Edit /var/www/discourse/config/discourse.pill
+E-mail:
+- browse through all the settings and be sure to add your mail server SMTP settings so outgoing mail can be sent (we recommend [Mandrill](https://mandrillapp.com))
+- If your users will come from "internal" [private unroutable IPs](https://en.wikipedia.org/wiki/Private_network) like 10.x.x.x or 192.168.x.x please [see this topic](http://meta.discourse.org/t/all-of-my-internal-users-show-as-coming-from-127-0-0-1/6607).
 
+Editing: /var/www/discourse/config/discourse.pill
 - change application name from 'discourse' if necessary
 - Ensure appropriate Bluepill.application line is uncommented
-- search for "host to run on" and change to current hostname
-
-Edit /var/www/discourse/config/initializers/secret_token.rb
-
-- uncomment secret_token line
-- replace SET_SECRET_HERE with the output from 'RAILS_ENV=production rake secret' command run from the discourse directory (`/var/www/discourse`)
-- delete the lines below as per instructions in the file
-
-Edit /var/www/discourse/config/environments/production.rb
-- browse througn all the settings
-- be sure to add your mail server SMTP settings so outgoing mail can be sent (we recommend [Mandrill](https://mandrillapp.com))
-- If your users will come from "internal" [private unroutable IPs](https://en.wikipedia.org/wiki/Private_network) like 10.x.x.x or 192.168.x.x please [see this topic](http://meta.discourse.org/t/all-of-my-internal-users-show-as-coming-from-127-0-0-1/6607).
 
 Initialize the database:
 
@@ -206,8 +189,8 @@ Initialize the database:
     # The database name here should match the production one in database.yml
     cd /var/www/discourse
     createdb discourse_prod
-    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production rake db:migrate
-    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production rake assets:precompile
+    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production bundle exec rake db:migrate
+    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production bundle exec rake assets:precompile
 
 Not english? Set the default language as appropriate:
 
@@ -238,6 +221,7 @@ site:
 Edit /etc/nginx/conf.d/discourse.conf
 
 - edit `server_name`. Example: `server_name cain.discourse.org test.cain.discourse.org;`
+- change socket count depending on your NUM_WEB count
 - change socket paths if discourse is installed to a different location
 - modify root location if discourse is installed to a different location
 
@@ -275,7 +259,14 @@ Add the following lines:
     # Disabled for now - log rotation isn't *quite* complete
     #0 0 * * * /usr/sbin/logrotate /var/www/discourse/config/logrotate.conf
 
+## Email setup
+
+IMPORTANT: Discourse relies heavily on email. If your email configuration is not correct, you will effectively have a broken forum.
+Please, head over to our [Mail Setup Guide](https://github.com/discourse/discourse/blob/master/docs/INSTALL-email.md) to find out more information on how to properly setup emails.
+
 Congratulations! You've got Discourse installed and running!
+
+## Administrator account
 
 Now make yourself an administrator account. Browse to your discourse instance
 and create an account by logging in normally, then run the commands:
@@ -293,7 +284,7 @@ and create an account by logging in normally, then run the commands:
 
     # Mark yourself as the 'system user':
     # (in rails console)
-    > SiteSetting.system_username = me.username
+    > SiteSetting.site_contact_username = me.username
 
 At this point we recommend you start going through the various items in the
 [Discourse Admin Quick Start Guide](https://github.com/discourse/discourse/wiki/The-Discourse-Admin-Quick-Start-Guide)
@@ -334,8 +325,8 @@ The corresponding site setting is:
     # "Check sample configuration files for new settings"
     #
     bundle install --without test --deployment
-    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production rake db:migrate
-    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production rake assets:precompile
+    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production bundle exec rake db:migrate
+    RUBY_GC_MALLOC_LIMIT=90000000 RAILS_ENV=production bundle exec rake assets:precompile
     # restart bluepill
     crontab -l
     # Here, run the command to start bluepill.
@@ -347,9 +338,7 @@ Check the sample configuration files provided in the repo with the ones being us
 
     # Run these commands as the discourse user
     cd /var/www/discourse
-    diff -u config/discourse.pill.sample config/discourse.pill
-    diff -u config/nginx.sample.conf /etc/nginx/conf.d/discourse.conf
-    diff -u config/environments/production.rb.sample config/environments/production.rb
+    diff -u config/discourse_defaults.conf config/discourse.conf
 
 #### Example 1
 

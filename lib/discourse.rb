@@ -1,4 +1,6 @@
 require 'cache'
+require_dependency 'plugin/instance'
+require_dependency 'auth/default_current_user_provider'
 
 module Discourse
 
@@ -20,18 +22,65 @@ module Discourse
   # When a setting is missing
   class SiteSettingMissing < Exception; end
 
+  # When ImageMagick is missing
+  class ImageMagickMissing < Exception; end
+
+  class InvalidPost < Exception; end
+
   # Cross site request forgery
   class CSRF < Exception; end
 
+  def self.filters
+    @filters ||= [:latest, :unread, :new, :starred, :read, :posted]
+  end
+
+  def self.anonymous_filters
+    @anonymous_filters ||= [:latest]
+  end
+
+  def self.logged_in_filters
+    @logged_in_filters ||= Discourse.filters - Discourse.anonymous_filters
+  end
+
+  def self.top_menu_items
+    @top_menu_items ||= Discourse.filters + [:category, :categories, :top]
+  end
+
+  def self.anonymous_top_menu_items
+    @anonymous_top_menu_items ||= Discourse.anonymous_filters + [:category, :categories, :top]
+  end
+
   def self.activate_plugins!
-    @plugins = Plugin.find_all("#{Rails.root}/plugins")
-    @plugins.each do |plugin|
-      plugin.activate!
-    end
+    @plugins = Plugin::Instance.find_all("#{Rails.root}/plugins")
+    @plugins.each { |plugin| plugin.activate! }
   end
 
   def self.plugins
     @plugins
+  end
+
+  def self.assets_digest
+    @assets_digest ||= begin
+      digest = Digest::MD5.hexdigest(ActionView::Base.assets_manifest.assets.values.sort.join)
+
+      channel = "/global/asset-version"
+      message = MessageBus.last_message(channel)
+
+      unless message && message.data == digest
+        MessageBus.publish channel, digest
+      end
+      digest
+    end
+  end
+
+  def self.authenticators
+    # TODO: perhaps we don't need auth providers and authenticators maybe one object is enough
+
+    # NOTE: this bypasses the site settings and gives a list of everything, we need to register every middleware
+    #  for the cases of multisite
+    # In future we may change it so we don't include them all for cases where we are not a multisite, but we would
+    #  require a restart after site settings change
+    Users::OmniauthCallbacksController::BUILTIN_AUTH + auth_providers.map(&:authenticator)
   end
 
   def self.auth_providers
@@ -60,11 +109,11 @@ module Discourse
     end
   end
 
-  def self.base_uri default_value=""
+  def self.base_uri(default_value = "")
     if !ActionController::Base.config.relative_url_root.blank?
-      return ActionController::Base.config.relative_url_root
+      ActionController::Base.config.relative_url_root
     else
-      return default_value
+      default_value
     end
   end
 
@@ -72,7 +121,7 @@ module Discourse
     default_port = 80
     protocol = "http"
 
-    if SiteSetting.use_ssl?
+    if SiteSetting.use_https?
       protocol = "https"
       default_port = 443
     end
@@ -117,21 +166,36 @@ module Discourse
     end
   end
 
-  # Either returns the system_username user or the first admin.
+  # Either returns the site_contact_username user or the first admin.
+  def self.site_contact_user
+    user = User.where(username_lower: SiteSetting.site_contact_username).first if SiteSetting.site_contact_username.present?
+    user ||= User.admins.real.order(:id).first
+  end
+
   def self.system_user
-    user = User.where(username_lower: SiteSetting.system_username).first if SiteSetting.system_username.present?
-    user = User.admins.order(:id).first if user.blank?
-    user
+    User.where(id: -1).first
   end
 
   def self.store
     if SiteSetting.enable_s3_uploads?
       @s3_store_loaded ||= require 'file_store/s3_store'
-      S3Store.new
+      FileStore::S3Store.new
     else
       @local_store_loaded ||= require 'file_store/local_store'
-      LocalStore.new
+      FileStore::LocalStore.new
     end
+  end
+
+  def self.current_user_provider
+    @current_user_provider || Auth::DefaultCurrentUserProvider
+  end
+
+  def self.current_user_provider=(val)
+    @current_user_provider = val
+  end
+
+  def self.asset_host
+    Rails.configuration.action_controller.asset_host
   end
 
 private

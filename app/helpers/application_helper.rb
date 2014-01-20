@@ -4,6 +4,7 @@ require_dependency 'guardian'
 require_dependency 'unread'
 require_dependency 'age_words'
 require_dependency 'configurable_urls'
+require_dependency 'mobile_detection'
 
 module ApplicationHelper
   include CurrentUser
@@ -19,9 +20,16 @@ module ApplicationHelper
     end
   end
 
+  def html_classes
+    "#{mobile_view? ? 'mobile-view' : 'desktop-view'} #{mobile_device? ? 'mobile-device' : 'not-mobile-device'}"
+  end
+
   def escape_unicode(javascript)
     if javascript
-      javascript.gsub(/\342\200\250/u, '&#x2028;').gsub(/(<\/)/u, '\u003C/').html_safe
+      javascript = javascript.scrub
+      javascript.gsub!(/\342\200\250/u, '&#x2028;')
+      javascript.gsub!(/(<\/)/u, '\u003C/')
+      javascript.html_safe
     else
       ''
     end
@@ -98,6 +106,20 @@ module ApplicationHelper
   end
 
   def login_path
-    return "#{Discourse::base_uri}/login"
+    "#{Discourse::base_uri}/login"
   end
+
+  def mobile_view?
+    MobileDetection.resolve_mobile_view!(request.user_agent,params,session)
+  end
+
+  def mobile_device?
+    MobileDetection.mobile_device?(request.user_agent)
+  end
+
+  def customization_disabled?
+    controller.class.name.split("::").first == "Admin" || session[:disable_customization]
+  end
+
+
 end

@@ -7,11 +7,20 @@
   @module Discourse
 **/
 Discourse.TopicRoute = Discourse.Route.extend({
-
   redirect: function() { Discourse.redirectIfLoginRequired(this); },
 
-  events: {
+  actions: {
     // Modals that can pop up within a topic
+    showPosterExpansion: function(post) {
+      this.controllerFor('posterExpansion').show(post);
+    },
+
+    composePrivateMessage: function(user) {
+      var self = this;
+      this.transitionTo('userActivity', user).then(function () {
+        self.controllerFor('userActivity').send('composePrivateMessage');
+      });
+    },
 
     showFlags: function(post) {
       Discourse.Route.showModal(this, 'flag', post);
@@ -25,12 +34,7 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
     showInvite: function() {
       Discourse.Route.showModal(this, 'invite', this.modelFor('topic'));
-      this.controllerFor('invite').setProperties({
-        email: null,
-        error: false,
-        saving: false,
-        finished: false
-      });
+      this.controllerFor('invite').reset();
     },
 
     showPrivateInvite: function() {
@@ -45,7 +49,7 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
     showHistory: function(post) {
       Discourse.Route.showModal(this, 'history', post);
-      this.controllerFor('history').refresh();
+      this.controllerFor('history').refresh(post.get("id"), post.get("version"));
       this.controllerFor('modal').set('modalClass', 'history-modal');
     },
 
@@ -55,7 +59,22 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
     splitTopic: function() {
       Discourse.Route.showModal(this, 'splitTopic', this.modelFor('topic'));
-    }
+    },
+
+    // Use replaceState to update the URL once it changes
+    postChangedRoute: Discourse.debounce(function(currentPost) {
+      // do nothing if we are transitioning to another route
+      if (this.get("isTransitioning")) { return; }
+
+      var topic = this.modelFor('topic');
+      if (topic && currentPost) {
+        var postUrl = topic.get('url');
+        if (currentPost > 1) { postUrl += "/" + currentPost; }
+        Discourse.URL.replaceState(postUrl);
+      }
+    }, 150),
+
+    willTransition: function() { this.set("isTransitioning", true); }
 
   },
 
@@ -69,6 +88,7 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
   activate: function() {
     this._super();
+    this.set("isTransitioning", false);
 
     var topic = this.modelFor('topic');
     Discourse.Session.currentProp('lastTopicIdViewed', parseInt(topic.get('id'), 10));
@@ -80,9 +100,10 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
     // Clear the search context
     this.controllerFor('search').set('searchContext', null);
+    this.controllerFor('posterExpansion').set('visible', false);
 
-    var topicController = this.controllerFor('topic');
-    var postStream = topicController.get('postStream');
+    var topicController = this.controllerFor('topic'),
+        postStream = topicController.get('postStream');
     postStream.cancelFilter();
 
     topicController.set('multiSelect', false);
@@ -101,12 +122,25 @@ Discourse.TopicRoute = Discourse.Route.extend({
   },
 
   setupController: function(controller, model) {
-    controller.set('model', model);
+    if (Discourse.Mobile.mobileView) {
+      // close the dropdowns on mobile
+      $('.d-dropdown').hide();
+      $('header ul.icons li').removeClass('active');
+      $('[data-toggle="dropdown"]').parent().removeClass('open');
+    }
+
+    controller.setProperties({
+      model: model,
+      editingTopic: false
+    });
+
+    Discourse.TopicRoute.trigger('setupTopicController', this);
 
     this.controllerFor('header').setProperties({
       topic: model,
       showExtraInfo: false
     });
+
     this.controllerFor('composer').set('topic', model);
     Discourse.TopicTrackingState.current().trackIncoming('all');
     controller.subscribe();
@@ -117,4 +151,4 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
 });
 
-
+RSVP.EventTarget.mixin(Discourse.TopicRoute);

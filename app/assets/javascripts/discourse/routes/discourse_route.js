@@ -9,11 +9,14 @@
 Discourse.Route = Em.Route.extend({
 
   /**
-    Called every time we enter a route on Discourse.
+    NOT called every time we enter a route on Discourse.
+    Only called the FIRST time we enter a route.
+    So, when going from one topic to another, activate will only be called on the
+    TopicRoute for the first topic.
 
     @method activate
   **/
-  activate: function(router, context) {
+  activate: function() {
     this._super();
 
     // Close mini profiler
@@ -29,7 +32,7 @@ Discourse.Route = Em.Route.extend({
     Discourse.set('notifyCount',0);
 
     var hideDropDownFunction = $('html').data('hide-dropdown');
-    if (hideDropDownFunction) return hideDropDownFunction();
+    if (hideDropDownFunction) { hideDropDownFunction(); }
   }
 
 });

@@ -13,15 +13,23 @@ module Email
     def format_basic
       @fragment.css('img').each do |img|
 
-        if img['src'] =~ /\/assets\/emoji\//
+        next if img['class'] == 'site-logo'
+
+        if img['class'] == "emoji" || img['src'] =~ /plugins\/emoji/
           img['width'] = 20
           img['height'] = 20
         else
           img['style'] = "max-width: 694px;"
         end
 
+        # ensure all urls are absolute
         if img['src'] =~ /^\/[^\/]/
           img['src'] = "#{Discourse.base_url}#{img['src']}"
+        end
+
+        # ensure no schemaless urls
+        if img['src'] && img['src'].starts_with?("//")
+          img['src'] = "http:" + img['src']
         end
       end
     end
@@ -42,9 +50,7 @@ module Email
       reset_tables
     end
 
-
     def format_html
-
       style('h3', 'margin: 15px 0 20px 0; border-bottom: 1px solid #ddd;')
       style('hr', 'background-color: #ddd; height: 1px; border: 1px;')
       style('a',' text-decoration: none; font-weight: bold; color: #006699;')
@@ -53,12 +59,10 @@ module Email
       style('div.digest-post', 'margin-left: 15px; margin-top: 20px; max-width: 694px;')
       style('div.digest-post h1', 'font-size: 20px;')
       style('span.footer-notice', 'color:#666; font-size:80%')
-
-      @fragment.css('pre').each do |pre|
-        pre.replace(pre.text)
-      end
-
-
+      style('span.post-count', 'margin: 0 5px; color: #777;')
+      style('pre', 'word-wrap: break-word; max-width: 694px;')
+      style('code', 'background-color: #f1f1ff; padding: 2px 5px;')
+      style('pre code', 'display: block; background-color: #f1f1ff; padding: 5px;')
     end
 
     def to_html

@@ -19,6 +19,57 @@ it:
             kb: KB
             mb: MB
             tb: TB
+    dates:
+      tiny:
+        half_a_minute: "< 1m"
+        less_than_x_seconds:
+          one:   "< 1s"
+          other: "< %{count}s"
+        x_seconds:
+          one:   "1s"
+          other: "%{count}s"
+        less_than_x_minutes:
+          one:   "< 1m"
+          other: "< %{count}m"
+        x_minutes:
+          one:   "1m"
+          other: "%{count}m"
+        about_x_hours:
+          one:   "1o"
+          other: "%{count}o"
+        x_days:
+          one:   "1g"
+          other: "%{count}g"
+        about_x_years:
+          one:   "1a"
+          other: "%{count}a"
+        over_x_years:
+          one:   "> 1a"
+          other: "> %{count}a"
+        almost_x_years:
+          one:   "1a"
+          other: "%{count}a"
+        date_year: "D MMM 'YY"
+      medium:
+        x_minutes:
+          one: "1 minuto"
+          other: "%{count} minuti"
+        x_hours:
+          one: "1 ora"
+          other: "%{count} ore"
+        x_days:
+          one: "1 giorno"
+          other: "%{count} giorni"
+      medium_with_ago:
+        x_minutes:
+          one: "1 minuto fa"
+          other: "%{count} minuti fa"
+        x_hours:
+          one: "1 ora fa"
+          other: "%{count} ore fa"
+        x_days:
+          one: "1 giorno fa"
+          other: "%{count} giorni fa"
     share:
       topic: 'condividi un link a questo topic'
       post: 'condividi un link a questo post'
@@ -34,6 +85,7 @@ it:
     yes_value: "Si"
     of_value: "di"
     generic_error: "Spiacenti, si è verificato un errore."
+    generic_error_with_reason: "Si è verificato un errore: %{error}"
     log_in: "Log In"
     age: "Età"
     last_post: "Ultimo Post"
@@ -42,10 +94,22 @@ it:
     show_more: "mostra tutto"
     links: Link
     faq: "FAQ"
+    privacy_policy: "Policy sulla privacy"
+    mobile_view: "Visualizzazione mobile"
+    desktop_view: "Visualizzazione desktop"
     you: "Tu"
     or: "o"
     now: "adesso"
     read_more: 'continua a leggere'
+    more: "Più"
+    less: "Meno"
+    never: "mai"
+    daily: "ogni giorno"
+    weekly: "ogni settimana"
+    every_two_weeks: "ogni due settimane"
+    character_count:
+      one: "{{count}} carattere"
+      other: "{{count}} caratteri"
 
     in_n_seconds:
       one: "in 1 secondo"
@@ -78,6 +142,10 @@ it:
     saving: "Salvataggio..."
     saved: "Salvato!"
 
+    upload: "Carica"
+    uploading: "Caricando..."
+    uploaded: "Caricato!"
+
     choose_topic:
       none_found: "Nessun topic trovato."
       title:
@@ -94,7 +162,7 @@ it:
 
       user_mentioned_user: "<a href='{{user1Url}}'>{{user}}</a> ha menzionato <a href='{{user2Url}}'>{{another_user}}</a>"
       user_mentioned_you: "<a href='{{user1Url}}'>{{user}}</a> ha menzionato <a href='{{user2Url}}'>te</a>"
-      you_mentioned_user: "<a href='{{user1Url}}'>Tu</a> hai menzionato <a href='{{user2Url}}'>{{user}}</a>"
+      you_mentioned_user: "<a href='{{user1Url}}'>Tu</a> hai menzionato <a href='{{user2Url}}'>{{another_user}}</a>"
 
       posted_by_user: "Pubblicato da <a href='{{userUrl}}'>{{user}}</a>"
       posted_by_you: "Pubblicato da <a href='{{userUrl}}'>te</a>"
@@ -115,9 +183,20 @@ it:
       "12": "Oggetti inviati"
       "13": "Inbox"
 
+    categories:
+      all: "tutte le categorie"
+      only_category: "solo {{categoryName}}"
+      category: "Categoria"
+      posts: "Post"
+      topics: "Topic"
+      latest: "Ultimi"
+      latest_by: "ultimi da"
+      toggle_ordering: "alterna l'ordine"
+      subcategories: "Sottocategorie:"
+
     user:
+      said: "{{username}} ha detto:"
       profile: Profilo
-      title: "Utente"
       mute: Ignora
       edit: Modifica Preferenze
       download_archive: "scarica archivio dei miei post"
@@ -128,31 +207,50 @@ it:
       bio: "Su di me"
       invited_by: "Invitato Da"
       trust_level: "Trust Level"
+      notifications: "Notifiche"
+      dynamic_favicon: "Mostra le notifiche dei messaggi in arrivo nella favicon"
       external_links_in_new_tab: "Apri tutti i link esterni in una nuova tab"
       enable_quoting: "Abilita risposta con citazione su testo selezionato"
-
+      change: "cambia"
       moderator: "{{user}} è un moderatore"
       admin: "{{user}} è un amministratore"
+      deleted: "(cancellato)"
+
+      messages:
+        all: "Tutti"
+        mine: "Miei"
+        unread: "Non letti"
 
       change_password:
-        action: "cambia"
         success: "(email inviata)"
         in_progress: "(invio email)"
         error: "(errore)"
+        action: "Invia una email per il reset della password"
+
+      change_about:
+        title: "Modifica le informazioni su di me"
 
       change_username:
-        action: "cambia"
         title: "Cambia Username"
         confirm: "Possono esserci consequenze modificando il tuo username. Sei veramente sicuro di volerlo fare?"
         taken: "Spiacenti, questo username è già utilizzato."
         error: "Si è verificato un errore modificando il tuo username."
         invalid: "Questo username non è valido. Deve contenere solo lettere e numeri."
+
       change_email:
-        action: 'cambia'
         title: "Cambia Email"
         taken: "Spiacenti, questa email non è disponibile."
         error: "Si è verificato un errore modificando la tua email. Forse l'indirizzo è già utilizzato?"
         success: "Abbiamo inviato una email a questo indirizzo. Segui le istruzioni per confermare la modifica."
+
+      change_avatar:
+        title: "Cambia il tuo avatar"
+        gravatar: "<a href='//gravatar.com/emails' target='_blank'>Gravatar</a>, based on"
+        gravatar_title: "Cambia il tuo avatar su Gravatar"
+        uploaded_avatar: "Immagine personalizzata"
+        uploaded_avatar_empty: "Aggiungi un'immagine personalizzata"
+        upload_title: "Carica la tua immagine"
+        image_is_not_a_square: "Attenzione: abbiamo tagliato la tua immagine perché non è quadrata."
 
       email:
         title: "Email"
@@ -198,7 +296,8 @@ it:
 
       email_direct: "Ricevi un'email quando qualcuno ti cita, risponde ad un tuo post oppure menziona il tuo @username"
       email_private_messages: "Ricevi un'email quando qualcuno ti invia un messaggio privato"
-
+      email_always: "Recevi email di notifica e mail riassuntive anche se attivo sul sito"
+      
       other_settings: "Altro"
 
       new_topic_duration:
@@ -224,6 +323,7 @@ it:
           other: "dopo {{count}} minuti"
 
       invited:
+        search: "scrivi per cercare tra gli inviti..."
         title: "Inviti"
         user: "Utenti Invitati"
         none: "{{username}} non ha invitato alcun utente al sito."
@@ -237,6 +337,7 @@ it:
         time_read: "Tempo di Lettura"
         days_visited: "Giornate di visita"
         account_age_days: "Età account in giorni"
+        create: "Invita Amici a questo sito"
 
       password:
         title: "Password"
@@ -247,8 +348,8 @@ it:
         title: "Ultimo indirizzo IP"
       avatar:
         title: "Avatar"
-        instructions:
-          gravatar: "Usiamo <a href='https://gravatar.com' target='_blank'>Gravatar</a> per gli avatar basandoci sulla tua email"
+      title:
+        title: "Titolo"
 
       filters:
         all: "Tutti"
@@ -275,12 +376,11 @@ it:
     unmute: Annulla ignora
     last_post: Ultimo post
 
-    best_of:
-      title: "Best Of"
-      enabled_description: Stai guardando il "Best Of" di questo topic.
+    summary:
+      enabled_description: Stai guardando il "Summary" di questo topic.
       description: "Ci sono <b>{{count}}</b> post in questo topic. Sono tanti! Vuoi risparmiare tempo leggendo solo i post con più interazioni e risposte?"
-      enable: 'Passa a "Best Of"'
-      disable: 'Annulla "Best Of"'
+      enable: 'Passa a "Summary"'
+      disable: 'Annulla "Summary"'
 
     private_message_info:
       title: "Conversazione Privata"
@@ -317,6 +417,7 @@ it:
       authenticating: "Autenticazione in corso..."
       awaiting_confirmation: "Il tuo account è in attesa di attivazione, usa il link Password Dimenticata per ricevere una nuova mail di attivazione."
       awaiting_approval: "Il tuo account non è ancora stato approvato da un moderatore. Riceverai un'email non appena verrà approvato."
+      requires_invite: "Mi dispiace, l'accesso a questi forum è solo per invito."
       not_activated: "Non puoi ancora effettuare il log in. Ti abbiamo mandato un'email con il link di attivazione all'indirizzo <b>{{sentTo}}</b>. Per favore segui le istruzioni in quell'email per attivare il tuo account."
       resend_activation_email: "Clicca qui per ricevere nuovamente la mail di attivazione."
       sent_activation_email_again: "Ti abbiamo mandato un altro link di attivazione all'indirizzo<b>{{currentEmail}}</b>. Potrebbe volerci qualche minuto prima che arrivi; controlla anche fra lo spam."
@@ -329,6 +430,9 @@ it:
       facebook:
         title: "con Facebook"
         message: "Autenticazione con Facebook (l'apertura di pop up deve essere permessa dal browser)"
+      cas:
+        title: "con CAS"
+        message: "Autenticazione con CAS (l'apertura di pop up deve essere permessa dal browser)"
       yahoo:
         title: "con Yahoo"
         message: "Autenticazione con Yahoo (l'apertura di pop up deve essere permessa dal browser)"
@@ -351,6 +455,14 @@ it:
         need_more_for_title: "ancora {{n}} caratteri per il titolo"
         need_more_for_reply: "ancora {{n}} caratteri per il post"
 
+      error:
+        title_missing: "Il titolo è obbligatorio."
+        title_too_short: "Il titolo deve essere di almeno {{min}} caratteri."
+        title_too_long: "Il titolo deve essere di al più {{max}} caratteri."
+        post_missing: "Il messaggio non può essere vuoto."
+        post_length: "Il messaggio deve essere di almeno {{min}} caratteri."
+        category_missing: "Devi scegliere una categoria."
+
       save_edit: "Salva Modifica"
       reply_original: "Rispondi al topic originale"
       reply_here: "Rispondi Qui"
@@ -366,7 +478,7 @@ it:
       saving: "Salvataggio..."
       saved: "Salvato!"
       saved_draft: "Hai una bozza di un post in corso. Clicca questo box per riprendere la scrittura."
-      uploading: "Uploading..."
+      uploading: "Caricamento..."
       show_preview: 'mostra anteprima &raquo;'
       hide_preview: '&laquo; nascondi anteprima'
 
@@ -405,28 +517,27 @@ it:
       none: "Non hai notifiche in questo momento."
       more: "guarda notifiche più vecchie"
       mentioned: "<span title='menzionato' class='icon'>@</span> {{username}} {{link}}"
-      quoted: "<i title='citato' class='icon icon-quote-right'></i> {{username}} {{link}}"
-      replied: "<i title='risposto' class='icon icon-reply'></i> {{username}} {{link}}"
-      posted: "<i title='risposto' class='icon icon-reply'></i> {{username}} {{link}}"
-      edited: "<i title='modificato' class='icon icon-pencil'></i> {{username}} {{link}}"
-      liked: "<i title='liked' class='icon icon-heart'></i> {{username}} {{link}}"
-      private_message: "<i class='icon icon-envelope-alt' title='messaggio privato'></i> {{username}} ti ha mandato un messaggio privato: {{link}}"
+      quoted: "<i title='citato' class='fa fa-quote-right'></i> {{username}} {{link}}"
+      replied: "<i title='risposto' class='fa fa-reply'></i> {{username}} {{link}}"
+      posted: "<i title='risposto' class='fa fa-reply'></i> {{username}} {{link}}"
+      edited: "<i title='modificato' class='fa fa-pencil'></i> {{username}} {{link}}"
+      liked: "<i title='liked' class='fa fa-heart'></i> {{username}} {{link}}"
+      private_message: "<i class='fa fa-envelope-o' title='messaggio privato'></i> {{username}} ti ha mandato un messaggio privato: {{link}}"
       invited_to_private_message: "{{username}} ti ha invitato ad una conversazione privata: {{link}}"
-      invitee_accepted: "<i title='ha accettato il tuo invito' class='icon icon-signin'></i> {{username}} ha accettato il tuo invito"
-      moved_post: "<i title='post spostato' class='icon icon-arrow-right'></i> {{username}} ha spostato il post qui {{link}}"
+      invitee_accepted: "<i title='ha accettato il tuo invito' class='fa fa-sign-in'></i> {{username}} ha accettato il tuo invito"
+      moved_post: "<i title='post spostato' class='fa fa-arrow-right'></i> {{username}} ha spostato il post qui {{link}}"
       total_flagged: "totale post segnalati"
 
     upload_selector:
-      title: "Inserisci Immagine"
+      title: "Carica un'immagine"
+      title_with_attachments: "Carica un'immagine od un file"
       from_my_computer: "Dal mio dispositivo"
       from_the_web: "Dal Web"
-      add_title: "Aggiungi Immagine"
-      remote_title: "immagine remota"
       remote_tip: "inserisci l'indirizzo dell'immagine (es. http://example.com/image.jpg)"
-      local_title: "immagine locale"
+      remote_tip_with_attachments: "inserisci l'indirizzo di un'immagine o di un file nel form http://esempio.com/file.ext (estensioni supportate: {{authorized_extensions}})."
       local_tip: "clicca per selezionare un'immagine dal tuo dispositivo."
-      upload_title: "Upload"
-      uploading: "Carico l'immagine"
+      local_tip_with_attachments: "click per selezionare un'immagine od un file dal tuo dispositivo (estensioni supportate: {{authorized_extensions}})"
+      uploading: "Caricamento"
 
     search:
       title: "cerca topic, post, utenti o categorie"
@@ -434,11 +545,15 @@ it:
       no_results: "Nessun risultato."
       searching: "Cerco ..."
 
+      prefer:
+        user: "la ricerca mostrerà prima i risultati di @{{username}}"
+        category: "la ricerca mostrerà prima i risultati in {{category}}"
+
     site_map: "vai in un'altra lista topic o categoria"
     go_back: 'torna indietro'
     current_user: 'vai alla tua pagina utente'
 
-    favorite:
+    starred:
       title: 'Preferito'
       help:
         star: 'aggiungi questo topic nella tua lista dei preferiti'
@@ -446,7 +561,7 @@ it:
 
     topics:
       none:
-        favorited: "Non hai alcun topic preferito. Per rendere un topic preferito, clicca la stella di fianco al titolo."
+        starred: "Non hai alcun topic preferito. Per rendere un topic preferito, clicca la stella di fianco al titolo."
         unread: "Non hai alcun topic non letto da leggere."
         new: "Non hai nuovi topic da leggere."
         read: "Non hai ancora letto alcun topic."
@@ -461,16 +576,10 @@ it:
         read: "Non ci sono altri topic da leggere."
         new: "Non ci sono altri nuovi topic da leggere."
         unread: "Non ci sono altri topic non letti da leggere."
-        favorited: "Non ci sono altri topic preferiti da leggere."
+        starred: "Non ci sono altri topic preferiti da leggere."
         category: "Non ci sono altri topic nella categoria {{category}} da leggere."
 
-    rank_details:
-      toggle: attica dettaglio classifica topic
-      show: mostra dettaglio classifica topic
-      title: Dettaglio Classifica Topic
-
     topic:
-      create_in: 'Crea Topic in {{categoryName}}'
       create: 'Crea Topic'
       create_long: 'Crea un nuovo Topic'
       private_message: 'Inizia una conversazione privata'
@@ -597,21 +706,9 @@ it:
       login_reply: 'Log In per Rispondere'
 
       filters:
-        user: "Stai vedendo solo {{n_posts}} {{by_n_users}}."
         n_posts:
           one: "1 post"
           other: "{{count}} post"
-        by_n_users:
-          one: "da 1 utente specifico"
-          other: "da {{count}} utenti specifici"
-
-        best_of: "Stai vedendo i {{n_best_posts}} {{of_n_posts}}."
-        n_best_posts:
-          one: "1 best post"
-          other: "{{count}} best post"
-        of_n_posts:
-          one: "di 1 nel topic"
-          other: "di {{count}} nel topic"
         cancel: "Mostra nuovamente tutti i post di questo topic."
 
       split_topic:
@@ -784,7 +881,6 @@ it:
       none: '(nessuna categoria)'
       edit: 'modifica'
       edit_long: "Modifica Categoria"
-      edit_uncategorized: "Modifica Non categorizzata"
       view: 'Mostra Topic nella Categoria'
       general: 'Generale'
       settings: 'Impostazioni'
@@ -828,11 +924,10 @@ it:
         more: "ancora {{n}}..."
         left: "{{n}} rimanenti"
 
-    topic_summary:
+    topic_map:
       title: "Riepilogo del Topic"
       links_shown: "mostra tutti i {{totalLinks}} link..."
       clicks: "click"
-      topic_link: "topic link"
 
     topic_statuses:
       locked:
@@ -852,7 +947,7 @@ it:
     views_long: "questo topic è stato visto {{number}} volte"
     activity: "Attività"
     likes: "Like"
-    top_contributors: "Partecipanti"
+    users: "Partecipanti"
     category_title: "Categoria"
     history: "Cronologia"
     changed_by: "di {{author}}"
@@ -866,7 +961,7 @@ it:
       hot:
         title: "Hot"
         help: "una selezione dei topic più attivi"
-      favorited:
+      starred:
         title: "Preferiti"
         help: "topic preferiti"
       read:
@@ -1033,13 +1128,18 @@ it:
           moderators: 'Moderatori'
 
       user:
-        ban_failed: "Qualcosa è andato storto nel bannare questo utente {{error}}"
-        unban_failed: "Qualcosa è andato rimuovendo il ban a questo utente {{error}}"
-        ban_duration: "Per quanto tempo vuoi bannare l'utente? (giorni)"
+        suspend_failed: "Qualcosa è andato storto nel sospendere questo utente {{error}}"
+        unsuspend_failed: "Qualcosa è andato storto nel riabilitare questo utente {{error}}"
+        suspend_duration: "Per quanto tempo vuoi sospendere l'utente?"
+        suspend_duration_units: "(giorni)"
+        suspend_reason_label: "Perché vuoi sospendere l'utente? Questo messaggio <b>sarà visibile a tutti</b> sul profilo dell'utente, e verrà mostrato all'utente quando proverà a collegarsi. Sii conciso."
+        suspend_reason: "Motivo"
+        suspended_by: "Sospeso da"
         delete_all_posts: "Cancella tutti i post"
-        ban: "Ban"
-        unban: "Rimuovi Ban"
-        banned: "Bannato?"
+        delete_all_posts_confirm: "Stai per cancellare %{posts} post e %{topics} topic. Sei sicuro?"
+        suspend: "Sospendi"
+        unsuspend: "Riabilita"
+        suspended: "Sospeso?"
         moderator: "Moderatore?"
         admin: "Amministratore?"
         show_admin_profile: "Amministratore"
@@ -1050,6 +1150,8 @@ it:
         grant_admin: 'Garantisci Amministratore'
         revoke_moderation: 'Revoca Moderatore'
         grant_moderation: 'Garantisci Moderatore'
+        unblock: 'Sblocca'
+        block: 'Blocca'
         reputation: Reputazione
         permissions: Permessi
         activity: Attività
@@ -1062,10 +1164,17 @@ it:
         flags_received_count: Segnalazioni Ricevute
         approve: 'Approva'
         approved_by: "approvato da"
+        approve_success: "User approvato ed inviata un'email con le istruzioni per l'attivazione."
+        approve_bulk_success: "Successo! Tutti gli utenti selezionati sono stati approvati ed avvisati."
         time_read: "Tempo di Lettura"
         delete: "Cancella Utente"
-        delete_forbidden: "Questo utente non può essere cancellato poiché ci sono altri post. Cancella i suoi post prima di eliminarlo."
-        delete_confirm: "Sei sicuro di voler cancellare definitivamente questo utente? Questa azione è irreversibile!"
+        delete_forbidden_because_staff: "Amministratori e moderatori non possono esser cancellati."
+        delete_forbidden:
+          one: "Gli utenti non posson esser cancellati se si sono registrati prima di %{count} giorni fa, o se hanno dei post. Cancella tutti i post prima di cancellare l'utente."
+          other: "Gli utenti non posson esser cancellati se si sono registrati prima di %{count} giorni fa, o se hanno dei post. Cancella tutti i post prima di cancellare l'utente."       
+        delete_confirm: "Sei SICURO di voler cancellare definitivamente questo utente? Questa azione è irreversibile!"
+        delete_and_block: "<b>Si</b>, e <b>blocca</b> iscrizioni con questa email ed indirizzo IP"
+        delete_dont_block: "<b>Si</b>, ma <b>permetti</b> iscrizioni con questa email ed indirizzo IP"
         deleted: "L'utente è stato cancellato."
         delete_failed: "Si sono verificati degli errori nella cancellazione dell'utente. Assicurati che tutti i suoi post sono stati cancellati."
         send_activation_email: "Invia Email di Attivazione"
@@ -1075,6 +1184,13 @@ it:
         activate_failed: "Si sono verificati dei problemi durante l'attivazione dell'account."
         deactivate_account: "Disattiva Account"
         deactivate_failed: "Si sono verificati dei problemi durante la disattivazione dell'account."
+        unblock_failed: "Si sono verificati dei problemi nel sbloccare l'utente."
+        block_failed: "Si sono verificati problemi nel bloccare l'utente."
+        deactivate_explanation: "Un utente disattivato deve rivalidare la sua email."
+        suspended_explanation: "Un utente sospeso non può collegarsi."
+        block_explanation: "Un utente bloccato non può creare post o aprire topic."
+        trust_level_change_failed: "Si sono verificati dei problemi nel cambiare il livello di trust dell'utente."
+        suspend_modal_title: "Utente Sospeso"
 
       site_content:
         none: "Scegli un tipo di contenuto da modificare."

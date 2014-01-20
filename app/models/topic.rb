@@ -5,21 +5,30 @@ require_dependency 'rate_limiter'
 require_dependency 'text_sentinel'
 require_dependency 'text_cleaner'
 require_dependency 'trashable'
+require_dependency 'archetype'
 
 class Topic < ActiveRecord::Base
   include ActionView::Helpers::SanitizeHelper
   include RateLimiter::OnCreateRecord
   include Trashable
+  extend Forwardable
+
+  def_delegator :featured_users, :user_ids, :featured_user_ids
+  def_delegator :featured_users, :choose, :feature_topic_users
+
+  def_delegator :notifier, :watch!, :notify_watch!
+  def_delegator :notifier, :tracking!, :notify_tracking!
+  def_delegator :notifier, :regular!, :notify_regular!
+  def_delegator :notifier, :muted!, :notify_muted!
+  def_delegator :notifier, :toggle_mute, :toggle_mute
 
   def self.max_sort_order
     2**31 - 1
   end
 
-  def self.featured_users_count
-    4
+  def featured_users
+    @featured_users ||= TopicFeaturedUsers.new(self)
   end
-
-  versioned if: :new_version_required?
 
   def trash!(trashed_by=nil)
     update_category_topic_count_by(-1) if deleted_at.nil?
@@ -46,6 +55,15 @@ class Topic < ActiveRecord::Base
                                         :case_sensitive => false,
                                         :collection => Proc.new{ Topic.listable_topics } }
 
+  validates :category_id, :presence => true ,:exclusion => {:in => [SiteSetting.uncategorized_category_id]},
+                                     :if => Proc.new { |t|
+                                           (t.new_record? || t.category_id_changed?) &&
+                                           !SiteSetting.allow_uncategorized_topics &&
+                                           (t.archetype.nil? || t.archetype == Archetype.default) &&
+                                           (!t.user_id || !t.user.staff?)
+                                       }
+
+
   before_validation do
     self.sanitize_title
     self.title = TextCleaner.clean_title(TextSentinel.title_sentinel(title).text) if errors[:title].empty?
@@ -64,7 +82,7 @@ class Topic < ActiveRecord::Base
   has_many :allowed_groups, through: :topic_allowed_groups, source: :group
   has_many :allowed_users, through: :topic_allowed_users, source: :user
 
-  has_one :hot_topic
+  has_one :top_topic
   belongs_to :user
   belongs_to :last_poster, class_name: 'User', foreign_key: :last_post_user_id
   belongs_to :featured_user1, class_name: 'User', foreign_key: :featured_user1_id
@@ -78,17 +96,21 @@ class Topic < ActiveRecord::Base
   has_many :topic_invites
   has_many :invites, through: :topic_invites, source: :invite
 
+  has_many :topic_revisions
+  has_many :revisions, foreign_key: :topic_id, class_name: 'TopicRevision'
+
   # When we want to temporarily attach some data to a forum topic (usually before serialization)
   attr_accessor :user_data
   attr_accessor :posters  # TODO: can replace with posters_summary once we remove old list code
   attr_accessor :topic_list
+  attr_accessor :include_last_poster
 
   # The regular order
   scope :topic_list_order, lambda { order('topics.bumped_at desc') }
 
   # Return private message topics
   scope :private_messages, lambda {
-    where(archetype: Archetype::private_message)
+    where(archetype: Archetype.private_message)
   }
 
   scope :listable_topics, lambda { where('topics.archetype <> ?', [Archetype.private_message]) }
@@ -115,42 +137,85 @@ class Topic < ActiveRecord::Base
            WHERE #{condition[0]})", condition[1])
   }
 
-  # Helps us limit how many favorites can be made in a day
-  class FavoriteLimiter < RateLimiter
+  # Helps us limit how many topics can be starred in a day
+  class StarLimiter < RateLimiter
     def initialize(user)
-      super(user, "favorited:#{Date.today.to_s}", SiteSetting.max_favorites_per_day, 1.day.to_i)
+      super(user, "starred:#{Date.today.to_s}", SiteSetting.max_stars_per_day, 1.day.to_i)
     end
   end
 
   before_create do
     self.bumped_at ||= Time.now
     self.last_post_user_id ||= user_id
-    if !@ignore_category_auto_close and self.category and self.category.auto_close_days and self.auto_close_at.nil?
-      set_auto_close(self.category.auto_close_days)
+    if !@ignore_category_auto_close and self.category and self.category.auto_close_hours and self.auto_close_at.nil?
+      set_auto_close(self.category.auto_close_hours)
     end
   end
 
+  attr_accessor :skip_callbacks
+
   after_create do
-    changed_to_category(category)
-    if archetype == Archetype.private_message
-      DraftSequence.next!(user, Draft::NEW_PRIVATE_MESSAGE)
-    else
-      DraftSequence.next!(user, Draft::NEW_TOPIC)
+
+    unless skip_callbacks
+      changed_to_category(category)
+      if archetype == Archetype.private_message
+        DraftSequence.next!(user, Draft::NEW_PRIVATE_MESSAGE)
+      else
+        DraftSequence.next!(user, Draft::NEW_TOPIC)
+      end
     end
+
   end
 
   before_save do
-    if (auto_close_at_changed? and !auto_close_at_was.nil?) or (auto_close_user_id_changed? and auto_close_at)
-      self.auto_close_started_at ||= Time.zone.now if auto_close_at
-      Jobs.cancel_scheduled_job(:close_topic, {topic_id: id})
-      true
+
+    unless skip_callbacks
+      if (auto_close_at_changed? and !auto_close_at_was.nil?) or (auto_close_user_id_changed? and auto_close_at)
+        self.auto_close_started_at ||= Time.zone.now if auto_close_at
+        Jobs.cancel_scheduled_job(:close_topic, {topic_id: id})
+        true
+      end
+      if category_id.nil? && (archetype.nil? || archetype == Archetype.default)
+        self.category_id = SiteSetting.uncategorized_category_id
+      end
     end
+
   end
 
   after_save do
-    if auto_close_at and (auto_close_at_changed? or auto_close_user_id_changed?)
-      Jobs.enqueue_at(auto_close_at, :close_topic, {topic_id: id, user_id: auto_close_user_id || user_id})
+    save_revision if should_create_new_version?
+
+    unless skip_callbacks
+      if auto_close_at and (auto_close_at_changed? or auto_close_user_id_changed?)
+        Jobs.enqueue_at(auto_close_at, :close_topic, {topic_id: id, user_id: auto_close_user_id || user_id})
+      end
     end
+
+  end
+
+  def save_revision
+    TopicRevision.create!(
+      user_id: acting_user.id,
+      topic_id: id,
+      number: TopicRevision.where(topic_id: id).count + 2,
+      modifications: changes.extract!(:category, :title)
+    )
+  end
+
+  def should_create_new_version?
+    !new_record? && (category_id_changed? || title_changed?)
+  end
+
+  def self.top_viewed(max = 10)
+    Topic.listable_topics.visible.secured.order('views desc').limit(max)
+  end
+
+  def self.recent(max = 10)
+    Topic.listable_topics.visible.secured.order('created_at desc').limit(max)
+  end
+
+  def self.count_exceeds_minimum?
+    count > SiteSetting.minimum_topics_similar
   end
 
   def best_post
@@ -165,12 +230,13 @@ class Topic < ActiveRecord::Base
 
   # Additional rate limits on topics: per day and private messages per day
   def limit_topics_per_day
-    RateLimiter.new(user, "topics-per-day:#{Date.today.to_s}", SiteSetting.max_topics_per_day, 1.day.to_i)
+    apply_per_day_rate_limit_for("topics", :max_topics_per_day)
+    limit_first_day_topics_per_day if user.added_a_day_ago?
   end
 
   def limit_private_messages_per_day
     return unless private_message?
-    RateLimiter.new(user, "pms-per-day:#{Date.today.to_s}", SiteSetting.max_private_messages_per_day, 1.day.to_i)
+    apply_per_day_rate_limit_for("pms", :max_private_messages_per_day)
   end
 
   def fancy_title
@@ -193,14 +259,21 @@ class Topic < ActiveRecord::Base
 
   # Returns hot topics since a date for display in email digest.
   def self.for_digest(user, since)
-    Topic
-      .visible
-      .secured(Guardian.new(user))
-      .where(closed: false, archived: false)
-      .created_since(since)
-      .listable_topics
-      .order(:percent_rank)
-      .limit(100)
+    topics = Topic
+              .visible
+              .secured(Guardian.new(user))
+              .where(closed: false, archived: false)
+              .created_since(since)
+              .listable_topics
+              .order(:percent_rank)
+              .limit(100)
+
+    category_topic_ids = Category.pluck(:topic_id).compact!
+    if category_topic_ids.present?
+      topics = topics.where("id NOT IN (?)", category_topic_ids)
+    end
+
+    topics
   end
 
   def update_meta_data(data)
@@ -217,8 +290,8 @@ class Topic < ActiveRecord::Base
     @post_numbers ||= posts.order(:post_number).pluck(:post_number)
   end
 
-  def age_in_days
-    ((Time.zone.now - created_at) / 1.day).round
+  def age_in_minutes
+    ((Time.zone.now - created_at) / 1.minute).round
   end
 
   def has_meta_data_boolean?(key)
@@ -301,13 +374,11 @@ class Topic < ActiveRecord::Base
                     FROM posts
                     WHERE avg_time > 0 AND avg_time IS NOT NULL
                     GROUP BY topic_id) AS x
-              WHERE x.topic_id = topics.id")
+              WHERE x.topic_id = topics.id AND (topics.avg_time <> x.gmean OR topics.avg_time IS NULL)")
   end
 
   def changed_to_category(cat)
-
-    return if cat.blank?
-    return if Category.where(topic_id: id).first.present?
+    return true if cat.blank? || Category.where(topic_id: id).first.present?
 
     Topic.transaction do
       old_category = category
@@ -316,13 +387,21 @@ class Topic < ActiveRecord::Base
         Category.where(['id = ?', category_id]).update_all 'topic_count = topic_count - 1'
       end
 
-      self.category_id = cat.id
-      save
+      success = true
+      if self.category_id != cat.id
+        self.category_id = cat.id
+        success = save
+      end
 
-      CategoryFeaturedTopic.feature_topics_for(old_category)
-      Category.where(id: cat.id).update_all 'topic_count = topic_count + 1'
-      CategoryFeaturedTopic.feature_topics_for(cat) unless old_category.try(:id) == cat.try(:id)
+      if success
+        CategoryFeaturedTopic.feature_topics_for(old_category)
+        Category.where(id: cat.id).update_all 'topic_count = topic_count + 1'
+        CategoryFeaturedTopic.feature_topics_for(cat) unless old_category.try(:id) == cat.try(:id)
+      else
+        return false
+      end
     end
+    true
   end
 
   def add_moderator_post(user, text, opts={})
@@ -354,28 +433,26 @@ class Topic < ActiveRecord::Base
   def change_category(name)
     # If the category name is blank, reset the attribute
     if name.blank?
-      if category_id.present?
-        CategoryFeaturedTopic.feature_topics_for(category)
-        Category.where(id: category_id).update_all 'topic_count = topic_count - 1'
-      end
-      self.category_id = nil
-      save
-      return
+      cat = Category.where(id: SiteSetting.uncategorized_category_id).first
+    else
+      cat = Category.where(name: name).first
     end
 
-    cat = Category.where(name: name).first
-    return if cat == category
+    return true if cat == category
+    return false unless cat
     changed_to_category(cat)
   end
 
-  def featured_user_ids
-    [featured_user1_id, featured_user2_id, featured_user3_id, featured_user4_id].uniq.compact
-  end
 
   def remove_allowed_user(username)
     user = User.where(username: username).first
     if user
-      topic_allowed_users.where(user_id: user.id).first.destroy
+      topic_user = topic_allowed_users.where(user_id: user.id).first
+      if topic_user
+        topic_user.destroy
+      else
+        false
+      end
     end
   end
 
@@ -404,32 +481,17 @@ class Topic < ActiveRecord::Base
     end
   end
 
-  # Invite a user by email and return the invite. Return the previously existing invite
-  # if already exists. Returns nil if the invite can't be created.
   def invite_by_email(invited_by, email)
-    lower_email = Email.downcase(email)
-    invite = Invite.with_deleted.where('invited_by_id = ? and email = ?', invited_by.id, lower_email).first
+    Invite.invite_by_email(email, invited_by, self)
+  end
 
-    if invite.blank?
-      invite = Invite.create(invited_by: invited_by, email: lower_email)
-      unless invite.valid?
+  def email_already_exists_for?(invite)
+    invite.email_already_exists and private_message?
+  end
 
-        # If the email already exists, grant permission to that user
-        if invite.email_already_exists and private_message?
-          user = User.where(email: lower_email).first
-          topic_allowed_users.create!(user_id: user.id)
-        end
-
-        return
-      end
-    end
-
-    # Recover deleted invites if we invite them again
-    invite.recover if invite.deleted_at.present?
-
-    topic_invites.create(invite_id: invite.id)
-    Jobs.enqueue(:invite_email, invite_id: invite.id)
-    invite
+  def grant_permission_to_user(lower_email)
+    user = User.where(email: lower_email).first
+    topic_allowed_users.create!(user_id: user.id)
   end
 
   def max_post_number
@@ -442,7 +504,7 @@ class Topic < ActiveRecord::Base
     if opts[:destination_topic_id]
       post_mover.to_topic opts[:destination_topic_id]
     elsif opts[:title]
-      post_mover.to_new_topic opts[:title]
+      post_mover.to_new_topic(opts[:title], opts[:category_id])
     end
   end
 
@@ -466,13 +528,6 @@ class Topic < ActiveRecord::Base
     end
   end
 
-  # Chooses which topic users to feature
-  def feature_topic_users(args={})
-    reload unless rails4?
-    clear_featured_users
-    update_featured_users featured_user_keys(args)
-    save
-  end
 
   def posters_summary(options = {})
     @posters_summary ||= TopicPostersSummary.new(self, options).summary
@@ -492,9 +547,9 @@ class Topic < ActiveRecord::Base
                 WHERE id = ?", id
 
       if starred
-        FavoriteLimiter.new(user).performed!
+        StarLimiter.new(user).performed!
       else
-        FavoriteLimiter.new(user).rollback!
+        StarLimiter.new(user).rollback!
       end
     end
   end
@@ -563,43 +618,53 @@ class Topic < ActiveRecord::Base
     @topic_notifier ||= TopicNotifier.new(self)
   end
 
-  # notification stuff
-  def notify_watch!(user)
-    notifier.watch! user
-  end
-
-  def notify_tracking!(user)
-    notifier.tracking! user
-  end
-
-  def notify_regular!(user)
-    notifier.regular! user
-  end
-
-  def notify_muted!(user)
-    notifier.muted! user
-  end
-
   def muted?(user)
     if user && user.id
       notifier.muted?(user.id)
     end
   end
 
-  # Enable/disable the mute on the topic
-  def toggle_mute(user_id)
-    notifier.toggle_mute user_id
-  end
-
-  def auto_close_days=(num_days)
+  def auto_close_hours=(num_hours)
     @ignore_category_auto_close = true
-    set_auto_close(num_days)
+    set_auto_close( num_hours )
   end
 
-  def set_auto_close(num_days, by_user=nil)
-    num_days = num_days.to_i
-    self.auto_close_at = (num_days > 0 ? num_days.days.from_now : nil)
-    if num_days > 0
+  def self.auto_close
+    Topic.where("NOT closed AND auto_close_at < ? AND auto_close_user_id IS NOT NULL", 1.minute.ago).each do |t|
+      t.auto_close
+    end
+  end
+
+  def auto_close(closer = nil)
+    if auto_close_at && !closed? && !deleted_at && auto_close_at < 5.minutes.from_now
+      closer ||= auto_close_user
+      if Guardian.new(closer).can_moderate?(self)
+        update_status('autoclosed', true, closer)
+      end
+    end
+  end
+
+  # Valid arguments for the auto close time:
+  #  * An integer, which is the number of hours from now to close the topic.
+  #  * A time, like "12:00", which is the time at which the topic will close in the current day
+  #    or the next day if that time has already passed today.
+  #  * A timestamp, like "2013-11-25 13:00", when the topic should close.
+  #  * A timestamp with timezone in JSON format. (e.g., "2013-11-26T21:00:00.000Z")
+  #  * nil, to prevent the topic from automatically closing.
+  def set_auto_close(arg, by_user=nil)
+    if arg.is_a?(String) and matches = /^([\d]{1,2}):([\d]{1,2})$/.match(arg.strip)
+      now = Time.zone.now
+      self.auto_close_at = Time.zone.local(now.year, now.month, now.day, matches[1].to_i, matches[2].to_i)
+      self.auto_close_at += 1.day if self.auto_close_at < now
+    elsif arg.is_a?(String) and arg.include?('-') and timestamp = Time.zone.parse(arg)
+      self.auto_close_at = timestamp
+      self.errors.add(:auto_close_at, :invalid) if timestamp < Time.zone.now
+    else
+      num_hours = arg.to_i
+      self.auto_close_at = (num_hours > 0 ? num_hours.hours.from_now : nil)
+    end
+
+    unless self.auto_close_at.nil?
       self.auto_close_started_at ||= Time.zone.now
       if by_user and by_user.staff?
         self.auto_close_user = by_user
@@ -616,38 +681,30 @@ class Topic < ActiveRecord::Base
     category && category.read_restricted
   end
 
+  def acting_user
+    @acting_user || user
+  end
+
+  def acting_user=(u)
+    @acting_user = u
+  end
+
   private
 
-    def update_category_topic_count_by(num)
-      if category_id.present?
-        Category.where(['id = ?', category_id]).update_all("topic_count = topic_count " + (num > 0 ? '+' : '') + "#{num}")
-      end
+  def update_category_topic_count_by(num)
+    if category_id.present?
+      Category.where(['id = ?', category_id]).update_all("topic_count = topic_count " + (num > 0 ? '+' : '') + "#{num}")
     end
+  end
 
-    def featured_user_keys(args)
-      # Don't include the OP or the last poster
-      to_feature = posts.where('user_id NOT IN (?, ?)', user_id, last_post_user_id)
+  def limit_first_day_topics_per_day
+    apply_per_day_rate_limit_for("first-day-topics", :max_topics_in_first_day)
+  end
 
-      # Exclude a given post if supplied (in the case of deletes)
-      to_feature = to_feature.where("id <> ?", args[:except_post_id]) if args[:except_post_id].present?
+  def apply_per_day_rate_limit_for(key, method_name)
+    RateLimiter.new(user, "#{key}-per-day:#{Date.today.to_s}", SiteSetting.send(method_name), 1.day.to_i)
+  end
 
-
-      # Assign the featured_user{x} columns
-      to_feature.group(:user_id).order('count_all desc').limit(Topic.featured_users_count).count.keys
-    end
-
-
-    def clear_featured_users
-      Topic.featured_users_count.times do |i|
-        send("featured_user#{i+1}_id=", nil)
-      end
-    end
-
-    def update_featured_users(user_keys)
-      user_keys.each_with_index do |user_id, i|
-        send("featured_user#{i+1}_id=", user_id)
-      end
-    end
 end
 
 # == Schema Information
@@ -661,7 +718,7 @@ end
 #  updated_at              :datetime         not null
 #  views                   :integer          default(0), not null
 #  posts_count             :integer          default(0), not null
-#  user_id                 :integer          not null
+#  user_id                 :integer
 #  last_post_user_id       :integer          not null
 #  reply_count             :integer          default(0), not null
 #  featured_user1_id       :integer
@@ -682,7 +739,7 @@ end
 #  closed                  :boolean          default(FALSE), not null
 #  archived                :boolean          default(FALSE), not null
 #  bumped_at               :datetime         not null
-#  has_best_of             :boolean          default(FALSE), not null
+#  has_summary             :boolean          default(FALSE), not null
 #  meta_data               :hstore
 #  vote_count              :integer          default(0), not null
 #  archetype               :string(255)      default("regular"), not null
@@ -701,10 +758,12 @@ end
 #  auto_close_user_id      :integer
 #  auto_close_started_at   :datetime
 #  deleted_by_id           :integer
+#  participant_count       :integer          default(1)
 #
 # Indexes
 #
-#  idx_topics_user_id_deleted_at     (user_id)
-#  index_forum_threads_on_bumped_at  (bumped_at)
+#  idx_topics_user_id_deleted_at                                (user_id)
+#  index_forum_threads_on_bumped_at                             (bumped_at)
+#  index_topics_on_deleted_at_and_visible_and_archetype_and_id  (deleted_at,visible,archetype,id)
+#  index_topics_on_id_and_deleted_at                            (id,deleted_at)
 #
-

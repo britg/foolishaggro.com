@@ -13,16 +13,22 @@ Discourse.TopicTrackingState = Discourse.Model.extend({
     var tracker = this;
 
     var process = function(data){
+
       if (data.message_type === "delete") {
         tracker.removeTopic(data.topic_id);
+        tracker.incrementMessageCount();
       }
 
       if (data.message_type === "new_topic" || data.message_type === "unread" || data.message_type === "read") {
         tracker.notify(data);
-        tracker.states["t" + data.topic_id] = data.payload;
+        var old = tracker.states["t" + data.topic_id];
+
+        if(!_.isEqual(old, data.payload)){
+          tracker.states["t" + data.topic_id] = data.payload;
+          tracker.incrementMessageCount();
+        }
       }
 
-      tracker.incrementMessageCount();
     };
 
     Discourse.MessageBus.subscribe("/new", process);
@@ -129,20 +135,23 @@ Discourse.TopicTrackingState = Discourse.Model.extend({
     this.set("messageCount", this.get("messageCount") + 1);
   },
 
-  countNew: function(){
+  countNew: function(category_name){
     return _.chain(this.states)
       .where({last_read_post_number: null})
+      .where(function(topic){ return topic.category_name === category_name || !category_name;})
       .value()
       .length;
   },
 
-  countUnread: function(){
-    var count = 0;
-    _.each(this.states, function(topic){
-      count += (topic.last_read_post_number !== null &&
-                topic.last_read_post_number < topic.highest_post_number) ? 1 : 0;
-    });
-    return count;
+  countUnread: function(category_name){
+    return _.chain(this.states)
+      .where(function(topic){
+        return topic.last_read_post_number !== null &&
+               topic.last_read_post_number < topic.highest_post_number;
+      })
+      .where(function(topic){ return topic.category_name === category_name || !category_name;})
+      .value()
+      .length;
   },
 
   countCategory: function(category) {
@@ -156,15 +165,16 @@ Discourse.TopicTrackingState = Discourse.Model.extend({
     return count;
   },
 
-  lookupCount: function(name){
-    if(name==="new") {
-      return this.countNew();
-    } else if(name==="unread") {
-      return this.countUnread();
+  lookupCount: function(name, category){
+    var categoryName = category ? Em.get(category, "name") : null;
+    if(name === "new") {
+      return this.countNew(categoryName);
+    } else if(name === "unread") {
+      return this.countUnread(categoryName);
     } else {
-      var category = name.split("/")[1];
-      if(category) {
-        return this.countCategory(category);
+      categoryName = name.split("/")[1];
+      if(categoryName) {
+        return this.countCategory(categoryName);
       }
     }
   },

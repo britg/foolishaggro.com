@@ -8,6 +8,31 @@ InviteRedeemer = Struct.new(:invite) do
     invited_user
   end
 
+  # extracted from User cause it is very specific to invites
+  def self.create_user_from_invite(invite)
+    username = UserNameSuggester.suggest(invite.email)
+
+    DiscourseHub.nickname_operation do
+      match, available, suggestion = DiscourseHub.nickname_match?(username, invite.email)
+      username = suggestion unless match || available
+    end
+
+    user = User.new(email: invite.email, username: username, name: username, active: true)
+    if invite.invited_by and invite.invited_by.has_trust_level?(:leader)
+      # People invited by users with trust level 3 will start at the default trust level + 1,
+      # unless the default trust level is 2 or higher.
+      user.trust_level = SiteSetting.default_invitee_trust_level
+      user.trust_level += 1 if user.trust_level < TrustLevel.levels[:regular]
+    else
+      user.trust_level = SiteSetting.default_invitee_trust_level
+    end
+    user.save!
+
+    DiscourseHub.nickname_operation { DiscourseHub.register_nickname(username, invite.email) }
+
+    user
+  end
+
   private
 
   def invited_user
@@ -34,7 +59,7 @@ InviteRedeemer = Struct.new(:invite) do
 
   def get_invited_user
     result = get_existing_user
-    result ||= create_new_user
+    result ||= InviteRedeemer.create_user_from_invite(invite)
     result.send_welcome_message = false
     result
   end
@@ -43,9 +68,6 @@ InviteRedeemer = Struct.new(:invite) do
     User.where(email: invite.email).first
   end
 
-  def create_new_user
-    User.create_for_email(invite.email, trust_level: SiteSetting.default_invitee_trust_level)
-  end
 
   def add_to_private_topics_if_invited
     invite.topics.private_messages.each do |t|

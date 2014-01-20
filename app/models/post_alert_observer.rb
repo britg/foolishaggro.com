@@ -1,5 +1,5 @@
 class PostAlertObserver < ActiveRecord::Observer
-  observe :post, VestalVersions::Version, :post_action
+  observe :post, :post_action, :post_revision
 
   # Dispatch to an after_save_#{class_name} method
   def after_save(model)
@@ -46,22 +46,26 @@ class PostAlertObserver < ActiveRecord::Observer
                         post_action_id: post_action.id)
   end
 
-  def after_create_version(version)
-    post = version.versioned
+  def after_create_post_revision(post_revision)
+    post = post_revision.post
 
-    return unless post.is_a?(Post)
-    return if version.user.blank?
-    return if version.user_id == post.user_id
+    return unless post
+    return if post_revision.user.blank?
+    return if post_revision.user_id == post.user_id
     return if post.topic.private_message?
 
-    create_notification(post.user, Notification.types[:edited], post, display_username: version.user.username)
+    create_notification(post.user, Notification.types[:edited], post, display_username: post_revision.user.username)
   end
 
   def after_create_post(post)
     if post.topic.private_message?
       # If it's a private message, notify the topic_allowed_users
-      post.topic.all_allowed_users.reject{ |a| a.id == post.user_id }.each do |a|
-        create_notification(a, Notification.types[:private_message], post)
+      post.topic.all_allowed_users.reject{ |user| user.id == post.user_id }.each do |user|
+        next if user.blank?
+
+        destroy_notifications(user, Notification.types[:private_message], post.topic)
+        unread_post = first_unread_post(user,post.topic) || post
+        create_notification(user, Notification.types[:private_message], unread_post)
       end
     elsif post.post_type != Post.types[:moderator_action]
       # If it's not a private message and it's not an automatic post caused by a moderator action, notify the users
@@ -73,6 +77,23 @@ class PostAlertObserver < ActiveRecord::Observer
 
     def callback_for(action, model)
       "#{action}_#{model.class.name.underscore.gsub(/.+\//, '')}"
+    end
+
+    def first_unread_post(user, topic)
+      Post.where('post_number > COALESCE((
+                 SELECT last_read_post_number FROM topic_users tu
+                 WHERE tu.user_id = ? AND tu.topic_id = ? ),0)',
+                  user.id, topic.id)
+          .where(topic_id: topic.id)
+          .order('post_number').first
+    end
+
+    def destroy_notifications(user, type, topic)
+      return if user.blank?
+      return unless Guardian.new(user).can_see?(topic)
+
+      user.notifications.where(notification_type: type,
+                               topic_id: topic.id).destroy_all
     end
 
     def create_notification(user, type, post, opts={})
@@ -124,17 +145,16 @@ class PostAlertObserver < ActiveRecord::Observer
       reply_to_user = post.reply_notification_target
       notify_users(reply_to_user, :replied, post)
 
-      # find all users watching
-      if post.post_number > 1
-        exclude_user_ids = []
-        exclude_user_ids << post.user_id
-        exclude_user_ids << reply_to_user.id if reply_to_user.present?
-        exclude_user_ids << extract_mentioned_users(post).map(&:id)
-        exclude_user_ids << extract_quoted_users(post).map(&:id)
-        exclude_user_ids.flatten!
-        TopicUser.where(topic_id: post.topic_id, notification_level: TopicUser.notification_levels[:watching]).includes(:user).each do |tu|
+      exclude_user_ids = []
+      exclude_user_ids << post.user_id
+      exclude_user_ids << reply_to_user.id if reply_to_user.present?
+      exclude_user_ids << extract_mentioned_users(post).map(&:id)
+      exclude_user_ids << extract_quoted_users(post).map(&:id)
+      exclude_user_ids.flatten!
+      TopicUser
+        .where(topic_id: post.topic_id, notification_level: TopicUser.notification_levels[:watching])
+        .includes(:user).each do |tu|
           create_notification(tu.user, Notification.types[:posted], post) unless exclude_user_ids.include?(tu.user_id)
         end
-      end
     end
 end

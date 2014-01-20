@@ -16,22 +16,29 @@ class TopicCreator
     topic_params = setup
     @topic = Topic.new(topic_params)
 
-    setup_auto_close_days if @opts[:auto_close_days]
+    setup_auto_close_time if @opts[:auto_close_time].present?
 
     process_private_message if @opts[:archetype] == Archetype.private_message
     save_topic
 
     watch_topic
+    auto_mute_topic
 
     @topic
   end
 
   private
 
+  def auto_mute_topic
+    CategoryUser.auto_mute_new_topic(@topic)
+  end
+
   def watch_topic
     unless @opts[:auto_track] == false
       @topic.notifier.watch_topic!(@topic.user_id)
     end
+    TopicUser.auto_watch_new_topic(@topic.id)
+    CategoryUser.auto_watch_new_topic(@topic)
   end
 
   def setup
@@ -39,8 +46,14 @@ class TopicCreator
     topic_params[:archetype] = @opts[:archetype] if @opts[:archetype].present?
     topic_params[:subtype] = @opts[:subtype] if @opts[:subtype].present?
 
-    category = Category.where(name: @opts[:category]).first
-
+    # Temporary fix to allow older clients to create topics.
+    # When all clients are updated the category variable should
+    # be set directly to the contents of the if statement.
+    category = if (@opts[:category].is_a? Integer) || (@opts[:category] =~ /^\d+$/)
+      Category.where(id: @opts[:category]).first
+    else
+      Category.where(name: @opts[:category]).first
+    end
     @guardian.ensure_can_create!(Topic,category)
     topic_params[:category_id] = category.id if category.present?
     topic_params[:meta_data] = @opts[:meta_data] if @opts[:meta_data].present?
@@ -48,9 +61,9 @@ class TopicCreator
     topic_params
   end
 
-  def setup_auto_close_days
-    @guardian.ensure_can_moderate!(@topic)
-    @topic.auto_close_days = @opts[:auto_close_days]
+  def setup_auto_close_time
+    return unless @guardian.can_moderate?(@topic)
+    @topic.set_auto_close(@opts[:auto_close_time], @user)
   end
 
   def process_private_message
