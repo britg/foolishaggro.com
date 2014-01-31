@@ -1,12 +1,12 @@
 class MoveColumnsToUserStats < ActiveRecord::Migration
   def up
-    add_column :user_stats, :topics_entered, :integer, default: 0, null: false
-    add_column :user_stats, :time_read, :integer, default: 0, null: false
-    add_column :user_stats, :days_visited, :integer, default: 0, null: false
-    add_column :user_stats, :posts_read_count, :integer, default: 0, null: false
-    add_column :user_stats, :likes_given, :integer, default: 0, null: false
-    add_column :user_stats, :likes_received, :integer, default: 0, null: false
-    add_column :user_stats, :topic_reply_count, :integer, default: 0, null: false
+    # add_column :user_stats, :topics_entered, :integer, default: 0, null: false
+    # add_column :user_stats, :time_read, :integer, default: 0, null: false
+    # add_column :user_stats, :days_visited, :integer, default: 0, null: false
+    # add_column :user_stats, :posts_read_count, :integer, default: 0, null: false
+    # add_column :user_stats, :likes_given, :integer, default: 0, null: false
+    # add_column :user_stats, :likes_received, :integer, default: 0, null: false
+    # add_column :user_stats, :topic_reply_count, :integer, default: 0, null: false
 
     execute 'UPDATE user_stats s
               SET topics_entered = u.topics_entered,
