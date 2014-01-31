@@ -7,10 +7,14 @@
   @module Discourse
 **/
 Discourse.PrivateMessageMapComponent = Ember.Component.extend({
-  templateName: 'components/private-message-map',
+  layoutName: 'components/private-message-map',
   tagName: 'section',
   classNames: ['information'],
   details: Em.computed.alias('topic.details'),
+
+  init: function() {
+    this._super();
+  },
 
   actions: {
     removeAllowedUser: function(user) {
