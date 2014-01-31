@@ -302,6 +302,16 @@ Discourse::Application.routes.draw do
 
   get "robots.txt" => "robots_txt#index"
 
+  root to: "pages#index"
+  get 'home' => "pages#index"
+  get 'games' => "pages#index"
+
+  get 'pyroclasm' => redirect("/category/pyroclasm")
+  get 'foolishgalaxy' => "pages#game", :game => "foolishgalaxy"
+  resources :scores
+
+  [:latest, :hot, :unread, :new, :favorited, :read, :posted].each do |filter|
+
   Discourse.filters.each do |filter|
     root to: "list##{filter}", constraints: HomePageConstraint.new("#{filter}"), :as => "list_#{filter}"
   end
