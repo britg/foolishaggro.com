@@ -24,7 +24,7 @@ body {
 
 header {
   padding-top: 1px;
-  background: url(image_path("pages/garden.png")) top center no-repeat;
+  background: url(image_path("pages/lg_bg.jpg")) top center no-repeat;
   background-size: cover;
 
   min-height: 275px;
@@ -70,6 +70,14 @@ header {
   margin-top: -158px;
 }
 
+.lonelygalaxy {
+  text-align: center;
+  color: #fff;
+  h1 {
+    margin-top: 0;
+  }
+}
+
 .tease {
   padding: 10px;
   border: solid 2px #000;
@@ -80,6 +88,7 @@ header {
 
   .status {
     text-shadow: 2px 2px #000000;
+    color: #fff;
     .label {
       text-shadow: none;
     }

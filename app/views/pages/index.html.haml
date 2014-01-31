@@ -1,8 +1,12 @@
 
 .row
 
-  .col-md-3
+  .col-md-1
 
+  .col-md-5
+    .lonelygalaxy
+      %h1 Lonely Galaxy
+      = link_to "Dev Log", "/category/lonely-galaxy", class: "btn btn-primary"
 
   .col-md-3
     .tease.pyroclasm
@@ -23,10 +27,6 @@
 
       = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
 
-  .col-md-3
-    #concepts
-
-
 .row
   .col-md-8
 
@@ -41,8 +41,6 @@
             %span.label.label-info= cat.name
 
         .content= topic.posts.first.excerpt.html_safe
-
-        %br
 
         = link_to "Read more ...", topic.relative_url, :class => ""
 
