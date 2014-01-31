@@ -310,8 +310,6 @@ Discourse::Application.routes.draw do
   get 'foolishgalaxy' => "pages#game", :game => "foolishgalaxy"
   resources :scores
 
-  [:latest, :hot, :unread, :new, :favorited, :read, :posted].each do |filter|
-
   Discourse.filters.each do |filter|
     root to: "list##{filter}", constraints: HomePageConstraint.new("#{filter}"), :as => "list_#{filter}"
   end

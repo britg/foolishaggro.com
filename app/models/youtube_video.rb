@@ -11,9 +11,9 @@ class YoutubeVideo
       @videos = []
       raw = RestClient.get(FEED_URL) rescue nil
       return @videos unless raw.present?
-      @feed = json.parse(raw)
+      @feed = JSON.parse(raw)
       @feed["feed"]["entry"].each do |entry|
-        @videos << youtubevideo.new(entry)
+        @videos << YoutubeVideo.new(entry)
       end
       @videos
     end
