@@ -1,6 +1,8 @@
 
 .row
 
+  .col-md-3
+
 
   .col-md-3
     .tease.pyroclasm
@@ -21,64 +23,44 @@
 
       = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
 
-  .col-md-6
+  .col-md-3
     #concepts
-      %h4.heading Playable Concepts
 
 
 .row
-  .col-md-4
+  .col-md-8
 
-    .panel
-      .panel-heading
-        = link_to "Visit forums", "/categories", :class => "btn btn-primary btn-xs pull-right"
-        %h2.panel-title Recent Topics
+    - @topics.each do |topic|
+      .topic
+        %h3.title= link_to topic.title, topic.relative_url
+        .by
+          Posted by
+          %strong= topic.user.username
+          - topic.category.try(:tap) do |cat|
+            in
+            %span.label.label-info= cat.name
 
-      .panel-body
+        .content= topic.posts.first.excerpt.html_safe
 
-        - @topics.each do |topic|
-          .topic
-            %h4.title= link_to topic.title, topic.relative_url
-            .by
-              Posted by
-              %strong.label.label-success= topic.user.username
-              - topic.category.try(:tap) do |cat|
-                in
-                %span.label.label-info= cat.name
+        %br
 
-            .content= topic.posts.first.excerpt.html_safe
+        = link_to "Read more ...", topic.relative_url, :class => ""
 
-            %br
-
-            = link_to "Read more", topic.relative_url, :class => "btn btn-primary btn-sm"
-
-            %hr
+        %hr
 
     = link_to "Visit the forums for more discussions", "/latest", :class => "btn btn-primary btn-large btn-block"
 
   .col-md-4
 
-    .panel
-      .panel-heading
-        = link_to "YouTube Channel", "http://www.youtube.com/foolishaggro", :class => "btn btn-danger btn-xs pull-right"
-        %h2.panel-title Recent Videos
-
-      .panel-body
-
-        - @videos.each do |video|
-          .topic
-            %h4.title= link_to video.title, video.video_url, :class => "video-link"
-            = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url, :class => "video-link"
-
-            %hr
+    %h3 Recent Videos
 
 
+    - @videos.each do |video|
+      .topic
+        %h4.title= link_to video.title, video.video_url, :class => "video-link"
+        = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url, :class => "video-link"
 
-  .col-md-4
-
-    :erb
-      <a class="twitter-timeline" href="https://twitter.com/foolishaggro" data-widget-id="369798873763418112">Foolish Aggro Tweets</a>
-      <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+"://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+        %hr
 
     = link_to "Twitter", "https://twitter.com/foolishaggro", :class => "btn btn-block btn-info"
     = link_to "Facebook", "https://www.facebook.com/foolishaggro", :class => "btn btn-block btn-primary"

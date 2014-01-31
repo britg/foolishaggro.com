@@ -3,8 +3,6 @@
 
 body {
   padding-bottom: 40px;
-  color: #5a5a5a;
-  background: url(image_path("pages/binding_dark.png")) #262626;
 }
 
 .navbar-wrapper {
@@ -29,7 +27,7 @@ header {
   background: url(image_path("pages/garden.png")) top center no-repeat;
   background-size: cover;
 
-  min-height: 400px;
+  min-height: 275px;
   border-bottom: solid 2px black;
 }
 
@@ -69,18 +67,7 @@ header {
 }
 
 #prime {
-  margin-top: -250px;
-  color: #fff;
-}
-
-.panel {
-  background: #333333;
-  border-color: #111;
-
-  .panel-heading {
-    background: #252525;
-    border-color: #111;
-  }
+  margin-top: -158px;
 }
 
 .tease {
@@ -135,6 +122,7 @@ header {
     text-align: center;
 
     .title {
+      color: #fff;
       display: block;
       width: 100%;
       position: relative;
@@ -147,22 +135,8 @@ header {
 }
 
 .topic {
-  .title {
-    text-shadow: 2px 2px #000;
-    margin-bottom: 5px;
-  }
-
   .by {
-    color: #ccc;
     margin-bottom: 20px;
-  }
-
-  .content {
-    color: #cfcfcf;
-  }
-
-  hr {
-    border-color: #666;
   }
 }
 
