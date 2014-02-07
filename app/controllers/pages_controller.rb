@@ -9,7 +9,7 @@ class PagesController < ActionController::Base
                    .visible
                    .where(:user_id => @admin_ids,
                           :archetype => Archetype.default)
-                   .where("category_id not in (5)")
+                   .where("category_id not in (5, 8, 9)")
                    .limit(10)
   end
 
