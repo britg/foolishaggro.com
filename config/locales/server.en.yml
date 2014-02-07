@@ -761,7 +761,7 @@ en:
     pop3s_polling_host: "The host to poll for email via POP3S"
     pop3s_polling_username: "The username for the POP3S account to poll for email"
     pop3s_polling_password: "The password for the POP3S account to poll for email"
-    enable_watch_new_topics: "Allow users to watch all new topics (optionally) via a user preference"
+    enable_mailing_list_mode: "Allow users to (optionally) opt-in to mailing list mode via a user preference"
 
     minimum_topics_similar: "How many topics need to exist in the database before similar topics are presented."
 
@@ -1275,7 +1275,7 @@ en:
     access_token_problem: "Tell an admin: Please update the site settings to include the correct discourse_org_access_key."
 
   page_not_found:
-    title: "The page you requested doesn't exist or may have been deleted by a moderator."
+    title: "The page you requested doesn't exist or is private."
     popular_topics: "Popular topics"
     recent_topics: "Recent topics"
     see_more: "See More"
