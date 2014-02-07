@@ -98,6 +98,10 @@ class User < ActiveRecord::Base
     3..15
   end
 
+  def custom_groups
+    groups.where(automatic: false)
+  end
+
   def self.username_available?(username)
     lower = username.downcase
     User.where(username_lower: lower).blank?
@@ -482,7 +486,7 @@ class User < ActiveRecord::Base
 
 
   def secure_category_ids
-    cats = self.staff? ? Category.where(read_restricted: true) : secure_categories.references(:categories)
+    cats = self.admin? ? Category.where(read_restricted: true) : secure_categories.references(:categories)
     cats.pluck('categories.id').sort
   end
 

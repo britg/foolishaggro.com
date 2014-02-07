@@ -163,6 +163,11 @@ Discourse::Application.routes.draw do
   get "posts/by_number/:topic_id/:post_number" => "posts#by_number"
   get "posts/:id/reply-history" => "posts#reply_history"
 
+  resources :groups do
+    get 'members'
+    get 'posts'
+  end
+
   resources :posts do
     put "bookmark"
     get "replies"
