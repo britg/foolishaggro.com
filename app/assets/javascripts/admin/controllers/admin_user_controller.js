@@ -24,6 +24,12 @@ Discourse.AdminUserIndexController = Discourse.ObjectController.extend({
     return Discourse.SiteSettings.must_approve_users;
   }.property(),
 
+  showBadges: function() {
+    return Discourse.SiteSettings.enable_badges;
+  }.property(),
+
+  primaryGroupDirty: Discourse.computed.propertyNotEqual('originalPrimaryGroupId', 'primary_group_id'),
+
   actions: {
     toggleTitleEdit: function() {
       this.toggleProperty('editingTitle');
@@ -42,6 +48,22 @@ Discourse.AdminUserIndexController = Discourse.ObjectController.extend({
 
     generateApiKey: function() {
       this.get('model').generateApiKey();
+    },
+
+    savePrimaryGroup: function() {
+      var self = this;
+      Discourse.ajax("/admin/users/" + this.get('id') + "/primary_group", {
+        type: 'PUT',
+        data: {primary_group_id: this.get('primary_group_id')}
+      }).then(function () {
+        self.set('originalPrimaryGroupId', self.get('primary_group_id'));
+      }).catch(function() {
+        bootbox.alert(I18n.t('generic_error'));
+      });
+    },
+
+    resetPrimaryGroup: function() {
+      this.set('primary_group_id', this.get('originalPrimaryGroupId'));
     },
 
     regenerateApiKey: function() {

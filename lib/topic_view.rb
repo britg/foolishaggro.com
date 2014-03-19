@@ -59,11 +59,27 @@ class TopicView
     @last_post ||= @posts.last
   end
 
+  def prev_page
+    if @page && @page > 1
+      @page - 1
+    else
+      nil
+    end
+  end
+
   def next_page
     @next_page ||= begin
       if last_post && (@topic.highest_post_number > last_post.post_number)
         @page + 1
       end
+    end
+  end
+
+  def prev_page_path
+    if prev_page > 1
+      "#{@topic.relative_url}?page=#{prev_page}"
+    else
+      @topic.relative_url
     end
   end
 
@@ -111,6 +127,22 @@ class TopicView
     filter_posts_paged(opts[:page].to_i)
   end
 
+  def primary_group_names
+    return @group_names if @group_names
+
+    primary_group_ids = Set.new
+    @posts.each do |p|
+      primary_group_ids << p.user.primary_group_id if p.user.try(:primary_group_id)
+    end
+
+    result = {}
+    unless primary_group_ids.empty?
+      Group.where(id: primary_group_ids.to_a).pluck(:id, :name).each do |g|
+        result[g[0]] = g[1]
+      end
+    end
+    result
+  end
 
   # Find the sort order for a post in the topic
   def sort_order_for_post_number(post_number)

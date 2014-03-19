@@ -95,7 +95,12 @@ class Plugin::Instance
 
   def register_asset(file,opts=nil)
     full_path = File.dirname(path) << "/assets/" << file
-    assets << full_path
+    if opts == :admin
+      @admin_javascripts ||= []
+      @admin_javascripts << full_path
+    else
+      assets << full_path
+    end
     if opts == :server_side
       @server_side_javascripts ||= []
       @server_side_javascripts << full_path
@@ -167,6 +172,12 @@ class Plugin::Instance
       Rails.configuration.assets.paths << File.dirname(path) + "/assets"
     end
 
+    if @admin_javascripts
+      @admin_javascripts.each do |js|
+        DiscoursePluginRegistry.admin_javascripts << js
+      end
+    end
+
     if @server_side_javascripts
       @server_side_javascripts.each do |js|
         DiscoursePluginRegistry.server_side_javascripts << js
@@ -216,7 +227,7 @@ class Plugin::Instance
       spec = Gem::Specification.load spec_file
       spec.activate
       unless opts[:require] == false
-        require name
+        require opts[:require_name] ? opts[:require_name] : name
       end
     else
       puts "You are specifying the gem #{name} in #{path}, however it does not exist!"
