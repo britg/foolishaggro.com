@@ -61,6 +61,19 @@ Discourse.User = Discourse.Model.extend({
     return this.get('website').split("/")[2];
   }.property('website'),
 
+  /**
+    This user's profile background(in CSS).
+
+    @property websiteName
+    @type {String}
+  **/
+  profileBackground: function() {
+    var background = this.get('profile_background');
+    if(Em.isEmpty(background) || !Discourse.SiteSettings.allow_profile_backgrounds) { return; }
+
+    return 'background-image: url(' + background + ')';
+  }.property('profile_background'),
+
   statusIcon: function() {
     var desc;
     if(this.get('admin')) {
@@ -109,6 +122,9 @@ Discourse.User = Discourse.Model.extend({
   trustLevel: function() {
     return Discourse.Site.currentProp('trustLevels').findProperty('id', parseInt(this.get('trust_level'), 10));
   }.property('trust_level'),
+
+  isElder: Em.computed.equal('trust_level', 4),
+  canManageTopic: Em.computed.or('staff', 'isElder'),
 
   isSuspended: Em.computed.equal('suspended', true),
 
@@ -170,6 +186,7 @@ Discourse.User = Discourse.Model.extend({
                                'bio_raw',
                                'website',
                                'name',
+                               'locale',
                                'email_digests',
                                'email_direct',
                                'email_always',
@@ -316,6 +333,22 @@ Discourse.User = Discourse.Model.extend({
     });
   },
 
+  /*
+    Clear profile background
+
+    @method clearProfileBackground
+    @returns {Promise} the result of the clear profile background request
+  */
+  clearProfileBackground: function() {
+    var user = this;
+    return Discourse.ajax("/users/" + this.get("username_lower") + "/preferences/profile_background/clear", {
+      type: 'PUT',
+      data: { }
+    }).then(function() {
+      user.set('profile_background', null);
+    });
+  },
+
   /**
     Determines whether the current user is allowed to upload a file.
 
@@ -343,10 +376,6 @@ Discourse.User = Discourse.Model.extend({
     });
   },
 
-  hasBeenSeenInTheLastMonth: function() {
-    return moment().diff(moment(this.get('last_seen_at')), 'month', true) < 1.0;
-  }.property("last_seen_at"),
-
   /**
     Homepage of the user
 
@@ -354,16 +383,8 @@ Discourse.User = Discourse.Model.extend({
     @type {String}
   **/
   homepage: function() {
-    // top is the default for:
-    //   - new users
-    //   - long-time-no-see user (ie. > 1 month)
-    if (Discourse.SiteSettings.top_menu.indexOf("top") >= 0) {
-      if (this.get("trust_level") === 0 || !this.get("hasBeenSeenInTheLastMonth")) {
-        return "top";
-      }
-    }
-    return Discourse.Utilities.defaultHomepage();
-  }.property("trust_level", "hasBeenSeenInTheLastMonth"),
+    return this.get("should_be_redirected_to_top") ? "top" : Discourse.Utilities.defaultHomepage();
+  }.property("should_be_redirected_to_top"),
 
   updateMutedCategories: function() {
     this.set("mutedCategories", Discourse.Category.findByIds(this.muted_category_ids));
@@ -375,7 +396,22 @@ Discourse.User = Discourse.Model.extend({
 
   updateWatchedCategories: function() {
     this.set("watchedCategories", Discourse.Category.findByIds(this.watched_category_ids));
-  }.observes("watched_category_ids")
+  }.observes("watched_category_ids"),
+
+  canDeleteAccount: function() {
+    return this.get('can_delete_account') && ((this.get('reply_count')||0) + (this.get('topic_count')||0)) <= 1;
+  }.property('can_delete_account', 'reply_count', 'topic_count'),
+
+  delete: function() {
+    if (this.get('can_delete_account')) {
+      return Discourse.ajax("/users/" + this.get('username'), {
+        type: 'DELETE',
+        data: {context: window.location.pathname}
+      });
+    } else {
+      return Ember.RSVP.reject(I18n.t('user.delete_yourself_not_allowed'));
+    }
+  }
 
 });
 

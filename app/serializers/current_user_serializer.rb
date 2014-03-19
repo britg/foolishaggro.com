@@ -16,7 +16,10 @@ class CurrentUserSerializer < BasicUserSerializer
              :trust_level,
              :can_edit,
              :can_invite_to_forum,
-             :no_password
+             :no_password,
+             :can_delete_account,
+             :should_be_redirected_to_top,
+             :redirected_to_top_reason
 
   def include_site_flagged_posts_count?
     object.staff?
@@ -52,6 +55,18 @@ class CurrentUserSerializer < BasicUserSerializer
 
   def include_no_password?
     !object.has_password?
+  end
+
+  def include_can_delete_account?
+    scope.can_delete_user?(object)
+  end
+
+  def can_delete_account
+    true
+  end
+
+  def include_redirected_to_top_reason?
+    object.should_be_redirected_to_top
   end
 
 end

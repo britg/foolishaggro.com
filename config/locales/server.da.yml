@@ -1,6 +1,9 @@
 # encoding: utf-8
 # This file contains content for the server portion of Discourse used by Ruby
 #
+# To work with us on translations, see:
+# https://www.transifex.com/projects/p/discourse-pt-br/
+#
 # To validate this YAML file after you change it, please paste it into
 # http://yamllint.com/
 
@@ -24,8 +27,8 @@ da:
   via: "%{username} via %{site_name}"
   is_reserved: "er reservet"
 
-  site_under_maintenance: 'Sitet bliver vedligeholdt i øjeblikket.'
-  operation_already_running: "Der kører allerede en %{operation}. Kan ikke starte et nyt %{operation} job lige nu."
+  backup:
+    operation_already_running: "Der kører allerede en %{operation}. Kan ikke starte et nyt %{operation} job lige nu."
 
   too_many_replies:
     one: "Beklager, men nye brugere kan kun skrive 1 svar i hvert emne til at starte med."
@@ -530,7 +533,7 @@ da:
     max_topic_title_length: "Maksimumlængde af emnetitel i tegn."
     min_private_message_title_length: "Minimumlængde af titel på privat besked i tegn."
     min_search_term_length: "Minimumlængde af søgeord i tegn."
-    allow_uncategorized_topics: "Tillad emner at blive oprettet uden en kategori. BEMÆRK: Efter ændring af denne indstilling skal alle klienter genindlæse siden for at ændringen slår igennem."
+    allow_uncategorized_topics: "Tillad emner at blive oprettet uden en kategori."
     allow_duplicate_topic_titles: "Tillad emner med identiske titler"
     unique_posts_mins: "Hvor mange minutter der skal gå før en bruger kan skrive et indlæg med det samme indhold igen."
     enforce_global_nicknames: "Gennemtving unikke øgenavne (ADVARSEL: skift kun dette under den første opsætning)"
@@ -597,7 +600,7 @@ da:
     must_approve_users: "Admins skal godkende alle brugere før de får adgang"
     ga_tracking_code: "Google analytics sporingskode, f.eks.: UA-12345678-9; se http://google.com/analytics."
     ga_domain_name: "Google analytics domænenavn, f.eks.: example.com; se http://google.com/analytics."
-    enable_escaped_fragments: "Aktivér workaround som kan hjælpe ældre webcrawlers med at indeksere sitet. ADVARSEL: aktivér kun hvis du har behov for det."
+    enable_escaped_fragments: "Aktivér workaround som kan hjælpe ældre webcrawlers med at indeksere sitet."
     enable_noscript_support: "Aktivér standard webcrawler søgemaskineunderstøttelse vha. noscript-tagget"
     top_menu: "Angiv hvilke elementer der skal vises i hjemmesidenavigationen, og i hvilken rækkefølge. Eksempel: latest|new|unread|starred|categories|top|read|posted."
     post_menu: "Angiv hvilke elementer der skal vises i indlægsmenuen, og i hvilken rækkefølge. Eksempel: like|edit|flag|delete|share|bookmark|reply."
@@ -652,9 +655,7 @@ da:
     github_client_id: "Client id til Github-login, oprettes på https://github.com/settings/applications."
     github_client_secret: "Client secret til Github-login, oprettes på at https://github.com/settings/applications."
 
-    enable_persona_logins: "Aktivér e-mail-baseret login med Mozilla Persona"
-
-    allow_import: "Tillad import, som kan erstatte ALLE sitets data; slå fra med mindre du planlægger at importere data"
+    allow_restore: "Tillad import, som kan erstatte ALLE sitets data; slå fra med mindre du planlægger at importere data"
 
     active_user_rate_limit_secs: "Hvor ofte vi opdaterer feltet 'last_seen_at', i sekunder."
     previous_visit_timeout_hours: "Hvor lang tid et besøg varer før vi regner det med i det 'forrige' besøg, i timer."
@@ -753,7 +754,7 @@ da:
     minimum_topics_similar: "Hvor emner der skal eksistere i databasen før der vises tilsvarende emner."
 
     relative_date_duration: "Antal dage efter oprettelse af et indlæg hvor datoer vises som relative i stedet for absolutte. Eksempler: relativ dato: 7d, absolut dato: 20 Feb."
-    delete_user_max_age: "Den maksimale alder af en bruger som kan slettes af en admin, i dage."
+    delete_user_max_post_age: "Den maksimale alder af en bruger som kan slettes af en admin, i dage."
     delete_all_posts_max: "Det maksimale antal indlæg der kan slettes på én gang med “Slet alle indlæg”-knappen. Hvis en bruger har mere end dette antal indlæg, kan indlæggene ikke slettes på én gang og brugeren kan ikke slettes."
     username_change_period: "Antal dage efter oprettelsen hvor brugere kan ændre deres brugernavn (0 for ikke at tillade skift af brugernavn)."
     email_editable: "Lad brugerne skifte deres e-mail-adresse efter oprettelsen."

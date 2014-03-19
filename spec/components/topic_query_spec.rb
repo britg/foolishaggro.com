@@ -3,13 +3,12 @@ require 'topic_view'
 
 describe TopicQuery do
 
-  let(:user) { Fabricate(:coding_horror) }
+  let!(:user) { Fabricate(:coding_horror) }
   let(:creator) { Fabricate(:user) }
   let(:topic_query) { TopicQuery.new(user) }
 
   let(:moderator) { Fabricate(:moderator) }
   let(:admin) { Fabricate(:admin) }
-
 
   context 'secure category' do
     it "filters categories out correctly" do
@@ -30,12 +29,12 @@ describe TopicQuery do
       # mods can see hidden topics
       TopicQuery.new(moderator).list_latest.topics.count.should == 1
       # admins can see all the topics
-      TopicQuery.new(admin).list_latest.topics.count.should == 2
+      TopicQuery.new(admin).list_latest.topics.count.should == 3
 
       group.add(user)
       group.save
 
-      TopicQuery.new(user).list_latest.topics.count.should == 1
+      TopicQuery.new(user).list_latest.topics.count.should == 2
 
     end
 
