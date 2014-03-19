@@ -58,9 +58,9 @@ Discourse.EditCategoryController = Discourse.ObjectController.extend(Discourse.M
     return false;
   }.property('saving', 'name', 'color', 'deleting'),
 
-  deleteVisible: function() {
-    return (this.get('id') && this.get('topic_count') === 0 && !this.get("isUncategorizedCategory"));
-  }.property('id', 'topic_count'),
+  emailInEnabled: function() {
+    return Discourse.SiteSettings.email_in;
+  },
 
   deleteDisabled: function() {
     return (this.get('deleting') || this.get('saving') || false);
@@ -102,6 +102,10 @@ Discourse.EditCategoryController = Discourse.ObjectController.extend(Discourse.M
   deleteButtonTitle: function() {
     return I18n.t('category.delete');
   }.property(),
+
+  showDescription: function() {
+    return !this.get('isUncategorized') && this.get('id');
+  }.property('isUncategorized', 'id'),
 
   actions: {
 

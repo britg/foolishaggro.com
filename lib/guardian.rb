@@ -2,12 +2,15 @@ require_dependency 'guardian/category_guardian'
 require_dependency 'guardian/ensure_magic'
 require_dependency 'guardian/post_guardian'
 require_dependency 'guardian/topic_guardian'
+require_dependency 'guardian/user_guardian'
+
 # The guardian is responsible for confirming access to various site resources and operations
 class Guardian
   include EnsureMagic
   include CategoryGuardian
   include PostGuardain
   include TopicGuardian
+  include UserGuardian
 
   class AnonymousUser
     def blank?; true; end
@@ -68,6 +71,26 @@ class Guardian
     end
   end
 
+  def can_create?(klass, parent=nil)
+    return false unless authenticated? && klass
+
+    # If no parent is provided, we look for a can_create_klass?
+    # custom method.
+    #
+    # If a parent is provided, we look for a method called
+    # can_create_klass_on_parent?
+    target = klass.name.underscore
+    if parent.present?
+      return false unless can_see?(parent)
+      target << "_on_#{parent.class.name.underscore}"
+    end
+    create_method = :"can_create_#{target}?"
+
+    return send(create_method, parent) if respond_to?(create_method)
+
+    true
+  end
+
   # Can the user edit the obj
   def can_edit?(obj)
     can_do?(:edit, obj)
@@ -79,11 +102,12 @@ class Guardian
   end
 
   def can_moderate?(obj)
-    obj && is_staff?
+    obj && authenticated? && (is_staff? || (obj.is_a?(Topic) && @user.has_trust_level?(:elder)))
   end
   alias :can_move_posts? :can_moderate?
   alias :can_see_flags? :can_moderate?
   alias :can_send_activation_email? :can_moderate?
+  alias :can_grant_badges? :can_moderate?
 
 
 
@@ -133,20 +157,12 @@ class Guardian
     user && is_staff?
   end
 
+  def can_change_primary_group?(user)
+    user && is_staff?
+  end
+
   def can_change_trust_level?(user)
     user && is_staff?
-  end
-
-  def can_block_user?(user)
-    user && is_staff? && not(user.staff?)
-  end
-
-  def can_unblock_user?(user)
-    user && is_staff?
-  end
-
-  def can_delete_user?(user)
-    user && is_staff? && !user.admin? && user.created_at > SiteSetting.delete_user_max_age.to_i.days.ago
   end
 
   # Support sites that have to approve users
@@ -180,32 +196,15 @@ class Guardian
     is_admin? || (authenticated? && @user.id == user_id)
   end
 
-  def can_edit_user?(user)
-    is_me?(user) || is_staff?
-  end
-
-  def can_edit_username?(user)
-    return true if is_staff?
-    return false if SiteSetting.username_change_period <= 0
-    is_me?(user) && (user.post_count == 0 || user.created_at > SiteSetting.username_change_period.days.ago)
-  end
-
-  def can_edit_email?(user)
-    return true if is_staff?
-    return false unless SiteSetting.email_editable?
-    can_edit?(user)
-  end
-
   def can_send_private_message?(target)
     (User === target || Group === target) &&
+    # User is authenticated
     authenticated? &&
-
     # Can't send message to yourself
     is_not_me?(target) &&
-
     # Have to be a basic level at least
     @user.has_trust_level?(:basic) &&
-
+    # PMs are enabled
     SiteSetting.enable_private_messages
   end
 

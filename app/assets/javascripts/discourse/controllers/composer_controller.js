@@ -304,10 +304,10 @@ Discourse.ComposerController = Discourse.Controller.extend({
       if (composer) {
         composer.set('topic', opts.topic);
       }
+    } else {
+      composer = composer || Discourse.Composer.create();
+      composer.open(opts);
     }
-
-    composer = composer || Discourse.Composer.create();
-    composer.open(opts);
 
     this.set('model', composer);
     composer.set('composeState', Discourse.Composer.OPEN);
@@ -335,7 +335,8 @@ Discourse.ComposerController = Discourse.Controller.extend({
 
     return new Ember.RSVP.Promise(function (resolve) {
       if (self.get('model.hasMetaData') || self.get('model.replyDirty')) {
-        bootbox.confirm(I18n.t("post.abandon"), I18n.t("no_value"), I18n.t("yes_value"), function(result) {
+        bootbox.confirm(I18n.t("post.abandon.confirm"), I18n.t("post.abandon.no_value"),
+            I18n.t("post.abandon.yes_value"), function(result) {
           if (result) {
             self.destroyDraft();
             self.get('model').clearState();

@@ -23,6 +23,7 @@ class PostSerializer < BasicPostSerializer
              :topic_slug,
              :topic_id,
              :display_username,
+             :primary_group_name,
              :version,
              :can_edit,
              :can_delete,
@@ -44,7 +45,8 @@ class PostSerializer < BasicPostSerializer
              :deleted_at,
              :deleted_by,
              :user_deleted,
-             :edit_reason
+             :edit_reason,
+             :can_view_edit_history
 
 
   def moderator?
@@ -73,6 +75,11 @@ class PostSerializer < BasicPostSerializer
 
   def display_username
     object.user.try(:name)
+  end
+
+  def primary_group_name
+    return nil unless object.user && @topic_view
+    return @topic_view.primary_group_names[object.user.primary_group_id] if object.user.primary_group_id
   end
 
   def link_counts
@@ -192,6 +199,10 @@ class PostSerializer < BasicPostSerializer
 
   def include_display_username?
     SiteSetting.enable_names?
+  end
+
+  def can_view_edit_history
+    scope.can_view_post_revisions?(object)
   end
 
   private

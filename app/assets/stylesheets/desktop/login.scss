@@ -14,7 +14,7 @@
 
 #login-form {
   a {
-    color: $dark_gray;
+    color: lighten($primary_text_color, 35%);
     cursor: pointer;
   }
 }
@@ -28,10 +28,13 @@
 // Create account
 
 #new-account-link {
-	cursor: pointer;
+  cursor: pointer;
 }
 
 .create-account {
+  form {
+    margin-bottom: 0;
+  }
   table {
     width: 100%;
   }
@@ -49,11 +52,15 @@
 
   tr.instructions {
     label {
-      color: #888;
+      color: lighten($primary_text_color, 60%);
     }
   }
 
   .fa-spinner {
     font-size: 18px;
+  }
+
+  .tos-agree {
+    margin-bottom: 12px;
   }
 }
