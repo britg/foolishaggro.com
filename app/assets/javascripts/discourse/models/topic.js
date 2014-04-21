@@ -168,8 +168,7 @@ Discourse.Topic = Discourse.Model.extend({
     if (!wordCount) return;
 
     // Avg for 500 words per minute when you account for skimming
-    var minutes = Math.floor(wordCount / 500.0);
-    return minutes;
+    return Math.floor(wordCount / 500.0);
   }.property('word_count'),
 
   toggleStar: function() {
@@ -272,12 +271,35 @@ Discourse.Topic = Discourse.Model.extend({
 
     // Clear the pin optimistically from the object
     topic.set('pinned', false);
+    topic.set('unpinned', true);
 
     Discourse.ajax("/t/" + this.get('id') + "/clear-pin", {
       type: 'PUT'
     }).then(null, function() {
       // On error, put the pin back
       topic.set('pinned', true);
+      topic.set('unpinned', false);
+    });
+  },
+
+  /**
+    Re-pins a topic with a cleared pin
+
+    @method rePin
+  **/
+  rePin: function() {
+    var topic = this;
+
+    // Clear the pin optimistically from the object
+    topic.set('pinned', true);
+    topic.set('unpinned', false);
+
+    Discourse.ajax("/t/" + this.get('id') + "/re-pin", {
+      type: 'PUT'
+    }).then(null, function() {
+      // On error, put the pin back
+      topic.set('pinned', true);
+      topic.set('unpinned', false);
     });
   },
 
@@ -406,6 +428,17 @@ Discourse.Topic.reopenClass({
     }).then(function (result) {
       if (result.success) return result;
       promise.reject(new Error("error moving posts topic"));
+    });
+    return promise;
+  },
+
+  changeOwners: function(topicId, opts) {
+    var promise = Discourse.ajax("/t/" + topicId + "/change-owner", {
+      type: 'POST',
+      data: opts
+    }).then(function (result) {
+      if (result.success) return result;
+      promise.reject(new Error("error changing ownership of posts"));
     });
     return promise;
   },

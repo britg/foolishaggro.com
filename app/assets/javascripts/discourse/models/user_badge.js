@@ -7,6 +7,17 @@
   @module Discourse
 **/
 Discourse.UserBadge = Discourse.Model.extend({
+  /**
+    Revoke this badge.
+
+    @method revoke
+    @returns {Promise} a promise that resolves when the badge has been revoked.
+  **/
+  revoke: function() {
+    return Discourse.ajax("/user_badges/" + this.get('id'), {
+      type: "DELETE"
+    });
+  }
 });
 
 Discourse.UserBadge.reopenClass({
@@ -19,14 +30,15 @@ Discourse.UserBadge.reopenClass({
   **/
   createFromJson: function(json) {
     // Create User objects.
+    if (json.users === undefined) { json.users = []; }
     var users = {};
     json.users.forEach(function(userJson) {
       users[userJson.id] = Discourse.User.create(userJson);
     });
 
     // Create the badges.
+    if (json.badges === undefined) { json.badges = []; }
     var badges = {};
-
     Discourse.Badge.createFromJson(json).forEach(function(badge) {
       badges[badge.get('id')] = badge;
     });
@@ -42,6 +54,9 @@ Discourse.UserBadge.reopenClass({
     userBadges = userBadges.map(function(userBadgeJson) {
       var userBadge = Discourse.UserBadge.create(userBadgeJson);
       userBadge.set('badge', badges[userBadge.get('badge_id')]);
+      if (userBadge.get('user_id')) {
+        userBadge.set('user', users[userBadge.get('user_id')]);
+      }
       if (userBadge.get('granted_by_id')) {
         userBadge.set('granted_by', users[userBadge.get('granted_by_id')]);
       }
@@ -53,5 +68,51 @@ Discourse.UserBadge.reopenClass({
     } else {
       return userBadges;
     }
+  },
+
+  /**
+    Find all badges for a given username.
+
+    @method findByUsername
+    @param {String} username
+    @returns {Promise} a promise that resolves to an array of `Discourse.UserBadge`.
+  **/
+  findByUsername: function(username) {
+    return Discourse.ajax("/user_badges.json?username=" + username).then(function(json) {
+      return Discourse.UserBadge.createFromJson(json);
+    });
+  },
+
+  /**
+    Find all badge grants for a given badge ID.
+
+    @method findById
+    @param {String} badgeId
+    @returns {Promise} a promise that resolves to an array of `Discourse.UserBadge`.
+  **/
+  findByBadgeId: function(badgeId) {
+    return Discourse.ajax("/user_badges.json?badge_id=" + badgeId).then(function(json) {
+      return Discourse.UserBadge.createFromJson(json);
+    });
+  },
+
+  /**
+    Grant the badge having id `badgeId` to the user identified by `username`.
+
+    @method grant
+    @param {Integer} badgeId id of the badge to be granted.
+    @param {String} username username of the user to be granted the badge.
+    @returns {Promise} a promise that resolves to an instance of `Discourse.UserBadge`.
+  **/
+  grant: function(badgeId, username) {
+    return Discourse.ajax("/user_badges", {
+      type: "POST",
+      data: {
+        username: username,
+        badge_id: badgeId
+      }
+    }).then(function(json) {
+      return Discourse.UserBadge.createFromJson(json);
+    });
   }
 });

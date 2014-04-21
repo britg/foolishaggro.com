@@ -115,7 +115,7 @@ describe UsersController do
 
       end
 
-      context 'reponse' do
+      context 'response' do
         before do
           Guardian.any_instance.expects(:can_access_forum?).returns(true)
           EmailToken.expects(:confirm).with('asdfasdf').returns(user)
@@ -295,18 +295,20 @@ describe UsersController do
     end
 
     context 'when creating a non active user (unconfirmed email)' do
-      it 'enqueues a signup email' do
+
+      it 'returns a 500 when local logins are disabled' do
+        SiteSetting.expects(:enable_local_logins).returns(false)
+        post_user
+
+        expect(response.status).to eq(500)
+      end
+
+      it 'creates a user correctly' do
         Jobs.expects(:enqueue).with(:user_email, has_entries(type: :signup))
-        post_user
-      end
-
-      it 'does not enqueue a welcome email' do
         User.any_instance.expects(:enqueue_welcome_message).with('welcome_user').never
-        post_user
-      end
 
-      it 'indicates the user is not active in the response' do
         post_user
+
         expect(JSON.parse(response.body)['active']).to be_false
       end
 
@@ -835,7 +837,7 @@ describe UsersController do
 
       xhr :get, :invited, username: inviter.username, filter: 'billybob'
 
-      invites = JSON.parse(response.body)
+      invites = JSON.parse(response.body)['invites']
       expect(invites).to have(1).item
       expect(invites.first).to include('email' => 'billybob@example.com')
     end
@@ -857,7 +859,7 @@ describe UsersController do
 
       xhr :get, :invited, username: inviter.username, filter: 'billybob'
 
-      invites = JSON.parse(response.body)
+      invites = JSON.parse(response.body)['invites']
       expect(invites).to have(1).item
       expect(invites.first).to include('email' => 'billybob@example.com')
     end
@@ -870,7 +872,7 @@ describe UsersController do
 
           xhr :get, :invited, username: inviter.username
 
-          invites = JSON.parse(response.body)
+          invites = JSON.parse(response.body)['invites']
           expect(invites).to be_empty
         end
       end
@@ -883,7 +885,7 @@ describe UsersController do
 
           xhr :get, :invited, username: inviter.username
 
-          invites = JSON.parse(response.body)
+          invites = JSON.parse(response.body)['invites']
           expect(invites).to have(1).item
           expect(invites.first).to include('email' => invite.email)
         end
@@ -898,13 +900,13 @@ describe UsersController do
             inviter = Fabricate(:user)
             invite = Fabricate(:invite, invited_by: inviter)
             stub_guardian(user) do |guardian|
-              guardian.stubs(:can_see_pending_invites_from?).
+              guardian.stubs(:can_see_invite_details?).
                 with(inviter).returns(true)
             end
 
             xhr :get, :invited, username: inviter.username
 
-            invites = JSON.parse(response.body)
+            invites = JSON.parse(response.body)['invites']
             expect(invites).to have(1).item
             expect(invites.first).to include("email" => invite.email)
           end
@@ -917,14 +919,14 @@ describe UsersController do
             invitee = Fabricate(:user)
             Fabricate(:invite, invited_by: inviter)
             stub_guardian(user) do |guardian|
-              guardian.stubs(:can_see_pending_invites_from?).
+              guardian.stubs(:can_see_invite_details?).
                 with(inviter).returns(false)
             end
 
             xhr :get, :invited, username: inviter.username
 
-            invites = JSON.parse(response.body)
-            expect(invites).to be_empty
+            json = JSON.parse(response.body)['invites']
+            expect(json).to be_empty
           end
         end
       end
@@ -938,7 +940,7 @@ describe UsersController do
 
           xhr :get, :invited, username: inviter.username
 
-          invites = JSON.parse(response.body)
+          invites = JSON.parse(response.body)['invites']
           expect(invites).to have(1).item
           expect(invites.first).to include('email' => invite.email)
         end
@@ -1097,25 +1099,23 @@ describe UsersController do
     it 'raises an error when not logged in' do
       lambda { xhr :put, :upload_user_image, username: 'asdf' }.should raise_error(Discourse::NotLoggedIn)
     end
-    
 
     context 'while logged in' do
 
       let!(:user) { log_in }
 
+      let(:logo) { File.new("#{Rails.root}/spec/fixtures/images/logo.png") }
+
       let(:user_image) do
-        ActionDispatch::Http::UploadedFile.new({
-          filename: 'logo.png',
-          tempfile: File.new("#{Rails.root}/spec/fixtures/images/logo.png")
-        })
+        ActionDispatch::Http::UploadedFile.new({ filename: 'logo.png', tempfile: logo })
       end
-      
+
       it 'raises an error without a user_image_type param' do
         lambda { xhr :put, :upload_user_image, username: user.username }.should raise_error(ActionController::ParameterMissing)
       end
 
       describe "with uploaded file" do
-      
+
         it 'raises an error when you don\'t have permission to upload an user image' do
           Guardian.any_instance.expects(:can_edit?).with(user).returns(false)
           xhr :post, :upload_user_image, username: user.username, user_image_type: "avatar"
@@ -1123,19 +1123,14 @@ describe UsersController do
         end
 
         it 'rejects large images' do
-          AvatarUploadPolicy.any_instance.stubs(:too_big?).returns(true)
-          xhr :post, :upload_user_image, username: user.username, file: user_image, user_image_type: "avatar"
-          response.status.should eq 413
-        end
-
-        it 'rejects unauthorized images' do
-          SiteSetting.stubs(:authorized_image?).returns(false)
+          SiteSetting.stubs(:max_image_size_kb).returns(1)
           xhr :post, :upload_user_image, username: user.username, file: user_image, user_image_type: "avatar"
           response.status.should eq 422
         end
-        
-        it 'rejects requests with unknown user_image_type' do
-          xhr :post, :upload_user_image, username: user.username, file: user_image, user_image_type: "asdf"
+
+        it 'rejects unauthorized images' do
+          SiteSetting.stubs(:authorized_extensions).returns(".txt")
+          xhr :post, :upload_user_image, username: user.username, file: user_image, user_image_type: "avatar"
           response.status.should eq 422
         end
 
@@ -1154,54 +1149,46 @@ describe UsersController do
           user.use_uploaded_avatar.should == true
           # returns the url, width and height of the uploaded image
           json = JSON.parse(response.body)
-          json['url'].should == "/uploads/default/1/1234567890123456.jpg"
+          json['url'].should == "/uploads/default/1/1234567890123456.png"
           json['width'].should == 100
           json['height'].should == 200
         end
-        
+
         it 'is successful for profile backgrounds' do
           upload = Fabricate(:upload)
           Upload.expects(:create_for).returns(upload)
           xhr :post, :upload_user_image, username: user.username, file: user_image, user_image_type: "profile_background"
           user.reload
-          
-          user.profile_background.should == "/uploads/default/1/1234567890123456.jpg"
-          
+
+          user.profile_background.should == "/uploads/default/1/1234567890123456.png"
+
           # returns the url, width and height of the uploaded image
           json = JSON.parse(response.body)
-          json['url'].should == "/uploads/default/1/1234567890123456.jpg"
+          json['url'].should == "/uploads/default/1/1234567890123456.png"
           json['width'].should == 100
           json['height'].should == 200
         end
-        
+
       end
 
       describe "with url" do
         let(:user_image_url) { "http://cdn.discourse.org/assets/logo.png" }
 
-        before :each do
-          UsersController.any_instance.stubs(:is_api?).returns(true)
-        end
+        before { UsersController.any_instance.stubs(:is_api?).returns(true) }
 
         describe "correct urls" do
-          before :each do
-            UriAdapter.any_instance.stubs(:open).returns StringIO.new(fixture_file("images/logo.png"))
-          end
-          
-          it 'rejects large images' do
-            AvatarUploadPolicy.any_instance.stubs(:too_big?).returns(true)
-            xhr :post, :upload_user_image, username: user.username, file: user_image_url, user_image_type: "profile_background"
-            response.status.should eq 413
-          end
 
-          it 'rejects unauthorized images' do
-            SiteSetting.stubs(:authorized_image?).returns(false)
+          before { FileHelper.stubs(:download).returns(logo) }
+
+          it 'rejects large images' do
+            SiteSetting.stubs(:max_image_size_kb).returns(1)
             xhr :post, :upload_user_image, username: user.username, file: user_image_url, user_image_type: "profile_background"
             response.status.should eq 422
           end
-          
-          it 'rejects requests with unknown user_image_type' do
-            xhr :post, :upload_user_image, username: user.username, file: user_image_url, user_image_type: "asdf"
+
+          it 'rejects unauthorized images' do
+            SiteSetting.stubs(:authorized_extensions).returns(".txt")
+            xhr :post, :upload_user_image, username: user.username, file: user_image_url, user_image_type: "profile_background"
             response.status.should eq 422
           end
 
@@ -1220,26 +1207,24 @@ describe UsersController do
             user.use_uploaded_avatar.should == true
             # returns the url, width and height of the uploaded image
             json = JSON.parse(response.body)
-            json['url'].should == "/uploads/default/1/1234567890123456.jpg"
+            json['url'].should == "/uploads/default/1/1234567890123456.png"
             json['width'].should == 100
             json['height'].should == 200
           end
-          
+
           it 'is successful for profile backgrounds' do
             upload = Fabricate(:upload)
             Upload.expects(:create_for).returns(upload)
             xhr :post, :upload_user_image, username: user.username, file: user_image_url, user_image_type: "profile_background"
             user.reload
-            
-            user.profile_background.should == "/uploads/default/1/1234567890123456.jpg"
-            
+            user.profile_background.should == "/uploads/default/1/1234567890123456.png"
+
             # returns the url, width and height of the uploaded image
             json = JSON.parse(response.body)
-            json['url'].should == "/uploads/default/1/1234567890123456.jpg"
+            json['url'].should == "/uploads/default/1/1234567890123456.png"
             json['width'].should == 100
             json['height'].should == 200
           end
-          
         end
 
         it "should handle malformed urls" do
@@ -1282,13 +1267,13 @@ describe UsersController do
     end
 
   end
-  
+
   describe '.clear_profile_background' do
-  
+
     it 'raises an error when not logged in' do
       lambda { xhr :put, :clear_profile_background, username: 'asdf' }.should raise_error(Discourse::NotLoggedIn)
     end
-    
+
     context 'while logged in' do
 
       let!(:user) { log_in }
@@ -1306,7 +1291,6 @@ describe UsersController do
       end
 
     end
-    
   end
 
   describe '.destroy' do

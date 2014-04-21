@@ -23,7 +23,7 @@ class SiteSetting < ActiveRecord::Base
     load_settings(file)
   end
 
-  SiteSettingExtension.class_variable_get(:@@client_settings) << :available_locales
+  client_settings << :available_locales
 
   def self.available_locales
     LocaleSiteSetting.values.map{ |e| e[:value] }.join('|')
@@ -72,28 +72,6 @@ class SiteSetting < ActiveRecord::Base
                   .first
   end
 
-  def self.authorized_uploads
-    authorized_extensions.tr(" ", "")
-                         .split("|")
-                         .map { |extension| (extension.start_with?(".") ? extension[1..-1] : extension).gsub(".", "\.") }
-  end
-
-  def self.authorized_upload?(file)
-    authorized_uploads.count > 0 && file.original_filename =~ /\.(#{authorized_uploads.join("|")})$/i
-  end
-
-  def self.images
-    @images ||= Set.new ["jpg", "jpeg", "png", "gif", "tif", "tiff", "bmp"]
-  end
-
-  def self.authorized_images
-    authorized_uploads.select { |extension| images.include?(extension) }
-  end
-
-  def self.authorized_image?(file)
-    authorized_images.count > 0 && file.original_filename =~ /\.(#{authorized_images.join("|")})$/i
-  end
-
   def self.scheme
     use_https? ? "https" : "http"
   end
@@ -118,4 +96,3 @@ end
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #
-
