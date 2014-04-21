@@ -1,14 +1,10 @@
 <a href="http://www.discourse.org/">![Logo](images/discourse.png)</a>
 
-Discourse is the 100% open source, next-generation discussion platform built for the next decade of the Internet.
-
-Whenever you need ...
+Discourse is the 100% open source, next-generation discussion platform built for the next decade of the Internet. It works as:
 
 - a mailing list
-- a forum to discuss something
-- a chat room where you can type paragraphs
-
-... consider Discourse.
+- a discussion forum
+- a longer form chat room
 
 To learn more about the philosophy and goals of the project, [visit **discourse.org**](http://www.discourse.org).
 
@@ -24,7 +20,7 @@ To learn more about the philosophy and goals of the project, [visit **discourse.
 
 ## Getting Started
 
-1. If you're **brand new to Ruby and Rails**, please see [**Discourse as Your First Rails App**](http://blog.discourse.org/2013/04/discourse-as-your-first-rails-app/) or our [**Discourse Vagrant Developer Guide**](docs/VAGRANT.md), which includes instructions to get up and running in a development environment using a virtual machine. 
+1. If you're **brand new to Ruby and Rails**, please see [**Discourse as Your First Rails App**](http://blog.discourse.org/2013/04/discourse-as-your-first-rails-app/) or our [**Discourse Vagrant Developer Guide**](docs/VAGRANT.md), which includes a development environment in a virtual machine. 
 
 2. If you're familiar with how Rails works and are comfortable setting up your own environment, use our [**Discourse Advanced Developer Guide**](docs/DEVELOPER-ADVANCED.md). 
 
@@ -42,7 +38,7 @@ Discourse is built for the *next* 10 years of the Internet, so our requirements 
 
 | Browsers | Tablets |  Smartphones |
 | -------- | ------- | ----------- |
-| Safari 5+| iPad 2+ |  iOS 6+ | 
+| Safari 5.1+| iPad 2+ |  iOS 6+ | 
 | Google Chrome 23+ |  Android 4.1+ | Android 4.1+ |
 | Internet Explorer 10+ | Windows 8 | Windows Phone 8 |
 | Firefox 16+ | |

@@ -24,11 +24,13 @@ describe BadgeGranter do
 
     it 'sets granted_by if the option is present' do
       admin = Fabricate(:admin)
+      StaffActionLogger.any_instance.expects(:log_badge_grant).once
       user_badge = BadgeGranter.grant(badge, user, granted_by: admin)
       user_badge.granted_by.should eq(admin)
     end
 
     it 'defaults granted_by to the system user' do
+      StaffActionLogger.any_instance.expects(:log_badge_grant).never
       user_badge = BadgeGranter.grant(badge, user)
       user_badge.granted_by_id.should eq(Discourse.system_user.id)
     end
@@ -38,22 +40,28 @@ describe BadgeGranter do
       user_badge.should_not be_present
     end
 
-    it 'increments grant_count on the badge' do
+    it 'increments grant_count on the badge and creates a notification' do
       BadgeGranter.grant(badge, user)
       badge.reload.grant_count.should eq(1)
+      user.notifications.where(notification_type: Notification.types[:granted_badge]).first.data_hash["badge_id"].should == badge.id
     end
 
   end
 
   describe 'revoke' do
 
+    let(:admin) { Fabricate(:admin) }
     let!(:user_badge) { BadgeGranter.grant(badge, user) }
 
-    it 'revokes the badge and decrements grant_count' do
+    it 'revokes the badge and does necessary cleanup' do
+      user.title = badge.name; user.save!
       badge.reload.grant_count.should eq(1)
-      BadgeGranter.revoke(user_badge)
+      StaffActionLogger.any_instance.expects(:log_badge_revoke).with(user_badge)
+      BadgeGranter.revoke(user_badge, revoked_by: admin)
       UserBadge.where(user: user, badge: badge).first.should_not be_present
       badge.reload.grant_count.should eq(0)
+      user.notifications.where(notification_type: Notification.types[:granted_badge]).should be_empty
+      user.reload.title.should == nil
     end
 
   end

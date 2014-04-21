@@ -1,19 +1,16 @@
 # encoding: utf-8
-# This file contains content for the client portion of Discourse, sent out
-# to the Javascript app.
 #
-# To work with us on translations, see:
+# Never edit this file. It will be overwritten when translations are pulled from Transifex.
+#
+# To work with us on translations, join this project:
 # https://www.transifex.com/projects/p/discourse-pt-br/
-#
-# To validate this YAML file after you change it, please paste it into
-# http://yamllint.com/
 
 zh_TW:
   js:
     number:
       human:
         storage_units:
-          format: ! '%n %u'
+          format: '%n %u'
           units:
             byte:
               one: Byte
@@ -64,7 +61,7 @@ zh_TW:
         x_days:
           one: "1 天"
           other: "%{count} 天"
-        date_year: "D MMM YYYY"  
+        date_year: "D MMM YYYY"
       medium_with_ago:
         x_minutes:
           one: "1 分鐘前"
@@ -711,20 +708,7 @@ zh_TW:
       read_more: "要閱讀更多文章嗎? 請按 {{catLink}} 或 {{latestLink}}。"
 
       # keys ending with _MF use message format, see /spec/components/js_local_helper_spec.rb for samples
-      read_more_MF: "There {
-        UNREAD, plural,
-        =0 {}
-        one {
-          is <a href='/unread'>1 unread</a>
-        } other {
-          are <a href='/unread'># unread</a>
-        }
-        } {
-          NEW, plural,
-            =0 {}
-            one { {BOTH, select, true{and } false {is } other{}} <a href='/new'>1 new</a> topic}
-            other { {BOTH, select, true{and } false {are } other{}} <a href='/new'># new</a> topics}
-        } remaining, or {CATEGORY, select, true {browse other topics in {catLink}} false {{latestLink}} other {}} "
+      read_more_MF: "There { UNREAD, plural, =0 {} one { is <a href='/unread'>1 unread</a> } other { are <a href='/unread'># unread</a> } } { NEW, plural, =0 {} one { {BOTH, select, true{and } false {is } other{}} <a href='/new'>1 new</a> topic} other { {BOTH, select, true{and } false {are } other{}} <a href='/new'># new</a> topics} } remaining, or {CATEGORY, select, true {browse other topics in {catLink}} false {{latestLink}} other {}}"
 
       browse_all_categories: 瀏覽所有分類
 
@@ -1175,6 +1159,11 @@ zh_TW:
           other: "未讀 ({{count}})"
         help: "追蹤有未讀帖子的討論話題"
       new:
+        lower_title_with_count:
+          zero: ""
+          one: "1 個新話題"
+          other: "{{count}} 個新話題"
+        lower_title: "新話題"
         title:
           zero: "新討論話題"
           one: "新討論話題 (1)"
