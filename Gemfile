@@ -162,9 +162,7 @@ end
 
 gem 'haml-rails'
 gem 'jquery-rails'
-gem 'anjlab-bootstrap-rails', :require => 'bootstrap-rails',
-                              :github => 'anjlab/bootstrap-rails',
-                              :branch => '3.0.0'
+gem 'anjlab-bootstrap-rails', '>= 3.0.0.0', require: 'bootstrap-rails'
 gem 'rails_autolink'
 
 group :test do
