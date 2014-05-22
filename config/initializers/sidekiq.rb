@@ -1,13 +1,11 @@
 require "sidekiq/pausable"
 
-sidekiq_redis = { url: $redis.url, namespace: 'sidekiq' }
-
 Sidekiq.configure_client do |config|
-  config.redis = sidekiq_redis
+  config.redis = Discourse.sidekiq_redis_config
 end
 
 Sidekiq.configure_server do |config|
-  config.redis = sidekiq_redis
+  config.redis = Discourse.sidekiq_redis_config
   # add our pausable middleware
   config.server_middleware do |chain|
     chain.add Sidekiq::Pausable
@@ -44,3 +42,19 @@ if Sidekiq.server?
 end
 
 Sidekiq.logger.level = Logger::WARN
+
+class LogsterErrorHandler
+  def call(ex, hash={})
+    text = "exception: #{ex}\ncontext: #{hash.inspect}\n"
+    if ex.backtrace
+      text << "backtrace: #{ex.backtrace.join("\n")}"
+    end
+    Rails.logger.error(text)
+  rescue => e
+    Rails.logger.fatal("Failed to log exception #{ex} #{hash}\nReason: #{e}\n#{e.backtrace.join("\n")}")
+  end
+end
+
+Sidekiq.error_handlers << LogsterErrorHandler.new
+
+

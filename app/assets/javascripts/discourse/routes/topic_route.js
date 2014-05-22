@@ -17,7 +17,7 @@ Discourse.TopicRoute = Discourse.Route.extend({
   actions: {
     // Modals that can pop up within a topic
     showPosterExpansion: function(post) {
-      this.controllerFor('posterExpansion').show(post);
+      this.controllerFor('poster-expansion').show(post);
     },
 
     composePrivateMessage: function(user) {
@@ -69,7 +69,7 @@ Discourse.TopicRoute = Discourse.Route.extend({
     },
 
     splitTopic: function() {
-      Discourse.Route.showModal(this, 'splitTopic', this.modelFor('topic'));
+      Discourse.Route.showModal(this, 'split-topic', this.modelFor('topic'));
     },
 
     changeOwner: function() {
@@ -137,7 +137,7 @@ Discourse.TopicRoute = Discourse.Route.extend({
 
     // Clear the search context
     this.controllerFor('search').set('searchContext', null);
-    this.controllerFor('posterExpansion').set('visible', false);
+    this.controllerFor('poster-expansion').set('visible', false);
 
     var topicController = this.controllerFor('topic'),
         postStream = topicController.get('postStream');

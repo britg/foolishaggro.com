@@ -36,15 +36,18 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
 
   // If the cooked content changed, add the quote controls
   cookedChanged: function() {
-    var self = this;
-    Em.run.schedule('afterRender', function() {
-      self.insertQuoteControls();
-    });
+    Em.run.scheduleOnce('afterRender', this, 'insertQuoteControls');
   }.observes('post.cooked'),
 
   mouseUp: function(e) {
     if (this.get('controller.multiSelect') && (e.metaKey || e.ctrlKey)) {
       this.get('controller').toggledSelectedPost(this.get('post'));
+    }
+
+    var $adminMenu = this.get('adminMenu');
+    if ($adminMenu && !$(e.target).is($adminMenu) && $adminMenu.has($(e.target)).length === 0) {
+      $adminMenu.hide();
+      this.set('adminMenu', null);
     }
   },
 
@@ -64,9 +67,9 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
   repliesShown: Em.computed.gt('post.replies.length', 0),
 
   updateQuoteElements: function($aside, desc) {
-    var navLink = "";
-    var quoteTitle = I18n.t("post.follow_quote");
-    var postNumber = $aside.data('post');
+    var navLink = "",
+        quoteTitle = I18n.t("post.follow_quote"),
+        postNumber = $aside.data('post');
 
     if (postNumber) {
 
@@ -94,7 +97,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
       expandContract = "<i class='fa fa-" + desc + "' title='" + I18n.t("post.expand_collapse") + "'></i>";
       $aside.css('cursor', 'pointer');
     }
-    $('.quote-controls', $aside).html("" + expandContract + navLink);
+    $('.quote-controls', $aside).html(expandContract + navLink);
   },
 
   toggleQuote: function($aside) {
@@ -111,7 +114,13 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
       if ($aside.data('topic')) {
         topic_id = $aside.data('topic');
       }
-      Discourse.ajax("/posts/by_number/" + topic_id + "/" + $aside.data('post')).then(function (result) {
+
+      var post_id = $aside.data('post');
+
+      topic_id = parseInt(topic_id,10);
+      post_id = parseInt(post_id,10);
+
+      Discourse.ajax("/posts/by_number/" + topic_id + "/" + post_id).then(function (result) {
         var parsed = $(result.cooked);
         parsed.replaceText(originalText, "<span class='highlighted'>" + originalText + "</span>");
         $blockQuote.showHtml(parsed);
@@ -137,7 +146,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
 
       self.$(".cooked a[href]").each(function() {
         var link = $(this);
-        if (link.attr('href') === lc.url) {
+        if (!lc.internal && link.attr('href') === lc.url) {
           // don't display badge counts on category badge
           if (link.closest('.badge-category').length === 0 && ((link.closest(".onebox-result").length === 0 && link.closest('.onebox-body').length === 0) || link.hasClass("track-link"))) {
             link.append("<span class='badge badge-notification clicks' title='" +
@@ -186,19 +195,26 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
 
   // Add the quote controls to a post
   insertQuoteControls: function() {
-    var self = this;
-    return this.$('aside.quote').each(function(i, e) {
-      var $aside = $(e);
-      self.updateQuoteElements($aside, 'chevron-down');
-      var $title = $('.title', $aside);
+    var self = this,
+        $quotes = this.$('aside.quote');
 
-      // Unless it's a full quote, allow click to expand
-      if (!($aside.data('full') || $title.data('has-quote-controls'))) {
-        $title.on('click', function(e) {
-          if ($(e.target).is('a')) return true;
-          self.toggleQuote($aside);
-        });
-        $title.data('has-quote-controls', true);
+    // Safety check - in some cases with cloackedView this seems to be `undefined`.
+    if (Em.isEmpty($quotes)) { return; }
+
+    $quotes.each(function(i, e) {
+      var $aside = $(e);
+      if ($aside.data('post')) {
+        self.updateQuoteElements($aside, 'chevron-down');
+        var $title = $('.title', $aside);
+
+        // Unless it's a full quote, allow click to expand
+        if (!($aside.data('full') || $title.data('has-quote-controls'))) {
+          $title.on('click', function(e) {
+            if ($(e.target).is('a')) return true;
+            self.toggleQuote($aside);
+          });
+          $title.data('has-quote-controls', true);
+        }
       }
     });
   },
@@ -240,6 +256,6 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     this.trigger('postViewInserted', $post);
 
     // Find all the quotes
-    this.insertQuoteControls();
+    Em.run.scheduleOnce('afterRender', this, 'insertQuoteControls');
   }
 });

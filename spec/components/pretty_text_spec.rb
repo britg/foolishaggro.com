@@ -10,7 +10,7 @@ describe PrettyText do
       before(:each) do
         eviltrout = User.new
         eviltrout.stubs(:avatar_template).returns("http://test.localhost/uploads/default/avatars/42d/57c/46ce7ee487/{size}.png")
-        User.expects(:where).with(username_lower: "eviltrout").returns([eviltrout])
+        User.expects(:find_by).with(username_lower: "eviltrout").returns(eviltrout)
       end
 
       it "produces a quote even with new lines in it" do
@@ -133,6 +133,10 @@ describe PrettyText do
 
     it "should truncate links" do
       PrettyText.excerpt("<a href='http://cnn.com'>cnn</a>",2).should == "<a href='http://cnn.com'>cn&hellip;</a>"
+    end
+
+    it "doesn't extract empty quotes as links" do
+      PrettyText.extract_links("<aside class='quote'>not a linked quote</aside>\n").to_a.should be_empty
     end
 
     it "should be able to extract links" do

@@ -58,7 +58,7 @@ basic:
   post_menu:
     client: true
     list: true
-    default: 'like|edit|flag|delete|share|bookmark|reply'
+    default: 'like|edit|flag|delete|share|bookmark|admin|reply'
   share_links:
     client: true
     list: true
@@ -75,10 +75,12 @@ basic:
     default: 30
   topics_per_period_in_top_summary: 20
   topics_per_period_in_top_page: 50
-  redirect_new_users_to_top_page_duration: 7
   category_featured_topics:
     client: true
     default: 3
+  fixed_category_positions:
+    client: true
+    default: false
   topics_per_page: 30
   posts_per_page:
     client: true
@@ -105,15 +107,24 @@ users:
     default: 3
   max_username_length:
     client: true
-    default: 15
+    default: 20
     hidden: true
   min_password_length:
     client: true
     default: 8
   block_common_passwords: true
+
+  # The default value of enable_google_logins changed from true to false.
+  # See db/migrate/20140521220115_google_openid_default_has_changed.rb
   enable_google_logins:
     client: true
+    default: false
+
+  enable_google_oauth2_logins:
+    client: true
     default: true
+  google_oauth2_client_id: ''
+  google_oauth2_client_secret: ''
   enable_yahoo_logins:
     client: true
     default: true
@@ -253,6 +264,7 @@ email:
   email_time_window_mins: 10
   email_posts_context: 5
   digest_min_excerpt_length: 100
+  digest_topics: 20
   default_digest_email_frequency:
     default: 7
     enum: 'DigestEmailSiteSetting'
@@ -283,7 +295,7 @@ files:
     default: 1024
   authorized_extensions:
     client: true
-    default: '.jpg|.jpeg|.png|.gif'
+    default: 'jpg|jpeg|png|gif'
     refresh: true
     list: true
   crawl_images:
@@ -301,6 +313,9 @@ files:
       test: false
       default: true
   download_remote_images_threshold: 20
+  disabled_image_download_domains:
+    list: true
+    default: ''
   create_thumbnails: true
   clean_up_uploads: false
   clean_orphan_uploads_grace_period_hours: 1
@@ -328,6 +343,9 @@ trust:
   default_trust_level: 0
   default_invitee_trust_level: 1
   min_trust_to_create_topic:
+    default: 0
+    enum: 'MinTrustToCreateTopicSetting'
+  min_trust_to_edit_wiki_post:
     default: 0
     enum: 'MinTrustToCreateTopicSetting'
   basic_requires_topics_entered: 5
@@ -524,3 +542,9 @@ uncategorized:
     hidden: true
 
   notify_about_flags_after: 48
+
+  public_user_custom_fields:
+    list: true
+    default: ''
+
+  enable_cdn_js_debugging: true

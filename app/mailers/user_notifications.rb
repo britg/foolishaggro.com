@@ -42,7 +42,7 @@ class UserNotifications < ActionMailer::Base
     @last_seen_at = I18n.l(@user.last_seen_at || @user.created_at, format: :short)
 
     # A list of topics to show the user
-    @featured_topics = Topic.for_digest(user, min_date, limit: 20, top_order: true).to_a
+    @featured_topics = Topic.for_digest(user, min_date, limit: SiteSetting.digest_topics, top_order: true).to_a
 
     # Don't send email unless there is content in it
     if @featured_topics.present?
@@ -157,7 +157,7 @@ class UserNotifications < ActionMailer::Base
        ["replied", "mentioned", "quoted", "posted"].include?(notification_type)
 
     title = @notification.data_hash[:topic_title]
-    allow_reply_by_email = opts[:allow_reply_by_email]
+    allow_reply_by_email = opts[:allow_reply_by_email] unless user.suspended?
 
     send_notification_email(
       title: title,
@@ -192,10 +192,12 @@ class UserNotifications < ActionMailer::Base
       end
     end
 
+    top = SiteContent.content_for(:notification_email_top)
+
     html = UserNotificationRenderer.new(Rails.configuration.paths["app/views"]).render(
       template: 'email/notification',
       format: :html,
-      locals: { context_posts: context_posts, post: post }
+      locals: { context_posts: context_posts, post: post, top: top ? PrettyText.cook(top).html_safe : nil }
     )
 
     template = "user_notifications.user_#{notification_type}"
@@ -213,6 +215,7 @@ class UserNotifications < ActionMailer::Base
       username: from_alias,
       add_unsubscribe_link: true,
       allow_reply_by_email: allow_reply_by_email,
+      include_respond_instructions: !user.suspended?,
       template: template,
       html_override: html,
       style: :notification

@@ -5,7 +5,7 @@ require_dependency 'avatar_upload_service'
 class UsersController < ApplicationController
 
   skip_before_filter :authorize_mini_profiler, only: [:avatar]
-  skip_before_filter :check_xhr, only: [:show, :password_reset, :update, :activate_account, :authorize_email, :user_preferences_redirect, :avatar]
+  skip_before_filter :check_xhr, only: [:show, :password_reset, :update, :activate_account, :authorize_email, :user_preferences_redirect, :avatar, :my_redirect]
 
   before_filter :ensure_logged_in, only: [:username, :update, :change_email, :user_preferences_redirect, :upload_user_image, :toggle_avatar, :clear_profile_background, :destroy]
   before_filter :respond_to_suspicious_request, only: [:create]
@@ -68,7 +68,7 @@ class UsersController < ApplicationController
     guardian.ensure_can_edit!(user)
 
     user_badge = UserBadge.find(params[:user_badge_id])
-    if user_badge.user == user && ["Gold", "Silver"].include?(user_badge.badge.badge_type.name)
+    if user_badge.user == user && user_badge.badge.allow_title?
       user.title = user_badge.badge.name
       user.save!
     end
@@ -78,6 +78,14 @@ class UsersController < ApplicationController
 
   def preferences
     render nothing: true
+  end
+
+  def my_redirect
+    if current_user.present? && params[:path] =~ /^[a-z\-]+$/
+      redirect_to "/users/#{current_user.username}/#{params[:path]}"
+      return
+    end
+    raise Discourse::NotFound.new
   end
 
   def invited
@@ -287,7 +295,7 @@ class UsersController < ApplicationController
     topic_id = params[:topic_id]
     topic_id = topic_id.to_i if topic_id
 
-    results = UserSearch.new(term, topic_id).search
+    results = UserSearch.new(term, topic_id: topic_id, searching_user: current_user).search
 
     user_fields = [:username, :use_uploaded_avatar, :upload_avatar_template, :uploaded_avatar_id]
     user_fields << :name if SiteSetting.enable_names?
@@ -304,7 +312,7 @@ class UsersController < ApplicationController
   # [LEGACY] avatars in quotes/oneboxes might still be pointing to this route
   # fixing it requires a rebake of all the posts
   def avatar
-    user = User.where(username_lower: params[:username].downcase).first
+    user = User.find_by(username_lower: params[:username].downcase)
     if user.present?
       size = determine_avatar_size(params[:size])
       url = user.avatar_template.gsub("{size}", size.to_s)
@@ -454,6 +462,6 @@ class UsersController < ApplicationController
         :password,
         :username,
         :active
-      ).merge(ip_address: request.ip)
+      ).merge(ip_address: request.ip, registration_ip_address: request.ip)
     end
 end

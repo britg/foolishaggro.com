@@ -29,9 +29,6 @@
             {{/if}}
             </div>
             <div class="topic-item-stats clearfix">
-              <div class='category'>
-                {{categoryLink category showParent=true}}
-              </div>
               <div class="pull-right">
                 <div class='num posts'>
                   <a href="{{lastUnreadUrl}}">{{number posts_count numberKey="posts_long"}}</a>
@@ -43,11 +40,6 @@
                     </a>
                   </div>
                 {{/if}}
-                <div {{bind-attr class=":num :views viewsHeat"}}>
-                  <a href="{{lastUnreadUrl}}">
-                    <i class='fa fa-eye'></i> {{number views numberKey="views_long"}}
-                  </a>
-                </div>
                 {{#if bumped}}
                   <div class='num activity last'>
                     <a href="{{lastPostUrl}}" class='age' title='{{i18n last_post}}: {{{rawDate bumped_at}}}'>{{unboundAge bumped_at}}</a>
@@ -58,6 +50,18 @@
                   </div>
                 {{/if}}
               </div>
+              {{#unless controller.hideCategory}}
+                <div class='category'>
+                  {{categoryLink category showParent=true}}
+                </div>
+              {{/unless}}
+              {{#if controller.showParticipants}}
+                <div class='participants'>
+                  {{#each topic.participants}}
+                    <a href="{{user.path}}" class="{{extras}}">{{avatar this usernamePath="user.username" imageSize="small"}}</a>
+                  {{/each}}
+                </div>
+              {{/if}}
               <div class="clearfix"></div>
             </div>
           </td>

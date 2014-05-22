@@ -27,13 +27,13 @@ class Admin::UsersController < Admin::AdminController
   end
 
   def show
-    @user = User.where(username_lower: params[:id]).first
+    @user = User.find_by(username_lower: params[:id])
     raise Discourse::NotFound.new unless @user
     render_serialized(@user, AdminDetailedUserSerializer, root: false)
   end
 
   def delete_all_posts
-    @user = User.where(id: params[:user_id]).first
+    @user = User.find_by(id: params[:user_id])
     @user.delete_all_posts!(guardian)
     render nothing: true
   end
@@ -57,7 +57,7 @@ class Admin::UsersController < Admin::AdminController
   end
 
   def refresh_browsers
-    MessageBus.publish "/file-change", ["refresh"], user_ids: [@user.id]
+    refresh_browser @user
     render nothing: true
   end
 
@@ -131,6 +131,7 @@ class Admin::UsersController < Admin::AdminController
   def deactivate
     guardian.ensure_can_deactivate!(@user)
     @user.deactivate
+    refresh_browser @user
     render nothing: true
   end
 
@@ -156,7 +157,7 @@ class Admin::UsersController < Admin::AdminController
   end
 
   def destroy
-    user = User.where(id: params[:id]).first
+    user = User.find_by(id: params[:id])
     guardian.ensure_can_delete_user!(user)
     begin
       if UserDestroyer.new(current_user).destroy(user, params.slice(:delete_posts, :block_email, :block_urls, :block_ip, :context))
@@ -179,7 +180,11 @@ class Admin::UsersController < Admin::AdminController
   private
 
     def fetch_user
-      @user = User.where(id: params[:user_id]).first
+      @user = User.find_by(id: params[:user_id])
+    end
+
+    def refresh_browser(user)
+      MessageBus.publish "/file-change", ["refresh"], user_ids: [user.id]
     end
 
 end

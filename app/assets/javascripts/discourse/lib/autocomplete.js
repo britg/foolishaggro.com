@@ -244,7 +244,6 @@ $.fn.autocomplete = function(options) {
     }
   };
 
-
   // chain to allow multiples
   var oldClose = me.data("closeAutocomplete");
   me.data("closeAutocomplete", function() {
@@ -270,7 +269,7 @@ $.fn.autocomplete = function(options) {
     }
   });
 
-  return $(this).keydown(function(e) {
+  $(this).keydown(function(e) {
     var c, caretPosition, i, initial, next, prev, prevIsGood, stopFound, term, total, userToComplete;
 
     if(options.allowAny){
@@ -405,4 +404,6 @@ $.fn.autocomplete = function(options) {
       }
     }
   });
+
+  return this;
 };
