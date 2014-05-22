@@ -2,7 +2,7 @@
   This view handles rendering of a list of topics under discovery, with support
   for loading more as well as remembering your scroll position.
 
-  @class ComboboxView
+  @class DiscoveryTopicsView
   @extends Discourse.View
   @namespace Discourse
   @module Discourse
@@ -26,10 +26,7 @@ Discourse.DiscoveryTopicsView = Discourse.View.extend(Discourse.LoadMore, {
   },
 
   _readjustScrollPosition: function() {
-    var scrollTo = Discourse.Session.currentProp('topicListScrollPosition'),
-        url = document.location.href;
-
-    if (url && url.indexOf('/more') === -1) { scrollTo = 0; }
+    var scrollTo = Discourse.Session.currentProp('topicListScrollPosition');
 
     if (typeof scrollTo !== "undefined") {
       Em.run.schedule('afterRender', function() {

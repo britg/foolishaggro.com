@@ -10,9 +10,6 @@ Discourse.URL = Em.Object.createWithMixins({
   // Used for matching a topic
   TOPIC_REGEXP: /\/t\/([^\/]+)\/(\d+)\/?(\d+)?/,
 
-  // Used for matching a /more URL
-  MORE_REGEXP: /\/more$/,
-
   /**
     Browser aware replaceState. Will only be invoked if the browser supports it.
 
@@ -31,7 +28,14 @@ Discourse.URL = Em.Object.createWithMixins({
         // which triggers a replaceState even though the topic hasn't fully loaded yet!
         Em.run.next(function() {
           var location = Discourse.URL.get('router.location');
-          if (location && location.replaceURL) { location.replaceURL(path); }
+          if (location && location.replaceURL) {
+
+            if (Ember.FEATURES.isEnabled("query-params-new")) {
+              var search = Discourse.__container__.lookup('router:main').get('location.location.search') || '';
+              path += search;
+            }
+            location.replaceURL(path);
+          }
         });
     }
   },
@@ -48,8 +52,27 @@ Discourse.URL = Em.Object.createWithMixins({
   **/
   routeTo: function(path) {
 
+    if (Em.isEmpty(path)) { return; }
+
     if(Discourse.get("requiresRefresh")){
       document.location.href = path;
+      return;
+    }
+
+    // Protocol relative URLs
+    if (path.indexOf('//') === 0) {
+      document.location = path;
+      return;
+    }
+
+    // Scroll to the same page, differnt anchor
+    if (path.indexOf('#') === 0) {
+      var $elem = $(path);
+      if ($elem.length > 0) {
+        Em.run.schedule('afterRender', function() {
+          $('html,body').scrollTop($elem.offset().top - $('header').height() - 15);
+        });
+      }
       return;
     }
 
@@ -66,9 +89,19 @@ Discourse.URL = Em.Object.createWithMixins({
     // Schedule a DOM cleanup event
     Em.run.scheduleOnce('afterRender', Discourse.Route, 'cleanDOM');
 
+    // Rewrite /my/* urls
+    if (path.indexOf('/my/') === 0) {
+      var currentUser = Discourse.User.current();
+      if (currentUser) {
+        path = path.replace('/my/', '/users/' + currentUser.get('username_lower') + "/");
+      } else {
+        document.location.href = "/404";
+        return;
+      }
+    }
+
     // TODO: Extract into rules we can inject into the URL handler
     if (this.navigatedToHome(oldPath, path)) { return; }
-    if (this.navigatedToListMore(oldPath, path)) { return; }
     if (this.navigatedToPost(oldPath, path)) { return; }
 
     if (path.match(/^\/?users\/[^\/]+$/)) {
@@ -77,13 +110,6 @@ Discourse.URL = Em.Object.createWithMixins({
 
     return this.handleURL(path);
   },
-
-  /**
-    Replaces the query parameters in the URL. Use no parameters to clear them.
-
-    @method replaceQueryParams
-  **/
-  queryParams: Em.computed.alias('router.location.queryParams'),
 
   /**
     Redirect to a URL.
@@ -103,28 +129,11 @@ Discourse.URL = Em.Object.createWithMixins({
   **/
   isInternal: function(url) {
     if (url && url.length) {
+      if (url.indexOf('#') === 0) { return true; }
       if (url.indexOf('/') === 0) { return true; }
       if (url.indexOf(this.origin()) === 0) { return true; }
       if (url.replace(/^http/, 'https').indexOf(this.origin()) === 0) { return true; }
       if (url.replace(/^https/, 'http').indexOf(this.origin()) === 0) { return true; }
-    }
-    return false;
-  },
-
-
-  /**
-    @private
-
-    If we're viewing more topics, scroll to where we were previously.
-
-    @method navigatedToListMore
-    @param {String} oldPath the previous path we were on
-    @param {String} path the path we're navigating to
-  **/
-  navigatedToListMore: function(oldPath, path) {
-    // If we transition from a /more path, scroll to the top
-    if (this.MORE_REGEXP.exec(oldPath) && (oldPath.indexOf(path) === 0)) {
-      window.scrollTo(0, 0);
     }
     return false;
   },
@@ -174,7 +183,6 @@ Discourse.URL = Em.Object.createWithMixins({
         // Abort routing, we have replaced our state.
         return true;
       }
-      this.set('queryParams', null);
     }
 
     return false;
@@ -189,14 +197,14 @@ Discourse.URL = Em.Object.createWithMixins({
     @param {String} path the path we're navigating to
   **/
   navigatedToHome: function(oldPath, path) {
-    var homepage = Discourse.User.current() ? Discourse.User.currentProp('homepage') : Discourse.Utilities.defaultHomepage();
+    var homepage = Discourse.Utilities.defaultHomepage();
 
     if (path === "/" && (oldPath === "/" || oldPath === "/" + homepage)) {
       // refresh the list
       switch (homepage) {
-        case "top" :       { this.controllerFor('discoveryTop').send('refresh'); break; }
-        case "categories": { this.controllerFor('discoveryCategories').send('refresh'); break; }
-        default:           { this.controllerFor('discoveryTopics').send('refresh'); break; }
+        case "top" :       { this.controllerFor('discovery/top').send('refresh'); break; }
+        case "categories": { this.controllerFor('discovery/categories').send('refresh'); break; }
+        default:           { this.controllerFor('discovery/topics').send('refresh'); break; }
       }
       return true;
     }
@@ -253,7 +261,26 @@ Discourse.URL = Em.Object.createWithMixins({
   handleURL: function(path) {
     var router = this.get('router');
     router.router.updateURL(path);
-    return router.handleURL(path);
+
+    var split = path.split('#'),
+        elementId;
+
+    if (split.length === 2) {
+      path = split[0];
+      elementId = split[1];
+    }
+
+    var transition = router.handleURL(path);
+    transition.promise.then(function() {
+      if (elementId) {
+        Em.run.next('afterRender', function() {
+          var offset = $('#' + elementId).offset();
+          if (offset && offset.top) {
+            $('html, body').scrollTop(offset.top - $('header').height() - 10);
+          }
+        });
+      }
+    });
   }
 
 });

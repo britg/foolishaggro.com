@@ -18,6 +18,7 @@ class PostCreator
   #                             topic.
   #   created_at              - Post creation time (optional)
   #   auto_track              - Automatically track this topic if needed (default true)
+  #   custom_fields           - Custom fields to be added to the post, Hash (default nil)
   #
   #   When replying to a topic:
   #     topic_id              - topic we're replying to
@@ -64,6 +65,7 @@ class PostCreator
       track_topic
       update_topic_stats
       update_user_counts
+      create_embedded_topic
 
       publish
       ensure_in_allowed_users if guardian.is_staff?
@@ -81,7 +83,6 @@ class PostCreator
 
     @post
   end
-
 
   def self.create(user, opts)
     PostCreator.new(user, opts).create
@@ -105,10 +106,18 @@ class PostCreator
   def self.set_reply_user_id(post)
     return unless post.reply_to_post_number.present?
 
-    post.reply_to_user_id ||= Post.select(:user_id).where(topic_id: post.topic_id, post_number: post.reply_to_post_number).first.try(:user_id)
+    post.reply_to_user_id ||= Post.select(:user_id).find_by(topic_id: post.topic_id, post_number: post.reply_to_post_number).try(:user_id)
   end
 
   protected
+
+  # You can supply an `embed_url` for a post to set up the embedded relationship.
+  # This is used by the wp-discourse plugin to associate a remote post with a
+  # discourse post.
+  def create_embedded_topic
+    return unless @opts[:embed_url].present?
+    TopicEmbed.create!(topic_id: @post.topic_id, post_id: @post.id, embed_url: @opts[:embed_url])
+  end
 
   def handle_spam
     if @spam
@@ -137,24 +146,14 @@ class PostCreator
     end
   end
 
-  def secure_group_ids(topic)
-    @secure_group_ids ||= if topic.category && topic.category.read_restricted?
-      topic.category.secure_group_ids
-    end
-  end
-
   def clear_possible_flags(topic)
     # at this point we know the topic is a PM and has been replied to ... check if we need to clear any flags
     #
-    first_post = Post.select(:id).where(topic_id: topic.id).where('post_number = 1').first
+    first_post = Post.select(:id).where(topic_id: topic.id).find_by("post_number = 1")
     post_action = nil
 
     if first_post
-      post_action = PostAction.where(
-        related_post_id: first_post.id,
-        deleted_at: nil,
-        post_action_type_id: PostActionType.types[:notify_moderators]
-      ).first
+      post_action = PostAction.find_by(related_post_id: first_post.id, deleted_at: nil, post_action_type_id: PostActionType.types[:notify_moderators])
     end
 
     if post_action
@@ -177,7 +176,7 @@ class PostCreator
         raise ex
       end
     else
-      topic = Topic.where(id: @opts[:topic_id]).first
+      topic = Topic.find_by(id: @opts[:topic_id])
       guardian.ensure_can_create!(Post, topic)
     end
     @topic = topic
@@ -205,10 +204,15 @@ class PostCreator
     post.extract_quoted_post_numbers
     post.created_at = Time.zone.parse(@opts[:created_at].to_s) if @opts[:created_at].present?
 
+    if fields = @opts[:custom_fields]
+      post.custom_fields = fields
+    end
+
     @post = post
   end
 
   def rollback_if_host_spam_detected
+    return if @opts[:skip_validations]
     if @post.has_host_spam?
       @post.errors.add(:base, I18n.t(:spamming_host))
       @errors = @post.errors
@@ -254,7 +258,7 @@ class PostCreator
                     user: BasicUserSerializer.new(@post.user).as_json(root: false),
                     post_number: @post.post_number
                   },
-                  group_ids: secure_group_ids(@topic)
+                  group_ids: @topic.secure_group_ids
     )
   end
 

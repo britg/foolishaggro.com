@@ -195,6 +195,73 @@ describe TopicsController do
 
   end
 
+  context 'change_post_owners' do
+    it 'needs you to be logged in' do
+      lambda { xhr :post, :change_post_owners, topic_id: 111, username: 'user_a', post_ids: [1,2,3] }.should raise_error(Discourse::NotLoggedIn)
+    end
+
+    describe 'forbidden to moderators' do
+      let!(:moderator) { log_in(:moderator) }
+      it 'correctly denies' do
+        xhr :post, :change_post_owners, topic_id: 111, username: 'user_a', post_ids: [1,2,3]
+        response.should be_forbidden
+      end
+    end
+
+    describe 'forbidden to elders' do
+      let!(:elder) { log_in(:elder) }
+
+      it 'correctly denies' do
+        xhr :post, :change_post_owners, topic_id: 111, username: 'user_a', post_ids: [1,2,3]
+        response.should be_forbidden
+      end
+    end
+
+    describe 'changing ownership' do
+      let!(:editor) { log_in(:admin) }
+      let(:topic) { Fabricate(:topic) }
+      let(:user_a) { Fabricate(:user) }
+      let(:p1) { Fabricate(:post, topic_id: topic.id) }
+
+      it "raises an error with a parameter missing" do
+        lambda { xhr :post, :change_post_owners, topic_id: 111, post_ids: [1,2,3] }.should raise_error(ActionController::ParameterMissing)
+        lambda { xhr :post, :change_post_owners, topic_id: 111, username: 'user_a' }.should raise_error(ActionController::ParameterMissing)
+      end
+
+      it "calls PostRevisor" do
+        PostRevisor.any_instance.expects(:revise!)
+        xhr :post, :change_post_owners, topic_id: topic.id, username: user_a.username_lower, post_ids: [p1.id]
+        response.should be_success
+      end
+
+      it "changes the user" do
+        old_user = p1.user
+        xhr :post, :change_post_owners, topic_id: topic.id, username: user_a.username_lower, post_ids: [p1.id]
+        p1.reload
+        old_user.should_not == p1.user
+      end
+
+      # Make sure that p1.reload isn't changing the user for us
+      it "is not an artifact of the framework" do
+        old_user = p1.user
+        # xhr :post, :change_post_owners, topic_id: topic.id, username: user_a.username_lower, post_ids: [p1.id]
+        p1.reload
+        p1.user.should_not == nil
+        old_user.should == p1.user
+      end
+
+      let(:p2) { Fabricate(:post, topic_id: topic.id) }
+
+      it "changes multiple posts" do
+        xhr :post, :change_post_owners, topic_id: topic.id, username: user_a.username_lower, post_ids: [p1.id, p2.id]
+        p1.reload
+        p2.reload
+        p1.user.should_not == nil
+        p1.user.should == p2.user
+      end
+    end
+  end
+
   context 'similar_to' do
 
     let(:title) { 'this title is long enough to search for' }
@@ -571,7 +638,7 @@ describe TopicsController do
     end
 
     context "when 'login required' site setting has been enabled" do
-      before { SiteSetting.stubs(:login_required?).returns(true) }
+      before { SiteSetting.login_required = true }
 
       context 'and the user is logged in' do
         before { log_in(:coding_horror) }
@@ -595,9 +662,9 @@ describe TopicsController do
           expect(response).to be_successful
         end
 
-        it 'redirects to the login page if invalid key is provided' do
+        it 'returns 403 for an invalid key' do
           get :show, topic_id: topic.id, slug: topic.slug, api_key: "bad"
-          expect(response).to redirect_to login_path
+          expect(response.code.to_i).to be(403)
         end
       end
     end
@@ -681,6 +748,24 @@ describe TopicsController do
   end
 
   describe 'invite' do
+
+    describe "group invites" do
+      it "works correctly" do
+        group = Fabricate(:group)
+        topic = Fabricate(:topic)
+        admin = log_in(:admin)
+
+        xhr :post, :invite, topic_id: topic.id, email: 'hiro@from.heros', group_ids: "#{group.id}"
+
+        response.should be_success
+
+        invite = Invite.find_by(email: 'hiro@from.heros')
+        groups = invite.groups.to_a
+        groups.count.should == 1
+        groups[0].id.should == group.id
+      end
+    end
+
     it "won't allow us to invite toa topic when we're not logged in" do
       lambda { xhr :post, :invite, topic_id: 1, email: 'jake@adventuretime.ooo' }.should raise_error(Discourse::NotLoggedIn)
     end
@@ -696,7 +781,6 @@ describe TopicsController do
 
       describe 'without permission' do
         it "raises an exception when the user doesn't have permission to invite to the topic" do
-          Guardian.any_instance.expects(:can_invite_to?).with(@topic).returns(false)
           xhr :post, :invite, topic_id: @topic.id, user: 'jake@adventuretime.ooo'
           response.should be_forbidden
         end
@@ -704,45 +788,24 @@ describe TopicsController do
 
       describe 'with permission' do
 
-        before do
-          Guardian.any_instance.expects(:can_invite_to?).with(@topic).returns(true)
+        let!(:admin) do
+          log_in :admin
         end
 
-        context 'when it returns an invite' do
-          before do
-            Topic.any_instance.expects(:invite_by_email).with(@topic.user, 'jake@adventuretime.ooo').returns(Invite.new)
-            xhr :post, :invite, topic_id: @topic.id, user: 'jake@adventuretime.ooo'
-          end
-
-          it 'should succeed' do
-            response.should be_success
-          end
-
-          it 'returns success JSON' do
-            ::JSON.parse(response.body).should == {'success' => 'OK'}
-          end
+        it 'should work as expected' do
+          xhr :post, :invite, topic_id: @topic.id, user: 'jake@adventuretime.ooo'
+          response.should be_success
+          ::JSON.parse(response.body).should == {'success' => 'OK'}
+          Invite.where(invited_by_id: admin.id).count.should == 1
         end
 
-        context 'when it fails and returns nil' do
-
-          before do
-            Topic.any_instance.expects(:invite_by_email).with(@topic.user, 'jake@adventuretime.ooo').returns(nil)
-            xhr :post, :invite, topic_id: @topic.id, user: 'jake@adventuretime.ooo'
-          end
-
-          it 'should succeed' do
-            response.should_not be_success
-          end
-
-          it 'returns success JSON' do
-            ::JSON.parse(response.body).should == {'failed' => 'FAILED'}
-          end
-
+        it 'should fail on shoddy email' do
+          xhr :post, :invite, topic_id: @topic.id, user: 'i_am_not_an_email'
+          response.should_not be_success
+          ::JSON.parse(response.body).should == {'failed' => 'FAILED'}
         end
 
       end
-
-
 
     end
 

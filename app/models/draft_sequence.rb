@@ -3,7 +3,7 @@ class DraftSequence < ActiveRecord::Base
     user_id = user
     user_id = user.id unless user.class == Fixnum
     h = { user_id: user_id, draft_key: key }
-    c = DraftSequence.where(h).first
+    c = DraftSequence.find_by(h)
     c ||= DraftSequence.new(h)
     c.sequence ||= 0
     c.sequence += 1
@@ -37,4 +37,3 @@ end
 #
 #  index_draft_sequences_on_user_id_and_draft_key  (user_id,draft_key) UNIQUE
 #
-

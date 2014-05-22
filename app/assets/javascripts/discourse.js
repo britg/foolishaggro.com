@@ -104,6 +104,7 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
                       Default is false, for next run loop. If unsure, use false.
   **/
   addInitializer: function(init, immediate) {
+    Em.warn("`Discouse.addInitializer` is deprecated. Export an Ember initializer instead.");
     Discourse.initializers = Discourse.initializers || [];
     Discourse.initializers.push({fn: init, immediate: !!immediate});
   },
@@ -114,6 +115,16 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
     @method start
   **/
   start: function() {
+
+    // Load any ES6 initializers
+    Ember.keys(requirejs._eak_seen).filter(function(key) {
+      return (/\/initializers\//).test(key);
+    }).forEach(function(moduleName) {
+      var module = require(moduleName, null, null, true);
+      if (!module) { throw new Error(moduleName + ' must export an initializer.'); }
+      Discourse.initializer(module.default);
+    });
+
     var initializers = this.initializers;
     if (initializers) {
       var self = this;
@@ -127,6 +138,7 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
         }
       });
     }
+
   },
 
   requiresRefresh: function(){
@@ -143,8 +155,24 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
       }
     }
     return this.get("currentAssetVersion");
-  }.property()
+  }.property(),
+
+  globalNotice: function(){
+    var notices = [];
+
+    if(this.get("isReadOnly")){
+      notices.push(I18n.t("read_only_mode.enabled"));
+    }
+
+    if(!_.isEmpty(Discourse.SiteSettings.global_notice)){
+      notices.push(Discourse.SiteSettings.global_notice);
+    }
+
+    if(notices.length > 0) {
+      return new Handlebars.SafeString(_.map(notices, function(text) {
+        return "<div class='row'><div class='alert alert-info'>" + text + "</div></div>";
+      }).join(""));
+    }
+  }.property("isReadOnly")
 
 });
-
-Discourse.Router = Discourse.Router.reopen({ location: 'discourse_location' });

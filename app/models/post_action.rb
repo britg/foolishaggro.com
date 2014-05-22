@@ -1,6 +1,5 @@
 require_dependency 'rate_limiter'
 require_dependency 'system_message'
-require_dependency 'trashable'
 
 class PostAction < ActiveRecord::Base
   class AlreadyActed < StandardError; end
@@ -20,6 +19,7 @@ class PostAction < ActiveRecord::Base
 
   after_save :update_counters
   after_save :enforce_rules
+  after_commit :notify_subscribers
 
   def self.update_flagged_posts_count
     posts_flagged_count = PostAction.joins(post: :topic)
@@ -77,8 +77,7 @@ class PostAction < ActiveRecord::Base
     actions = PostAction.where(
       defer: nil,
       post_id: post.id,
-      post_action_type_id:
-      PostActionType.flag_types.values,
+      post_action_type_id: PostActionType.flag_types.values,
       deleted_at: nil
     )
 
@@ -97,27 +96,30 @@ class PostAction < ActiveRecord::Base
 
     return unless opts[:message] && [:notify_moderators, :notify_user].include?(post_action_type)
 
-    # this is a hack to allow a PM with no reciepients, we should think through
-    # a cleaner technique, a PM with myself is valid for flagging
-    target_usernames = post_action_type == :notify_user ? post.user.username : "x"
+    title = I18n.t("post_action_types.#{post_action_type}.email_title", title: post.topic.title)
+    body = I18n.t("post_action_types.#{post_action_type}.email_body", message: opts[:message], link: "#{Discourse.base_url}#{post.url}")
 
-    title = I18n.t("post_action_types.#{post_action_type}.email_title",
-                    title: post.topic.title)
-    body = I18n.t("post_action_types.#{post_action_type}.email_body",
-                  message: opts[:message],
-                  link: "#{Discourse.base_url}#{post.url}")
+    opts = {
+      archetype: Archetype.private_message,
+      title: title,
+      raw: body
+    }
 
-    subtype = post_action_type == :notify_moderators ? TopicSubtype.notify_moderators : TopicSubtype.notify_user
-
-    if target_usernames.present?
-      PostCreator.new(user,
-              target_usernames: target_usernames,
-              archetype: Archetype.private_message,
-              subtype: subtype,
-              title: title,
-              raw: body
-       ).create.id
+    if post_action_type == :notify_moderators
+      opts[:subtype] = TopicSubtype.notify_moderators
+      opts[:target_group_names] = "moderators"
+    else
+      opts[:subtype] = TopicSubtype.notify_user
+      opts[:target_usernames] = if post_action_type == :notify_user
+        post.user.username
+      elsif post_action_type != :notify_moderators
+        # this is a hack to allow a PM with no reciepients, we should think through
+        # a cleaner technique, a PM with myself is valid for flagging
+        'x'
+      end
     end
+
+    PostCreator.new(user, opts).create.id
   end
 
   def self.act(user, post, post_action_type_id, opts={})
@@ -136,6 +138,7 @@ class PostAction < ActiveRecord::Base
             staff_took_action: opts[:take_action] || false,
             related_post_id: related_post_id,
             targets_topic: !!targets_topic )
+
   rescue ActiveRecord::RecordNotUnique
     # can happen despite being .create
     # since already bookmarked
@@ -143,16 +146,17 @@ class PostAction < ActiveRecord::Base
   end
 
   def self.remove_act(user, post, post_action_type_id)
-    if action = where(post_id: post.id,
-                      user_id: user.id,
-                      post_action_type_id: post_action_type_id).first
+    if action = find_by(post_id: post.id, user_id: user.id, post_action_type_id: post_action_type_id)
       action.remove_act!(user)
     end
   end
 
   def remove_act!(user)
     trash!(user)
-    run_callbacks(:save)
+    # NOTE: save is called to ensure all callbacks are called
+    # trash will not trigger callbacks, and triggering after_commit
+    # is not trivial
+    save
   end
 
   def is_bookmark?
@@ -259,6 +263,18 @@ class PostAction < ActiveRecord::Base
     SpamRulesEnforcer.enforce!(post.user) if post_action_type_key == :spam
   end
 
+  def notify_subscribers
+    if (is_like? || is_flag?) && post
+      MessageBus.publish("/topic/#{post.topic_id}",{
+                      id: post.id,
+                      post_number: post.post_number,
+                      type: "acted"
+                    },
+                    group_ids: post.topic.secure_group_ids
+      )
+    end
+  end
+
   def self.auto_hide_if_needed(post, post_action_type)
     return if post.hidden
 
@@ -268,13 +284,13 @@ class PostAction < ActiveRecord::Base
       old_flags, new_flags = PostAction.flag_counts_for(post.id)
 
       if new_flags >= SiteSetting.flags_required_to_hide_post
-        hide_post!(post, guess_hide_reason(old_flags))
+        hide_post!(post, post_action_type, guess_hide_reason(old_flags))
       end
     end
   end
 
 
-  def self.hide_post!(post, reason=nil)
+  def self.hide_post!(post, post_action_type, reason=nil)
     return if post.hidden
 
     unless reason
@@ -288,10 +304,12 @@ class PostAction < ActiveRecord::Base
 
     # inform user
     if post.user
-      SystemMessage.create(post.user,
-                           :post_hidden,
-                           url: post.url,
-                           edit_delay: SiteSetting.cooldown_minutes_after_hiding_posts)
+      options = {
+        url: post.url,
+        edit_delay: SiteSetting.cooldown_minutes_after_hiding_posts,
+        flag_reason: I18n.t("flag_reasons.#{post_action_type}"),
+      }
+      SystemMessage.create(post.user, :post_hidden, options)
     end
   end
 
@@ -299,6 +317,11 @@ class PostAction < ActiveRecord::Base
     old_flags > 0 ?
       Post.hidden_reasons[:flag_threshold_reached_again] :
       Post.hidden_reasons[:flag_threshold_reached]
+  end
+
+  def self.post_action_type_for_post(post_id)
+    post_action = PostAction.find_by(defer: nil, post_id: post_id, post_action_type_id: PostActionType.flag_types.values, deleted_at: nil)
+    PostActionType.types[post_action.post_action_type_id]
   end
 
   protected
@@ -333,4 +356,3 @@ end
 #  idx_unique_actions             (user_id,post_action_type_id,post_id,deleted_at) UNIQUE
 #  index_post_actions_on_post_id  (post_id)
 #
-

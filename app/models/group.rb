@@ -1,4 +1,6 @@
 class Group < ActiveRecord::Base
+  include HasCustomFields
+
   has_many :category_groups
   has_many :group_users, dependent: :destroy
 
@@ -8,6 +10,7 @@ class Group < ActiveRecord::Base
   after_save :destroy_deletions
 
   validate :name_format_validator
+  validates_uniqueness_of :name
 
   AUTO_GROUPS = {
     :everyone => 0,
@@ -152,13 +155,31 @@ class Group < ActiveRecord::Base
 
   def self.lookup_group(name)
     if id = AUTO_GROUPS[name]
-      Group.where(id: id).first
+      Group.find_by(id: id)
     else
-      unless group = Group.where(name: name).first
+      unless group = Group.find_by(name: name)
         raise ArgumentError, "unknown group"
       end
       group
     end
+  end
+
+  def self.lookup_group_ids(opts)
+    if group_ids = opts[:group_ids]
+      group_ids = group_ids.split(",").map(&:to_i)
+      group_ids = Group.where(id: group_ids).pluck(:id)
+    end
+
+    group_ids ||= []
+
+    if group_names = opts[:group_names]
+      group_names = group_names.split(",")
+      if group_names.present?
+        group_ids += Group.where(name: group_names).pluck(:id)
+      end
+    end
+
+    group_ids
   end
 
 
@@ -193,7 +214,7 @@ class Group < ActiveRecord::Base
     deletions = Set.new(deletions.map{|d| map[d]})
 
     @deletions = []
-    group_users.delete_if do |gu|
+    group_users.each do |gu|
       @deletions << gu if deletions.include?(gu.user_id)
     end
 
@@ -221,7 +242,7 @@ class Group < ActiveRecord::Base
     if @deletions
       @deletions.each do |gu|
         gu.destroy
-        User.update_all 'primary_group_id = NULL', ['id = ? AND primary_group_id = ?', gu.user_id, gu.group_id]
+        User.where('id = ? AND primary_group_id = ?', gu.user_id, gu.group_id).update_all 'primary_group_id = NULL'
       end
     end
     @deletions = nil
@@ -240,6 +261,7 @@ end
 #  automatic   :boolean          default(FALSE), not null
 #  user_count  :integer          default(0), not null
 #  alias_level :integer          default(0)
+#  visible     :boolean          default(TRUE), not null
 #
 # Indexes
 #

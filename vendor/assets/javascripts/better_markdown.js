@@ -1011,18 +1011,20 @@
               var contents = this.processBlock(li_accumulate, []),
                   firstBlock = contents[0];
 
-              firstBlock.shift();
-              contents.splice.apply(contents, [0, 1].concat(firstBlock));
-              add( last_li, loose, contents, nl );
+              if (firstBlock) {
+                firstBlock.shift();
+                contents.splice.apply(contents, [0, 1].concat(firstBlock));
+                add( last_li, loose, contents, nl );
 
-              // Let's not creating a trailing \n after content in the li
-              if(last_li[last_li.length-1] === "\n") {
-                last_li.pop();
+                // Let's not creating a trailing \n after content in the li
+                if(last_li[last_li.length-1] === "\n") {
+                  last_li.pop();
+                }
+
+                // Loose mode will have been dealt with. Reset it
+                loose = false;
+                li_accumulate = "";
               }
-
-              // Loose mode will have been dealt with. Reset it
-              loose = false;
-              li_accumulate = "";
             }
 
             // Look at the next block - we might have a loose list. Or an extra
@@ -1279,8 +1281,7 @@
 
         // No closing ']' found. Just consume the [
         if ( !res[1] ) {
-          var size = res[0] + 1;
-          return [ size, text.charAt(0) + res[2].join('') ];
+          return [ res[0] + 1, text.charAt(0) ].concat(res[2]);
         }
 
         var consumed = 1 + res[ 0 ],
@@ -1352,12 +1353,14 @@
           // [links][] uses links as its reference
           attrs = { ref: ( m[ 1 ] || String(children) ).toLowerCase(),  original: orig.substr( 0, consumed ) };
 
-          link = [ "link_ref", attrs ].concat( children );
+          if (children && children.length > 0) {
+            link = [ "link_ref", attrs ].concat( children );
 
-          // We can't check if the reference is known here as it likely wont be
-          // found till after. Check it in md tree->hmtl tree conversion.
-          // Store the original so that conversion can revert if the ref isn't found.
-          return [ consumed, link ];
+            // We can't check if the reference is known here as it likely wont be
+            // found till after. Check it in md tree->hmtl tree conversion.
+            // Store the original so that conversion can revert if the ref isn't found.
+            return [ consumed, link ];
+          }
         }
 
         // Another check for references

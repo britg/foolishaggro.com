@@ -1,8 +1,22 @@
 class UserBadgesController < ApplicationController
   def index
-    params.require(:username)
-    user = fetch_user_from_params
-    render json: user.user_badges
+    params.permit(:username).permit(:granted_before)
+
+    if params[:username]
+      user = fetch_user_from_params
+      user_badges = user.user_badges
+    else
+      badge = fetch_badge_from_params
+      user_badges = badge.user_badges.order('granted_at DESC').limit(96)
+    end
+
+    if params[:granted_before]
+      user_badges = user_badges.where('granted_at < ?', Time.at(params[:granted_before].to_f))
+    end
+
+    user_badges = user_badges.includes(:user, :granted_by, badge: :badge_type)
+
+    render_serialized(user_badges, UserBadgeSerializer, root: "user_badges")
   end
 
   def create
@@ -17,7 +31,7 @@ class UserBadgesController < ApplicationController
     badge = fetch_badge_from_params
     user_badge = BadgeGranter.grant(badge, user, granted_by: current_user)
 
-    render json: user_badge
+    render_serialized(user_badge, UserBadgeSerializer, root: "user_badge")
   end
 
   def destroy
@@ -29,7 +43,7 @@ class UserBadgesController < ApplicationController
       return
     end
 
-    BadgeGranter.revoke(user_badge)
+    BadgeGranter.revoke(user_badge, revoked_by: current_user)
     render json: success_json
   end
 
@@ -42,9 +56,9 @@ class UserBadgesController < ApplicationController
       params.permit(:badge_name)
       if params[:badge_name].nil?
         params.require(:badge_id)
-        badge = Badge.where(id: params[:badge_id]).first
+        badge = Badge.find_by(id: params[:badge_id])
       else
-        badge = Badge.where(name: params[:badge_name]).first
+        badge = Badge.find_by(name: params[:badge_name])
       end
       raise Discourse::NotFound.new if badge.blank?
 

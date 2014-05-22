@@ -11,35 +11,21 @@ if defined?(Bundler)
   Bundler.require(*Rails.groups(assets: %w(development test profile)))
 end
 
-# PATCH DB configuration
-class Rails::Application::Configuration
-
-  def database_configuration_with_global_config
-    if Rails.env == "production"
-      GlobalSetting.database_config
-    else
-      database_configuration_without_global_config
-    end
-  end
-
-  alias_method_chain :database_configuration, :global_config
-end
-
 module Discourse
   class Application < Rails::Application
+    def config.database_configuration
+      if Rails.env == "production"
+        GlobalSetting.database_config
+      else
+        super
+      end
+    end
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration should go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded.
 
-    # HACK!! regression in rubygems / bundler in ruby-head
-    if RUBY_VERSION == "2.1.0"
-      $:.map! do |path|
-        path = File.expand_path(path.sub("../../","../")) if path =~ /fast_xor/ && !File.directory?(File.expand_path(path))
-        path
-      end
-    end
-
     require 'discourse'
+    require 'es6_module_transpiler/rails'
     require 'js_locale_helper'
 
     # mocha hates us, active_support/testing/mochaing.rb line 2 is requiring the wrong
@@ -68,7 +54,7 @@ module Discourse
       path =~ /assets\/images/ && !%w(.js .css).include?(File.extname(filename))
     end]
 
-    config.assets.precompile += ['vendor.js', 'common.css', 'desktop.css', 'mobile.css', 'admin.js', 'admin.css', 'shiny/shiny.css', 'preload_store.js', 'browser-update.js', 'embed.css']
+    config.assets.precompile += ['vendor.js', 'common.css', 'desktop.css', 'mobile.css', 'admin.js', 'admin.css', 'shiny/shiny.css', 'preload_store.js', 'browser-update.js', 'embed.css', 'break_string.js']
 
     # Precompile all defer
     Dir.glob("#{config.root}/app/assets/javascripts/defer/*.js").each do |file|
@@ -141,8 +127,11 @@ module Discourse
     config.handlebars.templates_root = 'discourse/templates'
 
     require 'discourse_redis'
+    require 'logster/redis_store'
     # Use redis for our cache
     config.cache_store = DiscourseRedis.new_redis_store
+    $redis = DiscourseRedis.new
+    Logster.store = Logster::RedisStore.new(DiscourseRedis.new)
 
     # we configure rack cache on demand in an initializer
     # our setup does not use rack cache and instead defers to nginx

@@ -13,7 +13,7 @@
       <div class="controls">
         <span class='static'>{{username}}</span>
         {{#if can_edit_username}}
-          {{#link-to "preferences.username" class="btn pad-left"}}<i class="fa fa-pencil"></i>{{/link-to}}
+          {{#link-to "preferences.username" class="btn btn-small pad-left no-text"}}<i class="fa fa-pencil"></i>{{/link-to}}
         {{/if}}
       </div>
       <div class='instructions'>
@@ -37,12 +37,22 @@
       </div>
     {{/if}}
 
+    {{#if canSelectTitle}}
+      <div class="control-group">
+        <label class="control-label">{{i18n user.title.title}}</label>
+        <div class="controls">
+          <span class="static">{{title}}</span>
+          {{#link-to "preferences.badgeTitle" class="btn btn-small pad-left no-text"}}<i class="fa fa-pencil"></i>{{/link-to}}
+        </div>
+      </div>
+    {{/if}}
+
     <div class="control-group">
       <label class="control-label">{{i18n user.email.title}}</label>
       <div class="controls">
         <span class='static'>{{email}}</span>
         {{#if can_edit_email}}
-          {{#link-to "preferences.email" class="btn pad-left no-text"}}<i class="fa fa-pencil"></i>{{/link-to}}
+          {{#link-to "preferences.email" class="btn btn-small pad-left no-text"}}<i class="fa fa-pencil"></i>{{/link-to}}
         {{/if}}
       </div>
       <div class='instructions'>
@@ -112,7 +122,7 @@
 
     <div class="control-group">
       <label class="control-label">{{i18n user.bio}}</label>
-      <div class="controls">
+      <div class="controls bio-composer">
         {{pagedown value=bio_raw}}
       </div>
     </div>
@@ -187,17 +197,17 @@
       <label class="control-label">{{i18n user.categories_settings}}</label>
       <div class="controls category-controls">
         <label>{{i18n user.watched_categories}}</label>
-        {{category-group categories=watchedCategories}}
+        {{category-group categories=watchedCategories blacklist=selectedCategories}}
       </div>
       <div class="instructions">{{i18n user.watched_categories_instructions}}</div>
       <div class="controls category-controls">
         <label>{{i18n user.tracked_categories}}</label>
-        {{category-group categories=trackedCategories}}
+        {{category-group categories=trackedCategories blacklist=selectedCategories}}
       </div>
       <div class="instructions">{{i18n user.tracked_categories_instructions}}</div>
       <div class="controls category-controls">
         <label>{{i18n user.muted_categories}}</label>
-        {{category-group categories=mutedCategories}}
+        {{category-group categories=mutedCategories blacklist=selectedCategories}}
       </div>
       <div class="instructions">{{i18n user.muted_categories_instructions}}</div>
     </div>

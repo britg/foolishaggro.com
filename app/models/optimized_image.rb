@@ -7,7 +7,7 @@ class OptimizedImage < ActiveRecord::Base
     return unless width > 0 && height > 0
 
     # do we already have that thumbnail?
-    thumbnail = where(upload_id: upload.id, width: width, height: height).first
+    thumbnail = find_by(upload_id: upload.id, width: width, height: height)
 
     # make sure the previous thumbnail has not failed
     if thumbnail && thumbnail.url.blank?
@@ -87,4 +87,3 @@ end
 #  index_optimized_images_on_upload_id                       (upload_id)
 #  index_optimized_images_on_upload_id_and_width_and_height  (upload_id,width,height) UNIQUE
 #
-

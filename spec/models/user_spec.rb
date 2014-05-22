@@ -144,7 +144,7 @@ describe User do
     describe 'allow custom minimum username length from site settings' do
       before do
         @custom_min = User::GLOBAL_USERNAME_LENGTH_RANGE.begin - 1
-        SiteSetting.stubs("min_username_length").returns(@custom_min)
+        SiteSetting.min_username_length = @custom_min
       end
 
       it 'should allow a shorter username than default' do
@@ -158,15 +158,13 @@ describe User do
       end
 
       it 'should not allow a longer username than limit' do
-        result = user.change_username('a' * (User::GLOBAL_USERNAME_LENGTH_RANGE.end + 1))
+        result = user.change_username('a' * (User.username_length.end + 1))
         result.should be_false
       end
 
       it 'should use default length for validation if enforce_global_nicknames is true' do
-        SiteSetting.stubs('enforce_global_nicknames').returns(true)
-
-        User::username_length.begin.should == User::GLOBAL_USERNAME_LENGTH_RANGE.begin
-        User::username_length.end.should == User::GLOBAL_USERNAME_LENGTH_RANGE.end
+        SiteSetting.enforce_global_nicknames = true
+        User::username_length.should == User::GLOBAL_USERNAME_LENGTH_RANGE
       end
     end
   end
@@ -186,7 +184,7 @@ describe User do
       expect(Post.where(id: @posts.map(&:id))).to be_empty
       @posts.each do |p|
         if p.post_number == 1
-          expect(Topic.where(id: p.topic_id).first).to be_nil
+          expect(Topic.find_by(id: p.topic_id)).to be_nil
         end
       end
     end
@@ -705,7 +703,7 @@ describe User do
 
     context 'when email has been confirmed' do
       it 'should return true' do
-        token = user.email_tokens.where(email: user.email).first
+        token = user.email_tokens.find_by(email: user.email)
         EmailToken.confirm(token.token)
         user.email_confirmed?.should be_true
       end
@@ -935,6 +933,16 @@ describe User do
       it "returns true when the user has posted too much" do
         user.posted_too_much_in_topic?(topic.id).should be_true
       end
+
+      context "with a reply" do
+        before do
+          PostCreator.new(Fabricate(:user), raw: 'whatever this is a raw post', topic_id: topic.id, reply_to_post_number: post.post_number).create
+        end
+
+        it "resets the `posted_too_much` threshold" do
+          user.posted_too_much_in_topic?(topic.id).should be_false
+        end
+      end
     end
 
     it "returns false for a user who created the topic" do
@@ -1090,53 +1098,96 @@ describe User do
 
   end
 
-  describe "redirected_to_top_reason" do
+  describe ".redirected_to_top_reason" do
     let!(:user) { Fabricate(:user) }
 
-    it "should have no reason when top is not in the top_menu" do
-      SiteSetting.expects(:top_menu).returns("latest")
+    it "should have no reason when `SiteSetting.redirect_users_to_top_page` is disabled" do
+      SiteSetting.expects(:redirect_users_to_top_page).returns(false)
       user.redirected_to_top_reason.should == nil
     end
 
-    it "should have no reason when there isn't enough topics" do
-      SiteSetting.expects(:top_menu).returns("latest|top")
-      SiteSetting.expects(:has_enough_topics_to_redirect_to_top).returns(false)
-      user.redirected_to_top_reason.should == nil
-    end
+    context "when `SiteSetting.redirect_users_to_top_page` is enabled" do
+      before { SiteSetting.expects(:redirect_users_to_top_page).returns(true) }
 
-    describe "new users" do
-      before do
-        user.expects(:trust_level).returns(0)
-        user.stubs(:last_seen_at).returns(1.day.ago)
-        SiteSetting.expects(:top_menu).returns("latest|top")
-        SiteSetting.expects(:has_enough_topics_to_redirect_to_top).returns(true)
-        SiteSetting.expects(:redirect_new_users_to_top_page_duration).returns(7)
-      end
-
-      it "should have a reason for newly created user" do
-        user.expects(:created_at).returns(5.days.ago)
-        user.redirected_to_top_reason.should == I18n.t('redirected_to_top_reasons.new_user')
-      end
-
-      it "should not have a reason for newly created user" do
-        user.expects(:created_at).returns(10.days.ago)
+      it "should have no reason when top is not in the `SiteSetting.top_menu`" do
+        SiteSetting.expects(:top_menu).returns("latest")
         user.redirected_to_top_reason.should == nil
       end
-    end
 
-    describe "old users" do
-      before do
-        user.stubs(:trust_level).returns(1)
-        SiteSetting.expects(:top_menu).returns("latest|top")
-        SiteSetting.expects(:has_enough_topics_to_redirect_to_top).returns(true)
+      context "and when top is in the `SiteSetting.top_menu`" do
+        before { SiteSetting.expects(:top_menu).returns("latest|top") }
+
+        it "should have no reason when there aren't enough topics" do
+          SiteSetting.expects(:has_enough_topics_to_redirect_to_top).returns(false)
+          user.redirected_to_top_reason.should == nil
+        end
+
+        context "and when there are enough topics" do
+          before { SiteSetting.expects(:has_enough_topics_to_redirect_to_top).returns(true) }
+
+          describe "a new user" do
+            before do
+              user.stubs(:trust_level).returns(0)
+              user.stubs(:last_seen_at).returns(5.minutes.ago)
+            end
+
+            it "should have a reason for the first visit" do
+              user.expects(:last_redirected_to_top_at).returns(nil)
+              user.expects(:update_last_redirected_to_top!).once
+
+              user.redirected_to_top_reason.should == I18n.t('redirected_to_top_reasons.new_user')
+            end
+
+            it "should not have a reason for next visits" do
+              user.expects(:last_redirected_to_top_at).returns(10.minutes.ago)
+              user.expects(:update_last_redirected_to_top!).never
+
+              user.redirected_to_top_reason.should == nil
+            end
+          end
+
+          describe "an older user" do
+            before { user.stubs(:trust_level).returns(1) }
+
+            it "should have a reason when the user hasn't been seen in a month" do
+              user.last_seen_at = 2.months.ago
+              user.expects(:update_last_redirected_to_top!).once
+
+              user.redirected_to_top_reason.should == I18n.t('redirected_to_top_reasons.not_seen_in_a_month')
+            end
+          end
+
+        end
+
       end
 
-      it "should have a reason for long-time-no-see users" do
-        user.last_seen_at = 2.months.ago
-        user.redirected_to_top_reason.should == I18n.t('redirected_to_top_reasons.not_seen_in_a_month')
-      end
     end
 
+  end
+
+  describe "custom fields" do
+    it "allows modification of custom fields" do
+      user = Fabricate(:user)
+
+      user.custom_fields["a"].should == nil
+
+      user.custom_fields["bob"] = "marley"
+      user.custom_fields["jack"] = "black"
+      user.save
+
+      user = User.find(user.id)
+
+      user.custom_fields["bob"].should == "marley"
+      user.custom_fields["jack"].should == "black"
+
+      user.custom_fields.delete("bob")
+      user.custom_fields["jack"] = "jill"
+
+      user.save
+      user = User.find(user.id)
+
+      user.custom_fields.should == {"jack" => "jill"}
+    end
   end
 
 end

@@ -88,8 +88,8 @@ gem 'active_model_serializers'
 gem 'onebox'
 
 gem 'ember-rails'
-gem 'ember-source', '~> 1.2.0.1'
-gem 'handlebars-source', '~> 1.1.2'
+gem 'ember-source', '1.6.0.beta.2'
+gem 'handlebars-source', '1.3.0'
 gem 'barber'
 
 gem 'message_bus'
@@ -129,9 +129,11 @@ gem 'omniauth-facebook'
 gem 'omniauth-twitter'
 gem 'omniauth-github'
 gem 'omniauth-oauth2', require: false
+gem 'omniauth-google-oauth2'
 gem 'oj'
 # while resolving https://groups.google.com/forum/#!topic/ruby-pg/5_ylGmog1S4
 gem 'pg', '0.15.1'
+gem 'pry-rails', require: false
 gem 'rake'
 
 
@@ -140,7 +142,7 @@ gem 'rinku'
 gem 'sanitize'
 gem 'sass'
 gem 'sidekiq'
-gem 'sidekiq-failures'
+
 gem 'sinatra', require: nil
 gem 'slim'  # required for sidekiq-web
 
@@ -153,7 +155,7 @@ gem 'rack-protection' # security
 # in production environments by default.
 # allow everywhere for now cause we are allowing asset debugging in prd
 group :assets do
-  gem 'sass-rails'
+  gem 'sass-rails', '~> 4.0.2'
   gem 'uglifier'
   gem 'bourbon'
 end
@@ -184,7 +186,6 @@ group :test, :development do
   gem 'simplecov', require: false
   gem 'timecop'
   gem 'rspec-given'
-  gem 'pry-rails'
   gem 'pry-nav'
   gem 'spork-rails'
 end
@@ -195,6 +196,7 @@ group :development do
   gem 'meta_request', '0.2.5'
   gem 'librarian', '>= 0.0.25', require: false
   gem 'annotate'
+  gem 'foreman', require: false
 end
 
 # Gem that enables support for plugins. It is required.
@@ -223,10 +225,17 @@ gem 'puma', require: false
 gem 'rbtrace', require: false, platform: :mri
 
 # required for feed importing and embedding
+#
 gem 'ruby-readability', require: false
+
 gem 'simple-rss', require: false
 gem 'gctools', require: false, platform: :mri_21
 gem 'stackprof', require: false, platform: :mri_21
+gem 'memory_profiler', require: false, platform: :mri_21
+
+# This silly path comment just makes it easier for me to do dev
+# will be removed in a few weeks
+gem 'logster'#, path: '../logster'
 
 # perftools only works on 1.9 atm
 group :profile do

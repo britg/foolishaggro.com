@@ -41,7 +41,7 @@
         <button class='btn' {{action saveTitle}}>{{i18n admin.user.save_title}}</button>
         <a href="#" {{action toggleTitleEdit}}>{{i18n cancel}}</a>
       {{else}}
-        <button class='btn' {{action toggleTitleEdit}}>{{i18n admin.user.edit_title}}</button>
+        <button class='btn' {{action toggleTitleEdit}}><i class="fa fa-pencil"></i>{{i18n admin.user.edit_title}}</button>
       {{/if}}
     </div>
   </div>
@@ -58,8 +58,8 @@
     <div class='controls'>
       {{#if primaryGroupDirty}}
         <div>
-        <button class='btn ok' {{action savePrimaryGroup}}><i class='fa fa-check'></i></button>
-        <button class='btn cancel' {{action resetPrimaryGroup}}><i class='fa fa-times'></i></button>
+        <button class='btn ok no-text' {{action savePrimaryGroup}}><i class='fa fa-check'></i></button>
+        <button class='btn cancel no-text' {{action resetPrimaryGroup}}><i class='fa fa-times'></i></button>
         </div>
       {{/if}}
     </div>
@@ -77,6 +77,24 @@
     </div>
   </div>
 
+  <div class='display-row'>
+    <div class='field'>{{i18n user.registration_ip_address.title}}</div>
+    <div class='value'>{{registration_ip_address}}</div>
+    <div class='controls'></div>
+  </div>
+
+  {{#if showBadges}}
+    <div class='display-row'>
+      <div class='field'>{{i18n admin.badges.title}}</div>
+      <div class='value'>
+        {{i18n badges.badge_count count=badge_count}}
+      </div>
+      <div class='controls'>
+        {{#link-to 'adminUser.badges' this class="btn"}}{{i18n admin.badges.edit_badges}}{{/link-to}}
+      </div>
+    </div>
+  {{/if}}
+
 </section>
 
 
@@ -90,8 +108,8 @@
         {{#if approved}}
           {{i18n admin.user.approved_by}}
 
-          {{#link-to 'adminUser' approved_by}}{{avatar approved_by imageSize="small"}}{{/link-to}}
-          {{#link-to 'adminUser' approved_by}}{{approved_by.username}}{{/link-to}}
+          {{#link-to 'adminUser' approvedBy}}{{avatar approvedBy imageSize="small"}}{{/link-to}}
+          {{#link-to 'adminUser' approvedBy}}{{approvedBy.username}}{{/link-to}}
         {{else}}
           {{i18n no_value}}
         {{/if}}
@@ -150,15 +168,15 @@
     {{#if api_key}}
       <div class='long-value'>
         {{api_key.key}}
-        <button class='btn' {{action regenerateApiKey}}>{{i18n admin.api.regenerate}}</button>
-        <button {{action revokeApiKey}} class="btn">{{i18n admin.api.revoke}}</button>
+        <button class='btn' {{action regenerateApiKey}}><i class="fa fa-undo"></i>{{i18n admin.api.regenerate}}</button>
+        <button {{action revokeApiKey}} class="btn"><i class="fa fa-times"></i>{{i18n admin.api.revoke}}</button>
       </div>
     {{else}}
       <div class='value'>
       &mdash;
       </div>
       <div class='controls'>
-        <button {{action generateApiKey}} class="btn">{{i18n admin.api.generate}}</button>
+        <button {{action generateApiKey}} class="btn"><i class="fa fa-key"></i>{{i18n admin.api.generate}}</button>
       </div>
     {{/if}}
   </div>
@@ -214,8 +232,8 @@
 
       {{#if dirty}}
         <div>
-        <button class='btn ok' {{action saveTrustLevel target="content"}}><i class='fa fa-check'></i></button>
-        <button class='btn cancel' {{action restoreTrustLevel target="content"}}><i class='fa fa-times'></i></button>
+        <button class='btn ok no-text' {{action saveTrustLevel target="content"}}><i class='fa fa-check'></i></button>
+        <button class='btn cancel no-text' {{action restoreTrustLevel target="content"}}><i class='fa fa-times'></i></button>
         </div>
       {{/if}}
     </div>
@@ -248,8 +266,8 @@
   <div class='display-row highlight-danger'>
     <div class='field'>{{i18n admin.user.suspended_by}}</div>
     <div class='value'>
-      {{#link-to 'adminUser' suspended_by}}{{avatar suspended_by imageSize="tiny"}}{{/link-to}}
-      {{#link-to 'adminUser' suspended_by}}{{suspended_by.username}}{{/link-to}}
+      {{#link-to 'adminUser' suspendedBy}}{{avatar suspendedBy imageSize="tiny"}}{{/link-to}}
+      {{#link-to 'adminUser' suspendedBy}}{{suspendedBy.username}}{{/link-to}}
     </div>
     <div class='controls'>
       <b>{{i18n admin.user.suspend_reason}}</b>:
@@ -335,12 +353,6 @@
     <div class='value'>{{{days_visited}}}</div>
   </div>
 </section>
-
-{{#if showBadges}}
-<section class='details'>
-  <h1>{{i18n admin.badges.title}}</h1>
-</section>
-{{/if}}
 
 <section>
   <hr/>

@@ -5,7 +5,7 @@ module("Discourse.Markdown", {
 });
 
 var cooked = function(input, expected, text) {
-  var result = Discourse.Markdown.cook(input, {mentionLookup: false, sanitize: true});
+  var result = Discourse.Markdown.cook(input, {sanitize: true});
   equal(result, expected, text);
 };
 
@@ -185,6 +185,14 @@ test("Mentions", function() {
                 "<p>Hello <a class=\"mention\" href=\"/users/sam\">@sam</a></p>",
                 "translates mentions to links");
 
+  cooked("[@codinghorror](https://twitter.com/codinghorror)",
+         "<p><a href=\"https://twitter.com/codinghorror\">@codinghorror</a></p>",
+         "it doesn't do mentions within links");
+
+  cookedOptions("[@codinghorror](https://twitter.com/codinghorror)", alwaysTrue,
+         "<p><a href=\"https://twitter.com/codinghorror\">@codinghorror</a></p>",
+         "it doesn't do link mentions within links");
+
   cooked("Hello @EvilTrout", "<p>Hello <span class=\"mention\">@EvilTrout</span></p>", "adds a mention class");
   cooked("robin@email.host", "<p>robin@email.host</p>", "won't add mention class to an email address");
   cooked("hanzo55@yahoo.com", "<p>hanzo55@yahoo.com</p>", "won't be affected by email addresses that have a number before the @ symbol");
@@ -243,7 +251,7 @@ test("Heading", function() {
 test("Oneboxing", function() {
 
   var matches = function(input, regexp) {
-    return Discourse.Markdown.cook(input, {mentionLookup: false }).match(regexp);
+    return Discourse.Markdown.cook(input).match(regexp);
   };
 
   ok(!matches("- http://www.textfiles.com/bbs/MINDVOX/FORUMS/ethics\n\n- http://drupal.org", /onebox/),
@@ -352,6 +360,10 @@ test("sanitize", function() {
   equal(sanitize("<textarea>hullo</textarea>"), "hullo");
   equal(sanitize("<button>press me!</button>"), "press me!");
   equal(sanitize("<canvas>draw me!</canvas>"), "draw me!");
+
+  cooked("[the answer](javascript:alert(42))", "<p><a>the answer</a></p>", "it prevents XSS");
+
+  cooked("<i class=\"fa fa-bug fa-spin\" style=\"font-size:600%\"></i>\n<!-- -->", "<p><i></i><br/>&lt;!-- --&gt;</p>", "it doesn't circumvent XSS with comments");
 });
 
 test("URLs in BBCode tags", function() {

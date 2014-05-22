@@ -244,7 +244,6 @@ $.fn.autocomplete = function(options) {
     }
   };
 
-
   // chain to allow multiples
   var oldClose = me.data("closeAutocomplete");
   me.data("closeAutocomplete", function() {
@@ -270,8 +269,8 @@ $.fn.autocomplete = function(options) {
     }
   });
 
-  return $(this).keydown(function(e) {
-    var c, caretPosition, i, initial, next, nextIsGood, prev, prevIsGood, stopFound, term, total, userToComplete;
+  $(this).keydown(function(e) {
+    var c, caretPosition, i, initial, next, prev, prevIsGood, stopFound, term, total, userToComplete;
 
     if(options.allowAny){
       // saves us wiring up a change event as well, keypress is while its pressed
@@ -298,7 +297,6 @@ $.fn.autocomplete = function(options) {
     if ((completeStart === null) && e.which === 8 && options.key) {
       c = Discourse.Utilities.caretPosition(me[0]);
       next = me[0].value[c];
-      nextIsGood = next === void 0 || /\s/.test(next);
       c -= 1;
       initial = c;
       prevIsGood = true;
@@ -406,4 +404,6 @@ $.fn.autocomplete = function(options) {
       }
     }
   });
+
+  return this;
 };
