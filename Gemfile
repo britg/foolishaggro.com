@@ -162,7 +162,7 @@ end
 
 gem 'haml-rails'
 gem 'jquery-rails'
-gem 'anjlab-bootstrap-rails', '>= 3.0.0.0', require: 'bootstrap-rails'
+gem 'bootstrap-sass', '~> 3.1.1'
 gem 'rails_autolink'
 
 group :test do

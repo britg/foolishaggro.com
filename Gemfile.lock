@@ -45,9 +45,6 @@ GEM
     airbrake (3.1.2)
       activesupport
       builder
-    anjlab-bootstrap-rails (3.0.3.0)
-      railties (>= 3.0)
-      sass (>= 3.2)
     annotate (2.6.1)
       activerecord (>= 2.3.0)
       rake (>= 0.8.7)
@@ -61,6 +58,8 @@ GEM
       erubis (>= 2.6.6)
     binding_of_caller (0.7.2)
       debug_inspector (>= 0.0.1)
+    bootstrap-sass (3.1.1.1)
+      sass (~> 3.2)
     bourbon (3.1.8)
       sass (>= 3.2.0)
       thor
@@ -420,11 +419,11 @@ DEPENDENCIES
   actionpack-action_caching
   active_model_serializers
   airbrake (= 3.1.2)
-  anjlab-bootstrap-rails (>= 3.0.0.0)
   annotate
   barber
   better_errors
   binding_of_caller
+  bootstrap-sass (~> 3.1.1)
   bourbon
   certified
   discourse_plugin!
