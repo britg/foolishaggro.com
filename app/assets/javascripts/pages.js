@@ -12,6 +12,6 @@
 //
 //= require jquery
 //= require jquery_ujs
-//= require twitter/bootstrap/transition
-//= require twitter/bootstrap/modal
+//= require bootstrap/transition
+//= require bootstrap/modal
 //= require_tree ./pages
