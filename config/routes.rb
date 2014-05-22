@@ -12,8 +12,14 @@ BACKUP_ROUTE_FORMAT = /[a-zA-Z0-9\-_]*\d{4}(-\d{2}){2}-\d{6}\.tar\.gz/i unless d
 Discourse::Application.routes.draw do
 
   match "/404", to: "exceptions#not_found", via: [:get, :post]
+  get "/404-body" => "exceptions#not_found_body"
 
   mount Sidekiq::Web => "/sidekiq", constraints: AdminConstraint.new
+
+  if Rails.env.production?
+    require 'logster/middleware/viewer'
+    mount Logster::Middleware::Viewer.new(nil) => "/logs", constraints: AdminConstraint.new
+  end
 
   get "site" => "site#index"
 
@@ -84,7 +90,9 @@ Discourse::Application.routes.draw do
       resources :screened_urls,         only: [:index]
     end
 
-    get "customize" => "site_customizations#index", constraints: AdminConstraint.new
+    get "customize" => "color_schemes#index", constraints: AdminConstraint.new
+    get "customize/css_html" => "site_customizations#index", constraints: AdminConstraint.new
+    get "customize/colors" => "color_schemes#index", constraints: AdminConstraint.new
     get "flags" => "flags#index"
     get "flags/:filter" => "flags#index"
     post "flags/agree/:id" => "flags#agree"
@@ -93,6 +101,7 @@ Discourse::Application.routes.draw do
     resources :site_customizations, constraints: AdminConstraint.new
     resources :site_contents, constraints: AdminConstraint.new
     resources :site_content_types, constraints: AdminConstraint.new
+    resources :color_schemes, constraints: AdminConstraint.new
 
     get "version_check" => "versions#show"
 
@@ -174,6 +183,7 @@ Discourse::Application.routes.draw do
   get "users/activate-account/:token" => "users#activate_account"
   get "users/authorize-email/:token" => "users#authorize_email"
   get "users/hp" => "users#get_honeypot_value"
+  get "my/:path", to: 'users#my_redirect'
 
   get "user_preferences" => "users#user_preferences_redirect"
   get "users/:username/private-messages" => "user_actions#private_messages", constraints: {username: USERNAME_ROUTE_FORMAT}
@@ -204,6 +214,7 @@ Discourse::Application.routes.draw do
   post "uploads" => "uploads#create"
 
   get "posts/by_number/:topic_id/:post_number" => "posts#by_number"
+  put "posts/by_number/:topic_id/:post_number/bookmarks/remove" => "posts#remove_bookmark_by_number"
   get "posts/:id/reply-history" => "posts#reply_history"
 
   resources :groups do
@@ -214,6 +225,7 @@ Discourse::Application.routes.draw do
 
   resources :posts do
     put "bookmark"
+    put "wiki"
     get "replies"
     get "revisions/:revision" => "posts#revisions"
     put "recover"
@@ -352,6 +364,8 @@ Discourse::Application.routes.draw do
   get "draft" => "draft#show"
   post "draft" => "draft#update"
   delete "draft" => "draft#destroy"
+
+  get "cdn_asset/:site/*path" => "static#cdn_asset", format: false
 
   get "robots.txt" => "robots_txt#index"
 

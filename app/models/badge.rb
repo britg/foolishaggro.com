@@ -4,6 +4,17 @@ class Badge < ActiveRecord::Base
 
   validates :name, presence: true, uniqueness: true
   validates :badge_type, presence: true
+  validates :allow_title, inclusion: [true, false]
+
+  def self.trust_level_badge_ids
+    (1..4).to_a
+  end
+
+  def reset_grant_count!
+    self.grant_count = UserBadge.where(badge_id: id).count
+    save!
+  end
+
 end
 
 # == Schema Information
@@ -17,6 +28,7 @@ end
 #  grant_count   :integer          default(0), not null
 #  created_at    :datetime
 #  updated_at    :datetime
+#  allow_title   :boolean          default(FALSE), not null
 #
 # Indexes
 #

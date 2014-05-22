@@ -40,38 +40,21 @@ describe UsersController do
   end
 
   describe '.authorize_email' do
-    context 'invalid token' do
-      before do
-        EmailToken.expects(:confirm).with('asdfasdf').returns(nil)
-        get :authorize_email, token: 'asdfasdf'
-      end
-
-      it 'return success' do
-        response.should be_success
-      end
-
-      it 'sets a flash error' do
-        flash[:error].should be_present
-      end
+    it 'errors out for invalid tokens' do
+      get :authorize_email, token: 'asdfasdf'
+      response.should be_success
+      flash[:error].should be_present
     end
 
     context 'valid token' do
-      let(:user) { Fabricate(:user) }
 
-      before do
-        EmailToken.expects(:confirm).with('asdfasdf').returns(user)
-        get :authorize_email, token: 'asdfasdf'
-      end
+      it 'authorizes with a correct token' do
+        user = Fabricate(:user)
+        email_token = user.email_tokens.create(email: user.email)
 
-      it 'returns success' do
+        get :authorize_email, token: email_token.token
         response.should be_success
-      end
-
-      it "doesn't set an error" do
         flash[:error].should be_blank
-      end
-
-      it 'logs in as the user' do
         session[:current_user_id].should be_present
       end
     end
@@ -399,7 +382,7 @@ describe UsersController do
       end
 
       it 'should not result in an active account' do
-        User.where(username: @user.username).first.active.should be_false
+        User.find_by(username: @user.username).active.should be_false
       end
     end
 
@@ -996,6 +979,21 @@ describe UsersController do
     end
   end
 
+  describe "badge_title" do
+    let(:user) { Fabricate(:user) }
+    let(:badge) { Fabricate(:badge) }
+    let(:user_badge) { BadgeGranter.grant(badge, user) }
+
+    it "sets the user's title to the badge name if it is titleable" do
+      log_in_user user
+      xhr :put, :badge_title, user_badge_id: user_badge.id, username: user.username
+      user.reload.title.should_not == badge.name
+      badge.update_attributes allow_title: true
+      xhr :put, :badge_title, user_badge_id: user_badge.id, username: user.username
+      user.reload.title.should == badge.name
+    end
+  end
+
   describe "search_users" do
 
     let(:topic) { Fabricate :topic }
@@ -1319,6 +1317,29 @@ describe UsersController do
         UserDestroyer.any_instance.expects(:destroy).with(user, anything).returns(user)
         xhr :delete, :destroy, username: user.username
         response.should be_success
+      end
+    end
+  end
+
+  describe '.my_redirect' do
+
+    it "returns 404 if the user is not logged in" do
+      get :my_redirect, path: "wat"
+      response.should_not be_success
+      response.should_not be_redirect
+    end
+
+    context "when the user is logged in" do
+      let!(:user) { log_in }
+
+      it "will not redirect to an invalid path" do
+        get :my_redirect, path: "wat/..password.txt"
+        response.should_not be_redirect
+      end
+
+      it "will redirect to an valid path" do
+        get :my_redirect, path: "preferences"
+        response.should be_redirect
       end
     end
   end

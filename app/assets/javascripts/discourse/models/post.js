@@ -80,6 +80,25 @@ Discourse.Post = Discourse.Model.extend({
 
   }.observes('bookmarked'),
 
+  wikiChanged: function() {
+    var self = this;
+
+    Discourse.ajax('/posts/' + this.get('id') + '/wiki', {
+      type: 'PUT',
+      data: {
+        wiki: this.get('wiki') ? true : false
+      }
+    }).then(function() {
+      self.incrementProperty('version');
+    }, function(error) {
+      if (error && error.responseText) {
+        bootbox.alert($.parseJSON(error.responseText).errors[0]);
+      } else {
+        bootbox.alert(I18n.t('generic_error'));
+      }
+    });
+  }.observes('wiki'),
+
   internalLinks: function() {
     if (this.blank('link_counts')) return null;
     return this.get('link_counts').filterProperty('internal').filterProperty('title');
@@ -284,9 +303,30 @@ Discourse.Post = Discourse.Model.extend({
     var post = this;
     Object.keys(otherPost).forEach(function (key) {
       var value = otherPost[key];
-      if (typeof value !== "function") {
-        post.set(key, value);
+      var oldValue = post.get(key);
+
+      if(!value) {
+        value = null;
       }
+
+      if(!oldValue) {
+        oldValue = null;
+      }
+
+      var skip = false;
+
+      if (typeof value !== "function" && oldValue !== value) {
+
+        // wishing for an identity map
+        if(key === "reply_to_user") {
+          skip = Em.get(value, "username") === Em.get(oldValue, "username");
+        }
+
+        if(!skip) {
+          post.set(key, value);
+        }
+      }
+
     });
   },
 
@@ -418,5 +458,3 @@ Discourse.Post.reopenClass({
   }
 
 });
-
-

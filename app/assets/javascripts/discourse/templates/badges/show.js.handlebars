@@ -1,4 +1,4 @@
-<div class='container badges'>
+<div class='container show-badge'>
   <h1>
     {{#link-to 'badges.index'}}{{i18n badges.title}}{{/link-to}}
     <i class='fa fa-angle-right'></i>
@@ -8,19 +8,28 @@
   <table class='badges-listing'>
     <tr>
       <td class='badge'>{{user-badge badge=this}}</td>
-      <td class='description'>{{description}}</td>
+      <td class='description'>{{translatedDescription}}</td>
       <td class='grant-count'>{{i18n badges.granted count=grant_count}}</td>
     </tr>
   </table>
 
   {{#if userBadges}}
-    <h2>{{i18n users}}</h2>
-    <br>
+    <div>
     {{#each userBadges}}
-      {{#link-to 'userActivity' user}}
-        {{avatar user imageSize="large"}}
-      {{/link-to}}
-    {{/each}}
+        {{#link-to 'userActivity' user}}
+          <div class="badge-user">
+            {{avatar user imageSize="large"}}
+            <div class="details">
+              <span class="username">{{user.username}}</span>
+              {{unboundDate granted_at}}
+            </div>
+          </div>
+        {{/link-to}}
+      {{/each}}
+    </div>
+    {{#if canLoadMore}}
+      <div class='spinner'>{{i18n loading}}</div>
+    {{/if}}
   {{else}}
     {{#unless userBadgesLoaded}}
       <div class='spinner'>{{i18n loading}}</div>

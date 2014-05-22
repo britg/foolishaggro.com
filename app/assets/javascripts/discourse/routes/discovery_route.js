@@ -9,6 +9,13 @@
 **/
 Discourse.DiscoveryRoute = Discourse.Route.extend(Discourse.ScrollTop, Discourse.OpenComposer, {
 
+  beforeModel: function(transition) {
+    if (transition.targetName.indexOf("discovery.top") === -1 &&
+        Discourse.User.currentProp("should_be_redirected_to_top")) {
+      this.transitionTo("discovery.top");
+    }
+  },
+
   actions: {
     loading: function() {
       var controller = this.controllerFor('discovery');
@@ -39,7 +46,7 @@ Discourse.DiscoveryRoute = Discourse.Route.extend(Discourse.ScrollTop, Discourse
     },
 
     createTopic: function() {
-      this.openComposer(this.controllerFor('discoveryTopics'));
+      this.openComposer(this.controllerFor('discovery/topics'));
     },
 
     changeBulkTemplate: function(w) {
@@ -50,7 +57,7 @@ Discourse.DiscoveryRoute = Discourse.Route.extend(Discourse.ScrollTop, Discourse
     },
 
     showBulkActions: function() {
-      var selected = this.controllerFor('discoveryTopics').get('selected');
+      var selected = this.controllerFor('discovery/topics').get('selected');
       Discourse.Route.showModal(this, 'topicBulkActions', selected);
       this.send('changeBulkTemplate', 'modal/bulk_actions_buttons');
     }

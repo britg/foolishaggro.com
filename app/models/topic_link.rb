@@ -45,6 +45,7 @@ class TopicLink < ActiveRecord::Base
 
     builder.where('ftl.topic_id = :topic_id', topic_id: topic_id)
     builder.where('ft.deleted_at IS NULL')
+    builder.where("COALESCE(ft.archetype, 'regular') <> :archetype", archetype: Archetype.private_message)
 
     builder.secure_category(guardian.secure_category_ids)
 
@@ -72,6 +73,7 @@ class TopicLink < ActiveRecord::Base
               ORDER BY reflection ASC, clicks DESC")
 
     builder.where('t.deleted_at IS NULL')
+    builder.where("COALESCE(t.archetype, 'regular') <> :archetype", archetype: Archetype.private_message)
 
     # not certain if pluck is right, cause it may interfere with caching
     builder.where('l.post_id IN (:post_ids)', post_ids: posts.map(&:id))
@@ -123,7 +125,7 @@ class TopicLink < ActiveRecord::Base
             post_number = route[:post_number] || 1
 
             # Store the canonical URL
-            topic = Topic.where(id: topic_id).first
+            topic = Topic.find_by(id: topic_id)
 
             if topic.present?
               url = "#{Discourse.base_url}#{topic.relative_url}"
@@ -137,7 +139,7 @@ class TopicLink < ActiveRecord::Base
 
           reflected_post = nil
           if post_number && topic_id
-            reflected_post = Post.where(topic_id: topic_id, post_number: post_number.to_i).first
+            reflected_post = Post.find_by(topic_id: topic_id, post_number: post_number.to_i)
           end
 
           added_urls << url
@@ -152,7 +154,7 @@ class TopicLink < ActiveRecord::Base
 
           # Create the reflection if we can
           if topic_id.present?
-            topic = Topic.where(id: topic_id).first
+            topic = Topic.find_by(id: topic_id)
 
             if topic && post.topic && post.topic.archetype != 'private_message' && topic.archetype != 'private_message'
 
@@ -182,10 +184,10 @@ class TopicLink < ActiveRecord::Base
 
       # Remove links that aren't there anymore
       if added_urls.present?
-        TopicLink.delete_all ["(url not in (:urls)) AND (post_id = :post_id)", urls: added_urls, post_id: post.id]
-        TopicLink.delete_all ["(url not in (:urls)) AND (link_post_id = :post_id)", urls: reflected_urls, post_id: post.id]
+        TopicLink.delete_all ["(url not in (:urls)) AND (post_id = :post_id AND NOT reflection)", urls: added_urls, post_id: post.id]
+        TopicLink.delete_all ["(url not in (:urls)) AND (link_post_id = :post_id AND reflection)", urls: reflected_urls, post_id: post.id]
       else
-        TopicLink.delete_all ["post_id = :post_id OR link_post_id = :post_id", post_id: post.id]
+        TopicLink.delete_all ["(post_id = :post_id AND NOT reflection) OR (link_post_id = :post_id AND reflection)", post_id: post.id]
       end
     end
   end

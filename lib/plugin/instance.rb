@@ -212,7 +212,7 @@ class Plugin::Instance
 
   def register_assets!
     assets.each do |asset, opts|
-      if asset =~ /\.js$|\.js\.erb$/
+      if asset =~ /\.js$|\.js\.erb$|\.js\.es6$/
         if opts == :admin
           DiscoursePluginRegistry.admin_javascripts << asset
         else
@@ -222,12 +222,14 @@ class Plugin::Instance
           DiscoursePluginRegistry.javascripts << asset
         end
       elsif asset =~ /\.css$|\.scss$/
-
-        unless opts == :mobile
-          DiscoursePluginRegistry.stylesheets << asset
-        end
-        unless opts == :desktop
+        if opts == :mobile
           DiscoursePluginRegistry.mobile_stylesheets << asset
+        elsif opts == :desktop
+          DiscoursePluginRegistry.desktop_stylesheets << asset
+        elsif opts == :variables
+          DiscoursePluginRegistry.sass_variables << asset
+        else
+          DiscoursePluginRegistry.stylesheets << asset
         end
 
       elsif asset =~ /\.js\.handlebars$/
