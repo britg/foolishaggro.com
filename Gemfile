@@ -157,9 +157,9 @@ gem 'rack-protection' # security
 group :assets do
   gem 'sass-rails', '~> 4.0.2'
   gem 'uglifier'
-  gem 'bourbon'
 end
 
+gem 'bourbon'
 gem 'haml-rails'
 gem 'jquery-rails'
 gem 'bootstrap-sass', '~> 3.1.1'
