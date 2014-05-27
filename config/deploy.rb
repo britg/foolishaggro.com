@@ -91,6 +91,7 @@ namespace :deploy do
     run  "ln -nfs #{shared_path}/config/environments/production.rb #{release_path}/config/environments/production.rb"
     run  "ln -nfs #{shared_path}/config/initializers/secret_token.rb #{release_path}/config/initializers/secret_token.rb"
     run  "ln -nfs #{shared_path}/config/discourse.conf #{release_path}/config/discourse.conf"
+    run  "ln -nfs #{shared_path}/uploads #{release_path}/public/uploads"
   end
 end
 
