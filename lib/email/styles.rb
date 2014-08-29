@@ -4,10 +4,15 @@
 #
 module Email
   class Styles
+    @@plugin_callbacks = []
 
     def initialize(html)
       @html = html
       @fragment = Nokogiri::HTML.fragment(@html)
+    end
+
+    def self.register_plugin_style(&block)
+      @@plugin_callbacks.push(block)
     end
 
     def add_styles(node, new_styles)
@@ -20,6 +25,8 @@ module Email
     end
 
     def format_basic
+      uri = URI(Discourse.base_url)
+
       @fragment.css('img').each do |img|
 
         next if img['class'] == 'site-logo'
@@ -38,7 +45,7 @@ module Email
 
         # ensure no schemaless urls
         if img['src'] && img['src'].starts_with?("//")
-          img['src'] = "http:" + img['src']
+          img['src'] = "#{uri.scheme}:#{img['src']}"
         end
       end
     end
@@ -51,6 +58,7 @@ module Email
       style('.user-avatar', 'vertical-align:top;width:55px;')
       style('.user-avatar img', nil, width: '45', height: '45')
       style('hr', 'background-color: #ddd; height: 1px; border: 1px;')
+      style('.rtl', 'direction: rtl;')
       # we can do this but it does not look right
       # style('#main', 'font-family:"Helvetica Neue", Helvetica, Arial, sans-serif')
       style('td.body', 'padding-top:5px;', colspan: "2")
@@ -58,6 +66,7 @@ module Email
       correct_footer_style
       reset_tables
       onebox_styles
+      plugin_styles
     end
 
     def onebox_styles
@@ -79,6 +88,20 @@ module Email
       @fragment.css('aside, article, header').each do |n|
         n.name = "div"
       end
+
+      # iframes can't go in emails, so replace them with clickable links
+      @fragment.css('iframe').each do |i|
+        begin
+          src_uri = URI(i['src'])
+
+          # If an iframe is protocol relative, use SSL when displaying it
+          display_src = "#{src_uri.scheme || 'https://'}#{src_uri.host}#{src_uri.path}"
+          i.replace "<p><a href='#{src_uri.to_s}'>#{display_src}</a><p>"
+        rescue URI::InvalidURIError
+          # If the URL is weird, remove it
+          i.remove
+        end
+      end
     end
 
     def format_html
@@ -97,10 +120,17 @@ module Email
       style('.featured-topic a', 'text-decoration: none; font-weight: bold; color: #006699; margin-right: 5px')
 
       onebox_styles
+      plugin_styles
+    end
+
+    # this method is reserved for styles specific to plugin
+    def plugin_styles
+      @@plugin_callbacks.each { |block| block.call(@fragment) }
     end
 
     def to_html
       strip_classes_and_ids
+      replace_relative_urls
       @fragment.to_html.tap do |result|
         result.gsub!(/\[email-indent\]/, "<div style='margin-left: 15px'>")
         result.gsub!(/\[\/email-indent\]/, "</div>")
@@ -109,9 +139,22 @@ module Email
 
     private
 
+    def replace_relative_urls
+      forum_uri = URI(Discourse.base_url)
+      host = forum_uri.host
+      scheme = forum_uri.scheme
+
+      @fragment.css('[href]').each do |element|
+        href = element['href']
+        if href =~ /^\/\/#{host}/
+          element['href'] = "#{scheme}:#{href}"
+        end
+      end
+    end
+
     def correct_first_body_margin
       @fragment.css('.body p').each do |element|
-        element['style'] = "margin-top:0;"
+        element['style'] = "margin-top:0; border: 0;"
       end
     end
 

@@ -11,11 +11,11 @@
   {{else}}
 
     <label>{{inviteInstructions}}</label>
-    {{textField value=email placeholderKey="topic.invite_reply.email_placeholder"}}
+    {{text-field value=email placeholderKey="topic.invite_reply.email_placeholder"}}
 
     {{#if isAdmin}}
-      <label>{{i18n topic.automatically_add_to_groups}}</label>
-      {{group-selector includeAuto=false groupNames=groupNames placeholderKey="topic.invite_private.group_name"}}
+      <label>{{{groupInstructions}}}</label>
+      {{group-selector includeAuto=false groupFinder=groupFinder groupNames=groupNames placeholderKey="topic.invite_private.group_name"}}
     {{/if}}
   {{/if}}
 </div>

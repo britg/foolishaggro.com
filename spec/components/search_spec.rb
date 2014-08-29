@@ -110,17 +110,8 @@ describe Search do
 
     it 'returns a result' do
       result.should be_present
-    end
-
-    it 'has the display name as the title' do
       result[:title].should == user.username
-    end
-
-    it 'has the avatar_template is there so it can hand it to the client' do
       result[:avatar_template].should_not be_nil
-    end
-
-    it 'has a url for the record' do
       result[:url].should == "/users/#{user.username_lower}"
     end
 
@@ -138,18 +129,17 @@ describe Search do
 
       it 'displays multiple results within a topic' do
 
-        SiteSetting.stubs(:min_posts_for_search_in_topic).returns(3)
-
         topic = Fabricate(:topic)
         topic2 = Fabricate(:topic)
 
         new_post('this is the other post I am posting', topic2)
+        new_post('this is my fifth post I am posting', topic2)
+
         post1 = new_post('this is the other post I am posting', topic)
         post2 = new_post('this is my first post I am posting', topic)
         post3 = new_post('this is a real long and complicated bla this is my second post I am Posting birds
                          with more stuff bla bla', topic)
         post4 = new_post('this is my fourth post I am posting', topic)
-        new_post('this is my fifth post I am posting', topic2)
 
         # update posts_count
         topic.reload
@@ -164,16 +154,14 @@ describe Search do
           post1.topic_id,
           "_#{post2.id}",
           "_#{post3.id}",
-          "_#{post4.id}",
-          topic2.id]
+          "_#{post4.id}"]
 
-        # trigger expanded search
-        results = Search.new('birds', search_context: post1.topic).execute
-
-        SiteSetting.stubs(:min_posts_for_search_in_topic).returns(10)
-        results = Search.new('posting', search_context: post1.topic).execute.find do |r|
+        # stop words should work
+        results = Search.new('this', search_context: post1.topic).execute.find do |r|
           r[:type] == "topic"
-        end[:results].length.should == 2
+        end[:results]
+
+        results.length.should == 4
 
       end
     end
@@ -198,12 +186,13 @@ describe Search do
       it 'returns the post' do
         result.should be_present
         result[:title].should == topic.title
-        result[:url].should == reply.url
+
+        result[:url].should == topic.relative_url + "/2"
       end
     end
 
     context "search for a topic by id" do
-      let(:result) { first_of_type(Search.new(topic.id, type_filter: 'topic', min_search_term_length: 1).execute, 'topic') }
+      let(:result) { first_of_type(Search.new(topic.id, type_filter: 'topic', search_for_id: true, min_search_term_length: 1).execute, 'topic') }
 
       it 'returns the topic' do
         result.should be_present
@@ -213,7 +202,7 @@ describe Search do
     end
 
     context "search for a topic by url" do
-      let(:result) { first_of_type(Search.new(topic.relative_url, type_filter: 'topic').execute, 'topic') }
+      let(:result) { first_of_type(Search.new(topic.relative_url, search_for_id: true, type_filter: 'topic').execute, 'topic') }
 
       it 'returns the topic' do
         result.should be_present
@@ -322,8 +311,6 @@ describe Search do
 
       # should find topic created by searched user first
       Then          { first_of_type(search_user, 'topic')[:id].should == post.topic_id }
-      # results should also include topic by coding_horror
-      And           { result_ids_for_type(search_user, 'topic').should include coding_horror_post.topic_id }
     end
 
     context 'category as a search context' do
@@ -336,11 +323,25 @@ describe Search do
       When(:search_cat) { Search.new('hello', search_context: category).execute }
       # should find topic in searched category first
       Then          { first_of_type(search_cat, 'topic')[:id].should == topic.id }
-      # results should also include topic without category
-      And          { result_ids_for_type(search_cat, 'topic').should include topic_no_cat.id }
-
     end
 
+  end
+
+  describe 'Chinese search' do
+    it 'splits English / Chinese' do
+      SiteSetting.default_locale = 'zh_CN'
+      data = Search.prepare_data('Discourse社区指南').split(' ')
+      data.should == ['Discourse', '社区','指南']
+    end
+
+    it 'finds chinese topic based on title' do
+      SiteSetting.default_locale = 'zh_TW'
+      topic = Fabricate(:topic, title: 'My Title Discourse社区指南')
+      Fabricate(:post, topic: topic)
+
+      Search.new('社区指南').execute[0][:results][0][:id].should == topic.id
+      Search.new('指南').execute[0][:results][0][:id].should == topic.id
+    end
   end
 
 end

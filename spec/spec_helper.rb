@@ -30,9 +30,13 @@ Spork.prefork do
   # Requires supporting ruby files with custom matchers and macros, etc,
   # in spec/support/ and its subdirectories.
   Dir[Rails.root.join("spec/support/**/*.rb")].each {|f| require f}
+  Dir[Rails.root.join("spec/fabricators/*.rb")].each {|f| require f}
 
   # let's not run seed_fu every test
   SeedFu.quiet = true if SeedFu.respond_to? :quiet
+
+  SiteSetting.enable_system_avatars = false
+  SiteSetting.automatically_download_gravatars = false
   SeedFu.seed
 
   RSpec.configure do |config|
@@ -53,6 +57,11 @@ Spork.prefork do
     config.infer_base_class_for_anonymous_controllers = true
 
     config.before(:suite) do
+
+      Sidekiq.error_handlers.clear
+
+      # Ugly, but needed until we have a user creator
+      User.skip_callback(:create, :after, :ensure_in_trust_level_group)
 
       DiscoursePluginRegistry.clear if ENV['LOAD_PLUGINS'] != "1"
       Discourse.current_user_provider = TestCurrentUserProvider
@@ -79,6 +88,11 @@ Spork.prefork do
         SiteSetting.remove_override!(setting.name)
       end
 
+      # very expensive IO operations
+      SiteSetting.enable_system_avatars = false
+      SiteSetting.automatically_download_gravatars = false
+
+      I18n.locale = :en
     end
 
     class TestCurrentUserProvider < Auth::DefaultCurrentUserProvider
@@ -98,6 +112,12 @@ Spork.prefork do
   def freeze_time(now=Time.now)
     DateTime.stubs(:now).returns(DateTime.parse(now.to_s))
     Time.stubs(:now).returns(Time.parse(now.to_s))
+  end
+
+  def file_from_fixtures(filename)
+    FileUtils.mkdir_p("#{Rails.root}/tmp/spec") unless Dir.exists?("#{Rails.root}/tmp/spec")
+    FileUtils.cp("#{Rails.root}/spec/fixtures/images/#{filename}", "#{Rails.root}/tmp/spec/#{filename}")
+    File.new("#{Rails.root}/tmp/spec/#{filename}")
   end
 
 end

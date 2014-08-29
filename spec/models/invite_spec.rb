@@ -2,7 +2,6 @@ require 'spec_helper'
 
 describe Invite do
 
-  it { should validate_presence_of :email }
   it { should validate_presence_of :invited_by_id }
 
   let(:iceking) { 'iceking@adventuretime.ooo' }
@@ -80,7 +79,7 @@ describe Invite do
           it 'returns the original invite' do
             topic.invite_by_email(inviter, 'iceking@adventuretime.ooo').should == @invite
             topic.invite_by_email(inviter, 'iceking@ADVENTURETIME.ooo').should == @invite
-            topic.invite_by_email(inviter, 'ICEKING@adventuretime.ooo').should_not == @invite
+            topic.invite_by_email(inviter, 'ICEKING@adventuretime.ooo').should == @invite
           end
 
           it 'returns a new invite if the other has expired' do
@@ -197,11 +196,26 @@ describe Invite do
 
 
         context 'again' do
-          it 'will not redeem twice' do
-            invite.redeem.should == user
-            invite.redeem.send_welcome_message.should be_false
+          context "without a passthrough" do
+            before do
+              SiteSetting.invite_passthrough_hours = 0
+            end
+
+            it 'will not redeem twice' do
+              invite.redeem.should be_blank
+            end
           end
 
+          context "with a passthrough" do
+            before do
+              SiteSetting.invite_passthrough_hours = 1
+            end
+
+            it 'will not redeem twice' do
+              invite.redeem.should be_present
+              invite.redeem.send_welcome_message.should be_false
+            end
+          end
         end
       end
 
@@ -334,4 +348,43 @@ describe Invite do
       result.should be_valid
     end
   end
+
+  describe '.redeem_from_email' do
+    let(:inviter) { Fabricate(:user) }
+    let(:invite) { Fabricate(:invite, invited_by: inviter, email: 'test@example.com', user_id: nil) }
+    let(:user) { Fabricate(:user, email: invite.email) }
+
+    it 'redeems the invite from email' do
+      result = Invite.redeem_from_email(user.email)
+      invite.reload
+      invite.should be_redeemed
+    end
+
+    it 'does not redeem the invite if email does not match' do
+      result = Invite.redeem_from_email('test24@example.com')
+      invite.reload
+      invite.should_not be_redeemed
+    end
+
+  end
+
+  describe '.redeem_from_token' do
+    let(:inviter) { Fabricate(:user) }
+    let(:invite) { Fabricate(:invite, invited_by: inviter, email: 'test@example.com', user_id: nil) }
+    let(:user) { Fabricate(:user, email: invite.email) }
+
+    it 'redeems the invite from token' do
+      result = Invite.redeem_from_token(invite.invite_key, user.email)
+      invite.reload
+      invite.should be_redeemed
+    end
+
+    it 'does not redeem the invite if token does not match' do
+      result = Invite.redeem_from_token("bae0071f995bb4b6f756e80b383778b5", user.email)
+      invite.reload
+      invite.should_not be_redeemed
+    end
+
+  end
+
 end

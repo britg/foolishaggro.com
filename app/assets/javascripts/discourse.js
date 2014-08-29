@@ -6,11 +6,10 @@
   @class Discourse
   @extends Ember.Application
 **/
+var DiscourseResolver = require('discourse/ember/resolver').default;
+
 window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
   rootElement: '#main',
-
-  // Helps with integration tests
-  URL_FIXTURES: {},
 
   getURL: function(url) {
     // If it's a non relative URL, return it.
@@ -24,7 +23,7 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
     return u + url;
   },
 
-  Resolver: Discourse.Resolver,
+  Resolver: DiscourseResolver,
 
   titleChanged: function() {
     var title = "";
@@ -33,7 +32,12 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
       title += "" + (this.get('title')) + " - ";
     }
     title += Discourse.SiteSettings.title;
-    $('title').text(title);
+
+    // if we change this we can trigger changes on document.title
+    // only set if changed.
+    if($('title').text() !== title) {
+      $('title').text(title);
+    }
 
     var notifyCount = this.get('notifyCount');
     if (notifyCount > 0 && !Discourse.User.currentProp('dynamic_favicon')) {
@@ -77,7 +81,14 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
     Discourse.User.logout().then(function() {
       // Reloading will refresh unbound properties
       Discourse.KeyValueStore.abandonLocal();
-      window.location.pathname = Discourse.getURL('/');
+
+      var redirect = Discourse.SiteSettings.logout_redirect;
+      if(redirect.length === 0){
+        window.location.pathname = Discourse.getURL('/');
+      } else {
+        window.location.href = redirect;
+      }
+
     });
   },
 
@@ -89,24 +100,10 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
 
   loginRequired: function() {
     return Discourse.SiteSettings.login_required && !Discourse.User.current();
-  }.property(),
+  }.property().volatile(),
 
   redirectIfLoginRequired: function(route) {
     if(this.get('loginRequired')) { route.transitionTo('login'); }
-  },
-
-  /**
-    Add an initializer hook for after the Discourse Application starts up.
-
-    @method addInitializer
-    @param {Function} init the initializer to add.
-    @param {Boolean} immediate whether to execute the function right away.
-                      Default is false, for next run loop. If unsure, use false.
-  **/
-  addInitializer: function(init, immediate) {
-    Em.warn("`Discouse.addInitializer` is deprecated. Export an Ember initializer instead.");
-    Discourse.initializers = Discourse.initializers || [];
-    Discourse.initializers.push({fn: init, immediate: !!immediate});
   },
 
   /**
@@ -116,28 +113,16 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
   **/
   start: function() {
 
-    // Load any ES6 initializers
-    Ember.keys(requirejs._eak_seen).filter(function(key) {
-      return (/\/initializers\//).test(key);
-    }).forEach(function(moduleName) {
-      var module = require(moduleName, null, null, true);
-      if (!module) { throw new Error(moduleName + ' must export an initializer.'); }
-      Discourse.initializer(module.default);
-    });
+    $('noscript').remove();
 
-    var initializers = this.initializers;
-    if (initializers) {
-      var self = this;
-      initializers.forEach(function (init) {
-        if (init.immediate) {
-          init.fn.call(self);
-        } else {
-          Em.run.next(function() {
-            init.fn.call(self);
-          });
-        }
-      });
-    }
+    // Load any ES6 initializers
+    Ember.keys(requirejs._eak_seen).forEach(function(key) {
+      if (/\/initializers\//.test(key)) {
+        var module = require(key, null, null, true);
+        if (!module) { throw new Error(key + ' must export an initializer.'); }
+        Discourse.initializer(module.default);
+      }
+    });
 
   },
 
@@ -162,6 +147,20 @@ window.Discourse = Ember.Application.createWithMixins(Discourse.Ajax, {
 
     if(this.get("isReadOnly")){
       notices.push(I18n.t("read_only_mode.enabled"));
+    }
+
+    if(Discourse.User.currentProp('admin') && Discourse.SiteSettings.show_create_topics_notice) {
+      var topic_count = 0,
+          post_count = 0;
+      _.each(Discourse.Site.currentProp('categories'), function(c) {
+        if (!c.get('read_restricted')) {
+          topic_count += c.get('topic_count');
+          post_count  += c.get('post_count');
+        }
+      });
+      if (topic_count < 5 || post_count < Discourse.SiteSettings.basic_requires_read_posts) {
+        notices.push(I18n.t("too_few_topics_notice", {posts: Discourse.SiteSettings.basic_requires_read_posts}));
+      }
     }
 
     if(!_.isEmpty(Discourse.SiteSettings.global_notice)){

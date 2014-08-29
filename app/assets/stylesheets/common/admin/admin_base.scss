@@ -3,8 +3,6 @@
 @import "common/foundation/mixins";
 @import "common/foundation/helpers";
 
-
-
 .admin-contents table {
   width: 100%;
   tr {text-align: left;}
@@ -14,6 +12,11 @@
   tr:hover { background-color: darken($secondary, 2.5%); }
   tr.selected { background-color: lighten($primary, 50%); }
   .filters input { margin-bottom: 0; }
+}
+
+td.flaggers td {
+  border-bottom: none;
+  border-top: none;
 }
 
 .content-list li a span.count {
@@ -81,12 +84,31 @@
   };
 }
 
+.ip-lookup {
+  position: relative;
+  display: inline-block;
+
+  .location-box {
+    position: absolute;
+    width: 460px;
+    right: 0px;
+    z-index: 990;
+    box-shadow: 0 2px 6px rgba(0,0,0, .8);
+    margin-top: -2px;
+    background-color: $secondary;
+    padding: 12px 12px 5px;
+    .close {
+      float: right;
+    }
+  }
+}
+
 .admin-container {
   margin-top: 20px;
 }
 
 .admin-controls {
-  background-color: darken($secondary, 5%);
+  background-color: dark-light-diff($primary, $secondary, 90%, -20%);
   padding: 10px 10px 3px 0;
   height: 35px;
   .nav.nav-pills {
@@ -148,7 +170,7 @@
 }
 
 .site-settings-nav {
-  width: 200px;
+  width: 18.018%;
   margin-top: 30px;
   .nav-stacked {
     border-right: none;
@@ -160,9 +182,7 @@
 }
 
 .site-settings-detail {
-  width: 850px;
-  @include medium-width { width: 740px; }
-  @include small-width  { width: 700px; }
+  width: 76.5765%;
   min-height: 800px;
   margin-left: 0;
   border-left: solid 1px scale-color-diff();
@@ -175,20 +195,21 @@
 
     .setting-label {
       float: left;
-      width: 196px;
-      @include medium-width { width: 176px; }
-      @include small-width  { width: 166px; }
+      width: 17.6576%;
       margin-right: 12px;
     }
     .setting-value {
       float: left;
-      width: 450px;
-      @include medium-width { width: 360px; }
-      @include small-width  { width: 330px; }
+      width: 53%;
+      .select2-container {
+        width: 100%;
+      }
+      .select2-container-multi .select2-choices {
+        border: none;
+      }
     }
     .setting-controls {
       float: left;
-      width: 144px;
     }
     .input-setting-string {
       width: 404px;
@@ -205,36 +226,42 @@
       -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
       transition: border linear 0.2s, box-shadow linear 0.2s;
 
-      .list-input-item {
-        width: 90px;
-        margin: 2px 1px;
-        background-color: $secondary;
-        border: 1px solid scale-color-diff();
-        border-radius: 3px;
-        box-shadow: inset 0 1px 1px rgba(51, 51, 51, 0.3);
-        -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
-        transition: border linear 0.2s, box-shadow linear 0.2s;
-
-        &:focus {
-          border-color: $tertiary;
-          outline: 0;
-          box-shadow: inset 0 1px 1px rgba(51, 51, 51, 0.3), 0 0 8px $tertiary;
+      li.select2-search-choice {
+        cursor: pointer;
+        .select2-search-choice-close {
+          content: "x"
         }
       }
 
-      .btn.list-add-value {
-        margin: 0px 3px;
-        padding: 4px 10px;
-        color: $tertiary;
+      li.sortable-placeholder {
+        padding: 3px 5px 3px 18px;
+        margin: 3px 0px 3px 5px;
+        position: relative;
+        line-height: 13px;
+        cursor: default;
+        border: 1px dashed #AAA;
+        border-radius: 3px;
+        background-clip: padding-box;
+        -moz-user-select: none;
+        background-color: none;
+        width: 3em;
+        height: 1em;
       }
+
     }
 
-
-    .desc {
+    .desc, .validation-error {
       padding-top: 3px;
-      color: $primary;
       font-size: 80%;
       line-height: 1.4em;
+    }
+
+    .validation-error {
+      color: $danger;
+    }
+
+    .desc {
+      color: scale-color($primary, $lightness: 50%);
     }
 
     h3 {
@@ -245,7 +272,8 @@
 
   .setting.overridden {
     input[type=text] {
-      background-color: scale-color($highlight, $lightness: 50%);
+      background-color: dark-light-diff($highlight, $secondary, 50%, -10%);
+
     }
 
     h3 {
@@ -256,11 +284,11 @@
 
 section.details {
   h1 {
-    font-size: 15px;
-    background-color: scale-color-diff();
-    color: $secondary;
-    padding: 0 10px;
-    margin: 0 0 5px 0;
+    font-size: 18px;
+    color: $primary;
+    padding: 5px 10px;
+    margin: 30px 0 5px 0;
+    border-bottom: 5px solid scale-color-diff();
   }
 }
 
@@ -271,6 +299,12 @@ section.details {
   position: fixed;
   bottom: 0;
   width: 1075px;
+}
+
+.user-controls {
+  padding: 5px;
+  clear: both;
+  text-align: right;
 }
 
 .display-row {
@@ -292,7 +326,7 @@ section.details {
   }
   .field {
     font-weight: bold;
-    width: 196px;
+    width: 17.65765%;
     float: left;
     margin-left: 12px;
   }
@@ -367,6 +401,12 @@ section.details {
     }
   }
 
+  .current-badge-actions {
+    margin: 10px;
+    padding: 10px;
+    border-top: 1px solid scale-color($primary, $lightness: 80%);
+  }
+
   .buttons {
     float: left;
     width: 200px;
@@ -401,7 +441,7 @@ section.details {
     padding-left: 10px;
     width: 65%;
     .style-name {
-      width: 600px;
+      width: 54.0540%;
       height: 25px;
       font-size: 20px;
     }
@@ -461,28 +501,44 @@ section.details {
 
 .admin-flags {
 
-  tr.hidden-post td.excerpt { opacity: 0.4;  }
-  tr.deleted td.excerpt { opacity: 0.8; background-color: scale-color($danger, $lightness: 30%); }
-  td.message {
-    padding: 4px 8px;
-    background-color:  scale-color($highlight, $lightness: 30%);
-  }
+  .hidden-post td.excerpt, .hidden-post td.user { opacity: 0.5; }
+  .deleted td.excerpt, .deleted td.user { background-color: scale-color($danger, $lightness: 70%); }
+  .message { background-color: scale-color($highlight, $lightness: 70%); }
+  .message:hover { background-color: scale-color($highlight, $lightness: 30%); }
   td { vertical-align: top; }
   th { text-align: left; }
-  .user { width: 40px; padding-top: 12px; }
+  .user {
+    width: 20px;
+    padding: 8px 0 0 0;
+    text-align: center;
+  }
   .excerpt {
-    max-width: 740px;
-    width: 740px;
+    max-width: 700px;
+    width: 700px;
     padding: 8px;
     word-wrap: break-word;
-    .fa,h3 { display: inline-block; }
-
+    .fa { display: inline-block; }
+    h3 {
+      max-height: 1.2em;
+      overflow: hidden;
+    }
   }
   .flaggers {
     font-size: 11px;
+    padding: 8px 0 0 5px;
+    .avatar {
+      width: 25px;
+    }
+    table {
+      max-width: 145px;
+    }
+    tr {
+      height: 44px;
+    }
     td {
       vertical-align: middle;
       padding: 3px;
+      line-height: 1.4;
     }
   }
   .action {
@@ -490,27 +546,23 @@ section.details {
      text-align: right;
      padding-bottom: 20px;
   }
+  td p {
+    font-size: 13px;
+    margin: 0 0 5px 0;
+  }
 }
 
 /* Dashboard */
 
 .dashboard-left {
   float: left;
-  width: 500px;
-  margin-top: 10px;
+  width: 60%;
 }
 .dashboard-right {
   float: right;
-  width: 500px;
   margin-top: 10px;
-  margin-right: 15px;
+  width: 40%;
 
-  @include medium-width {
-    width: 430px;
-  }
-  @include small-width {
-    width: 390px;
-  }
 
   .dashboard-stats {
     width: 100%;
@@ -581,9 +633,7 @@ table.api-keys {
 
 .dashboard-stats {
   margin-bottom: 30px;
-  width: 460px;
-  margin-left: 30px;
-
+  margin-right: 40px;
   h4 {
     font-weight: normal;
     margin-bottom: 8px;
@@ -649,7 +699,7 @@ table.api-keys {
     background-color: scale-color-diff();
     margin-bottom: 20px;
     margin-top: 10px;
-    box-shadow: inset 0 0 10px rgba($primary, .1);
+    box-shadow: inset 0 0 10px rgba(0,0,0, .1);
 
     .look-here {
       float: left;
@@ -664,7 +714,7 @@ table.api-keys {
 
     .problem-messages {
       float: left;
-      width: 395px;
+      width: 75%;
       a {
         text-decoration: underline;
       }
@@ -714,16 +764,8 @@ table.api-keys {
 
 .commits-widget {
   border: solid 1px scale-color-diff();
-  width: 500px;
   height: 180px;
   margin-bottom: 36px;
-
-  @include medium-width {
-    width: 430px;
-  }
-  @include small-width {
-    width: 390px;
-  }
 
   ul, li {
     margin: 0;
@@ -819,7 +861,7 @@ table.api-keys {
 .content-list {
 
   h3 {
-    color: $primary;
+    color: dark-light-diff($primary, $secondary, 90%, -60%);
     font-size: 15px;
     padding-left: 5px;
     margin-bottom: 10px;
@@ -858,10 +900,8 @@ table.api-keys {
   min-height: 500px;
 
   float: left;
-  width: 760px;
-  @include medium-width { width: 650px; }
-  @include small-width { width: 600px; }
-  margin-left: 20px;
+  width: 54.0540%;
+  margin-left: 1.8018%;
 
   p.description {
     color: $primary;
@@ -929,7 +969,7 @@ table.api-keys {
   }
   .action, .match_count, .last_match_at, .created_at {
     text-align: center;
-    width: 110px;
+    width: 9.9099%;
   }
 }
 
@@ -937,13 +977,12 @@ table.api-keys {
   margin-left: 6px;
   .combobox {
     width: 130px;
-    top: 10px;
   }
 }
 
 .screened-emails, .screened-urls {
   .ip_address {
-    width: 110px;
+    width: 9.9099%;
     text-align: center;
   }
 }
@@ -967,19 +1006,19 @@ table.api-keys {
 .staff-actions {
   width: 100%;
   .action {
-    width: 120px;
+    width: 10.810%;
   }
   .staff_user {
-    width: 100px;
+    width: 9.009%;
   }
   .subject {
-    width: 200px;
+    width: 18.018%;
   }
   .created_at {
-    width: 50px;
+    width: 4.5045%;
   }
   .context {
-    width: 200px;
+    width: 18.018%;
   }
   .created_at {
     text-align: center;
@@ -1121,4 +1160,109 @@ button.ru {
 
 .invisible {
   visibility: hidden;
+}
+
+.delete-flag-modal, .agree-flag-modal {
+  button {
+    display: block;
+    margin: 10px 0 10px 10px;
+    padding: 10px 15px;
+  }
+}
+
+.start-backup-modal {
+  .btn {
+    margin: 10px 0 10px 5px;
+  }
+  .btn:first-of-type {
+    margin-left: 10px;
+  }
+}
+
+@media all
+and (max-width : 850px) {
+  .nav-stacked {
+    .glyph {width: auto; position: relative;}
+    .fa-chevron-right {display: none;}
+    > li > a {padding: 13px}
+  }
+}
+
+@media all
+and (min-width : 320px)
+and (max-width : 500px) {
+
+.full-width { margin: 0; }
+.site-settings-nav { width: 100%; }
+.site-settings-detail {
+  width: 100%;
+  padding: 0;
+  border: none;
+
+  .settings .setting {
+      .setting-label {
+      float: left;
+      width: 100%;
+      h3 {
+        margin-bottom: 5px;
+        font-weight: bold;
+        margin-top: 25px;
+        }
+      }
+      .setting-value {
+        width: 100%;
+        }
+      label {
+        font-size: 13px;
+        }
+    }
+  }
+
+  .content-editor {
+    width: 100%;
+      #pagedown-editor {
+        box-sizing: border-box;
+      }
+  }
+
+  div.ac-wrap {
+    width: 100% !important;
+    box-sizing: border-box;
+    }
+
+  .admin-container {
+    h2 {
+      float: left;
+      }
+  }
+
+  .dashboard-left, .dashboard-right { width: 100%; }
+  .dashboard-stats { margin: 0; }
+
+  .badges {
+    .current-badge {margin: 70px 0 0 0;}
+    .current-badge-actions {padding: 0;}
+  }
+
+  .customize .content-list, .customize .current-style {
+    width: 100%;
+  }
+}
+
+.badge-groupings {
+  list-style: none;
+  margin: 0;
+  padding: 10px 3px;
+  li {
+    padding: 6px 0;
+    width: 600px;
+    border-bottom: 1px solid #dfdfdf;
+  }
+  .actions {
+    font-size: 17px;
+    float: right;
+    a {
+      margin-left: 5px;
+    }
+  }
 }

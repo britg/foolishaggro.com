@@ -15,6 +15,7 @@ Discourse.TopicFromParamsRoute = Discourse.Route.extend({
         postStream = topic.get('postStream');
 
     var topicController = this.controllerFor('topic'),
+        topicProgressController = this.controllerFor('topic-progress'),
         composerController = this.controllerFor('composer');
 
     // I sincerely hope no topic gets this many posts
@@ -22,16 +23,21 @@ Discourse.TopicFromParamsRoute = Discourse.Route.extend({
 
     postStream.refresh(params).then(function () {
       // The post we requested might not exist. Let's find the closest post
-      var closest = postStream.closestPostNumberFor(params.nearPost) || 1;
+      var closestPost = postStream.closestPostForPostNumber(params.nearPost || 1),
+          closest = closestPost.get('post_number'),
+          progress = postStream.progressIndexOfPost(closestPost);
 
       topicController.setProperties({
         currentPost: closest,
-        progressPosition: closest,
         enteredAt: new Date().getTime().toString(),
         highlightOnInsert: closest
       });
 
-      Discourse.TopicView.jumpToPost(closest);
+      topicProgressController.setProperties({
+        progressPosition: progress,
+        expanded: false
+      });
+      Discourse.URL.jumpToPost(closest);
 
       if (topic.present('draft')) {
         composerController.open({
