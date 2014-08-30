@@ -1,47 +1,4 @@
-/**
-  Breaks up a long string
-
-  @method breakUp
-  @for Handlebars
-**/
-Handlebars.registerHelper('breakUp', function(property, hint, options) {
-  var prop = Ember.Handlebars.get(this, property, options);
-  if (!prop) return "";
-  if (typeof(hint) === 'string') {
-    hint = Ember.Handlebars.get(this, hint, options);
-  } else {
-    hint = undefined;
-  }
-
-  return new Handlebars.SafeString(Discourse.Formatter.breakUp(prop, hint));
-});
-
-// helper function for dates
-function daysSinceEpoch(dt) {
-  // 1000 * 60 * 60 * 24 = days since epoch
-  return dt.getTime() / 86400000;
-}
-
-/**
-  Converts a date to a coldmap class
-
-  @method coldDate
-**/
-Handlebars.registerHelper('coldAgeClass', function(property, options) {
-  var dt = Em.Handlebars.get(this, property, options);
-
-  if (!dt) { return 'age'; }
-
-  // Show heat on age
-  var nowDays = daysSinceEpoch(new Date()),
-      epochDays = daysSinceEpoch(new Date(dt));
-  if (nowDays - epochDays > 60) return 'age coldmap-high';
-  if (nowDays - epochDays > 30) return 'age coldmap-med';
-  if (nowDays - epochDays > 14) return 'age coldmap-low';
-
-  return 'age';
-});
-
+var safe = Handlebars.SafeString;
 
 /**
   Truncates long strings
@@ -56,10 +13,10 @@ Handlebars.registerHelper('shorten', function(property, options) {
 /**
   Produces a link to a topic
 
-  @method topicLink
+  @method topic-link
   @for Handlebars
 **/
-Handlebars.registerHelper('topicLink', function(property, options) {
+Handlebars.registerHelper('topic-link', function(property, options) {
   var topic = Ember.Handlebars.get(this, property, options),
       title = topic.get('fancy_title');
   return "<a href='" + topic.get('lastUnreadUrl') + "' class='title'>" + title + "</a>";
@@ -78,30 +35,31 @@ function categoryLinkHTML(category, options) {
   if (options.hash) {
     if (options.hash.allowUncategorized) { categoryOptions.allowUncategorized = true; }
     if (options.hash.showParent) { categoryOptions.showParent = true; }
+    if (options.hash.onlyStripe) { categoryOptions.onlyStripe = true; }
     if (options.hash.link !== undefined) { categoryOptions.link = options.hash.link; }
     if (options.hash.extraClasses) { categoryOptions.extraClasses = options.hash.extraClasses; }
     if (options.hash.categories) {
       categoryOptions.categories = Em.Handlebars.get(this, options.hash.categories, options);
     }
   }
-  return new Handlebars.SafeString(Discourse.HTML.categoryBadge(category, categoryOptions));
+  return new safe(Discourse.HTML.categoryBadge(category, categoryOptions));
 }
 
 /**
   Produces a link to a category
 
-  @method categoryLink
+  @method category-link
   @for Handlebars
 **/
-Handlebars.registerHelper('categoryLink', function(property, options) {
+Handlebars.registerHelper('category-link', function(property, options) {
   return categoryLinkHTML(Ember.Handlebars.get(this, property, options), options);
 });
 
-Handlebars.registerHelper('categoryLinkRaw', function(property, options) {
+Handlebars.registerHelper('category-link-raw', function(property, options) {
   return categoryLinkHTML(property, options);
 });
 
-Handlebars.registerHelper('categoryBadge', function(property, options) {
+Handlebars.registerHelper('category-badge', function(property, options) {
   options.hash.link = false;
   return categoryLinkHTML(Ember.Handlebars.get(this, property, options), options);
 });
@@ -110,18 +68,18 @@ Handlebars.registerHelper('categoryBadge', function(property, options) {
 /**
   Produces a bound link to a category
 
-  @method boundCategoryLink
+  @method bound-category-link
   @for Handlebars
 **/
-Ember.Handlebars.registerBoundHelper('boundCategoryLink', categoryLinkHTML);
+Em.Handlebars.helper('bound-category-link', categoryLinkHTML);
 
 /**
   Produces a link to a route with support for i18n on the title
 
-  @method titledLinkTo
+  @method titled-link-to
   @for Handlebars
 **/
-Handlebars.registerHelper('titledLinkTo', function(name, object) {
+Handlebars.registerHelper('titled-link-to', function(name, object) {
   var options = [].slice.call(arguments, -1)[0];
   if (options.hash.titleKey) {
     options.hash.title = I18n.t(options.hash.titleKey);
@@ -139,7 +97,7 @@ Handlebars.registerHelper('titledLinkTo', function(name, object) {
   @method shortenUrl
   @for Handlebars
 **/
-Handlebars.registerHelper('shortenUrl', function(property, options) {
+Handlebars.registerHelper('shorten-url', function(property, options) {
   var url, matches;
   url = Ember.Handlebars.get(this, property, options);
   // Remove trailing slash if it's a top level URL
@@ -153,154 +111,80 @@ Handlebars.registerHelper('shortenUrl', function(property, options) {
 });
 
 /**
-  Display a property in lower case
-
-  @method lower
-  @for Handlebars
-**/
-Handlebars.registerHelper('lower', function(property, options) {
-  var o;
-  o = Ember.Handlebars.get(this, property, options);
-  if (o && typeof o === 'string') {
-    return o.toLowerCase();
-  } else {
-    return "";
-  }
-});
-
-/**
-  Show an avatar for a user, intelligently making use of available properties
-
-  @method avatar
-  @for Handlebars
-**/
-Handlebars.registerHelper('avatar', function(user, options) {
-  if (typeof user === 'string') {
-    user = Ember.Handlebars.get(this, user, options);
-  }
-
-  if (user) {
-    var username = Em.get(user, 'username');
-    if (!username) username = Em.get(user, options.hash.usernamePath);
-
-    var avatarTemplate;
-    var template = options.hash.template;
-    if (template && template !== 'avatar_template') {
-      avatarTemplate = Em.get(user, template);
-      if (!avatarTemplate) avatarTemplate = Em.get(user, 'user.' + template);
-    }
-
-    if (!avatarTemplate) avatarTemplate = Em.get(user, 'avatar_template');
-    if (!avatarTemplate) avatarTemplate = Em.get(user, 'user.avatar_template');
-
-    var title;
-    if (!options.hash.ignoreTitle) {
-      // first try to get a title
-      title = Em.get(user, 'title');
-      // if there was no title provided
-      if (!title) {
-        // try to retrieve a description
-        var description = Em.get(user, 'description');
-        // if a description has been provided
-        if (description && description.length > 0) {
-          // preprend the username before the description
-          title = username + " - " + description;
-        }
-      }
-    }
-
-    return new Handlebars.SafeString(Discourse.Utilities.avatarImg({
-      size: options.hash.imageSize,
-      extraClasses: Em.get(user, 'extras') || options.hash.extraClasses,
-      title: title || username,
-      avatarTemplate: avatarTemplate
-    }));
-  } else {
-    return '';
-  }
-});
-
-/**
   Bound avatar helper.
-  Will rerender whenever the "avatar_template" changes.
 
-  @method boundAvatar
+  @method bound-avatar
   @for Handlebars
 **/
-Ember.Handlebars.registerBoundHelper('boundAvatar', function(user, options) {
-  return new Handlebars.SafeString(Discourse.Utilities.avatarImg({
-    size: options.hash.imageSize,
-    avatarTemplate: Em.get(user, options.hash.template || 'avatar_template')
+Em.Handlebars.helper('bound-avatar', function(user, size, uploadId) {
+  if (Em.isEmpty(user)) {
+    return new safe("<div class='avatar-placeholder'></div>");
+  }
+  var username = Em.get(user, 'username');
+
+  if(arguments.length < 4){
+    uploadId = Em.get(user, 'uploaded_avatar_id');
+  }
+
+  var avatarTemplate = Discourse.User.avatarTemplate(username, uploadId);
+
+  return new safe(Discourse.Utilities.avatarImg({
+    size: size,
+    avatarTemplate: avatarTemplate
   }));
-}, 'avatar_template', 'uploaded_avatar_template', 'gravatar_template');
+}, 'username', 'uploaded_avatar_id');
+
+/*
+ * Used when we only have a template
+ */
+Em.Handlebars.helper('bound-avatar-template', function(avatarTemplate, size) {
+  return new safe(Discourse.Utilities.avatarImg({
+    size: size,
+    avatarTemplate: avatarTemplate
+  }));
+});
 
 /**
   Nicely format a date without binding or returning HTML
 
-  @method rawDate
+  @method raw-date
   @for Handlebars
 **/
-Handlebars.registerHelper('rawDate', function(property, options) {
+Handlebars.registerHelper('raw-date', function(property, options) {
   var dt = new Date(Ember.Handlebars.get(this, property, options));
   return Discourse.Formatter.longDate(dt);
 });
 
 /**
-  Live refreshing age helper
+  Nicely format a bound date without returning HTML
 
-  @method unboundAge
+  @method bound-raw-date
   @for Handlebars
 **/
-Handlebars.registerHelper('unboundAge', function(property, options) {
+Em.Handlebars.helper('bound-raw-date', function (date) {
+  return Discourse.Formatter.longDateNoYear(new Date(date));
+});
+
+/**
+  Live refreshing age helper
+
+  @method age
+  @for Handlebars
+**/
+Handlebars.registerHelper('age', function(property, options) {
   var dt = new Date(Ember.Handlebars.get(this, property, options));
-  return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(dt));
+  return new safe(Discourse.Formatter.autoUpdatingRelativeAge(dt));
 });
 
 /**
   Live refreshing age helper, with a tooltip showing the date and time
 
-  @method unboundAgeWithTooltip
+  @method age-with-tooltip
   @for Handlebars
 **/
-Handlebars.registerHelper('unboundAgeWithTooltip', function(property, options) {
+Handlebars.registerHelper('age-with-tooltip', function(property, options) {
   var dt = new Date(Ember.Handlebars.get(this, property, options));
-  return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(dt, {title: true}));
-});
-
-/**
-  Display a date related to an edit of a post
-
-  @method editDate
-  @for Handlebars
-**/
-Handlebars.registerHelper('editDate', function(property, options) {
-  // autoupdating this is going to be painful
-  var date = new Date(Ember.Handlebars.get(this, property, options));
-  return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(date, {format: 'medium', title: true, leaveAgo: true, wrapInSpan: false}));
-});
-
-/**
-  Displays a percentile based on a `percent_rank` field
-
-  @method percentile
-  @for Ember.Handlebars
-**/
-Ember.Handlebars.registerHelper('percentile', function(property, options) {
-  var percentile = Ember.Handlebars.get(this, property, options);
-  return Math.round((1.0 - percentile) * 100);
-});
-
-/**
-  Displays a float nicely
-
-  @method float
-  @for Ember.Handlebars
-**/
-Ember.Handlebars.registerHelper('float', function(property, options) {
-  var x = Ember.Handlebars.get(this, property, options);
-  if (!x) return "0";
-  if (Math.round(x) === x) return x;
-  return x.toFixed(3);
+  return new safe(Discourse.Formatter.autoUpdatingRelativeAge(dt, {title: true}));
 });
 
 /**
@@ -332,17 +216,17 @@ Handlebars.registerHelper('number', function(property, options) {
   }
   result += ">" + n + "</span>";
 
-  return new Handlebars.SafeString(result);
+  return new safe(result);
 });
 
 /**
   Display logic for dates. It is unbound in Ember but will use jQuery to
   update the dates on a regular interval.
 
-  @method unboundDate
+  @method date
   @for Handlebars
 **/
-Handlebars.registerHelper('unboundDate', function(property, options) {
+Handlebars.registerHelper('date', function(property, options) {
   var leaveAgo;
   if (property.hash) {
     if (property.hash.leaveAgo) {
@@ -356,22 +240,22 @@ Handlebars.registerHelper('unboundDate', function(property, options) {
   var val = Ember.Handlebars.get(this, property, options);
   if (val) {
     var date = new Date(val);
-    return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(date, {format: 'medium', title: true, leaveAgo: leaveAgo}));
+    return new safe(Discourse.Formatter.autoUpdatingRelativeAge(date, {format: 'medium', title: true, leaveAgo: leaveAgo}));
   }
 });
 
-Ember.Handlebars.registerBoundHelper('date', function(dt) {
-  return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(new Date(dt), {format: 'medium', title: true }));
+Em.Handlebars.helper('bound-date', function(dt) {
+  return new safe(Discourse.Formatter.autoUpdatingRelativeAge(new Date(dt), {format: 'medium', title: true }));
 });
 
 /**
   Look for custom html content using `Discourse.HTML`. If none exists, look for a template
   to render with that name.
 
-  @method customHTML
+  @method custom-html
   @for Handlebars
 **/
-Handlebars.registerHelper('customHTML', function(name, contextString, options) {
+Handlebars.registerHelper('custom-html', function(name, contextString, options) {
   var html = Discourse.HTML.getCustomHTML(name);
   if (html) { return html; }
 
@@ -382,8 +266,8 @@ Handlebars.registerHelper('customHTML', function(name, contextString, options) {
   }
 });
 
-Ember.Handlebars.registerBoundHelper('humanSize', function(size) {
-  return new Handlebars.SafeString(I18n.toHumanSize(size));
+Em.Handlebars.helper('human-size', function(size) {
+  return new safe(I18n.toHumanSize(size));
 });
 
 /**
@@ -402,7 +286,7 @@ Handlebars.registerHelper('link-domain', function(property, options) {
       if (!Em.isEmpty(domain)) {
         var s = domain.split('.');
         domain = s[s.length-2] + "." + s[s.length-1];
-        return new Handlebars.SafeString("<span class='domain'>" + domain + "</span>");
+        return new safe("<span class='domain'>" + domain + "</span>");
       }
     }
   }
@@ -424,5 +308,5 @@ Handlebars.registerHelper('icon', function(icon, options) {
   if (labelKey) {
     html += "<span class='sr-only'>" + I18n.t(labelKey) + "</span>";
   }
-  return new Handlebars.SafeString(html);
+  return new safe(html);
 });

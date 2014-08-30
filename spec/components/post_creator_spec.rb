@@ -91,11 +91,15 @@ describe PostCreator do
         end
 
 
+        # 2 for topic, one to notify of new topic another for tracking state
         messages.map{|m| m.channel}.sort.should == [ "/new",
                                                      "/users/#{admin.username}",
                                                      "/users/#{admin.username}",
                                                      "/unread/#{admin.id}",
                                                      "/unread/#{admin.id}",
+                                                     "/latest",
+                                                     "/latest",
+                                                     "/topic/#{created_post.topic_id}",
                                                      "/topic/#{created_post.topic_id}"
                                                    ].sort
         admin_ids = [Group[:admins].id]
@@ -110,6 +114,9 @@ describe PostCreator do
           p = creator.create
         end
 
+        latest = messages.find{|m| m.channel == "/latest"}
+        latest.should_not be_nil
+
         latest = messages.find{|m| m.channel == "/new"}
         latest.should_not be_nil
 
@@ -119,7 +126,7 @@ describe PostCreator do
         user_action = messages.find{|m| m.channel == "/users/#{p.user.username}"}
         user_action.should_not be_nil
 
-        messages.length.should == 3
+        messages.length.should == 5
       end
 
       it 'extracts links from the post' do
@@ -213,7 +220,7 @@ describe PostCreator do
 
     context "disabled" do
       before do
-        SiteSetting.stubs(:unique_posts_mins).returns(0)
+        SiteSetting.unique_posts_mins = 0
         creator.create
       end
 
@@ -227,22 +234,37 @@ describe PostCreator do
       let(:new_post_creator) { PostCreator.new(user, basic_topic_params) }
 
       before do
-        SiteSetting.stubs(:unique_posts_mins).returns(10)
-        creator.create
+        SiteSetting.unique_posts_mins = 10
+      end
+
+      it "fails for dupe post accross topic" do
+        first = create_post
+        second = create_post
+
+        dupe = "hello 123 test #{SecureRandom.hex}"
+
+        response_1 = create_post(raw: dupe, user: first.user, topic_id: first.topic_id)
+        response_2 = create_post(raw: dupe, user: first.user, topic_id: second.topic_id)
+
+        response_1.errors.count.should == 0
+        response_2.errors.count.should == 1
       end
 
       it "returns blank for another post with the same content" do
+        creator.create
         new_post_creator.create
         new_post_creator.errors.should be_present
       end
 
       it "returns a post for admins" do
+        creator.create
         user.admin = true
         new_post_creator.create
         new_post_creator.errors.should be_blank
       end
 
       it "returns a post for moderators" do
+        creator.create
         user.moderator = true
         new_post_creator.create
         new_post_creator.errors.should be_blank
@@ -429,8 +451,31 @@ describe PostCreator do
                                 embed_url: embed_url,
                                 title: 'Reviews of Science Ovens',
                                 raw: 'Did you know that you can use microwaves to cook your dinner? Science!')
-      post = creator.create
+      creator.create
       TopicEmbed.where(embed_url: embed_url).exists?.should be_true
+    end
+  end
+
+  describe "read credit for creator" do
+    it "should give credit to creator" do
+      post = create_post
+      PostTiming.find_by(topic_id: post.topic_id,
+                         post_number: post.post_number,
+                         user_id: post.user_id).msecs.should be > 0
+
+      TopicUser.find_by(topic_id: post.topic_id,
+                        user_id: post.user_id).last_read_post_number.should == 1
+    end
+  end
+
+
+  describe "suspended users" do
+    it "does not allow suspended users to create topics" do
+      user = Fabricate(:user, suspended_at: 1.month.ago, suspended_till: 1.month.from_now)
+
+      creator = PostCreator.new(user, {title: "my test title 123", raw: "I should not be allowed to post"} )
+      creator.create
+      creator.errors.count.should be > 0
     end
   end
 

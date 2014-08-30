@@ -27,7 +27,8 @@ class TopicUser < ActiveRecord::Base
         :created_post,
         :auto_watch,
         :auto_watch_category,
-        :auto_mute_category
+        :auto_mute_category,
+        :auto_track_category
       )
     end
 
@@ -111,6 +112,13 @@ class TopicUser < ActiveRecord::Base
           observe_after_save_callbacks_for topic_id, user_id
         end
       end
+
+      if attrs[:notification_level]
+        MessageBus.publish("/topic/#{topic_id}",
+                         {notification_level_change: attrs[:notification_level]}, user_ids: [user_id])
+      end
+
+
     rescue ActiveRecord::RecordNotUnique
       # In case of a race condition to insert, do nothing
     end
@@ -209,6 +217,8 @@ class TopicUser < ActiveRecord::Base
                                    FROM topic_users AS ftu
                                    WHERE ftu.user_id = :user_id and ftu.topic_id = :topic_id)",
                   args)
+
+        MessageBus.publish("/topic/#{topic_id}", {notification_level_change: args[:new_status]}, user_ids: [user.id])
       end
     end
 
@@ -220,10 +230,15 @@ class TopicUser < ActiveRecord::Base
   end
 
   def self.ensure_consistency!(topic_id=nil)
+    # TODO this needs some reworking, when we mark stuff skipped
+    # we up these numbers so they are not in-sync
+    # the simple fix is to add a column here, but table is already quite big
+    # long term we want to split up topic_users and allow for this better
     builder = SqlBuilder.new <<SQL
+
 UPDATE topic_users t
   SET
-    last_read_post_number = last_read,
+    last_read_post_number = LEAST(GREATEST(last_read, last_read_post_number), max_post_number),
     seen_post_count = LEAST(max_post_number,GREATEST(t.seen_post_count, last_read))
 FROM (
   SELECT topic_id, user_id, MAX(post_number) last_read
@@ -241,7 +256,7 @@ SQL
 X.topic_id = t.topic_id AND
 X.user_id = t.user_id AND
 (
-  last_read_post_number <> last_read OR
+  last_read_post_number <> LEAST(GREATEST(last_read, last_read_post_number), max_post_number) OR
   seen_post_count <> LEAST(max_post_number,GREATEST(t.seen_post_count, last_read))
 )
 SQL
@@ -279,5 +294,5 @@ end
 #
 # Indexes
 #
-#  index_forum_thread_users_on_forum_thread_id_and_user_id  (topic_id,user_id) UNIQUE
+#  index_topic_users_on_topic_id_and_user_id  (topic_id,user_id) UNIQUE
 #

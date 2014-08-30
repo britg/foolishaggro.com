@@ -23,6 +23,16 @@ Discourse.User = Discourse.Model.extend({
   }.property(),
 
   /**
+    The user's posts stream
+
+    @property postsStream
+    @type {Discourse.UserPostsStream}
+  **/
+  postsStream: function() {
+    return Discourse.UserPostsStream.create({ user: this });
+  }.property(),
+
+  /**
     Is this user a member of staff?
 
     @property staff
@@ -53,19 +63,6 @@ Discourse.User = Discourse.Model.extend({
   }.property('username', 'name'),
 
   /**
-    This user's website.
-
-    @property websiteName
-    @type {String}
-  **/
-  websiteName: function() {
-    var website = this.get('website');
-    if (Em.isEmpty(website)) { return; }
-
-    return this.get('website').split("/")[2];
-  }.property('website'),
-
-  /**
     This user's profile background(in CSS).
 
     @property websiteName
@@ -84,11 +81,11 @@ Discourse.User = Discourse.Model.extend({
 
     if(this.get('admin')) {
       desc = I18n.t('user.admin', {user: name});
-      return '<i class="fa fa-trophy" title="' + desc +  '" alt="' + desc + '"></i>';
+      return '<i class="fa fa-shield" title="' + desc +  '" alt="' + desc + '"></i>';
     }
     if(this.get('moderator')){
       desc = I18n.t('user.moderator', {user: name});
-      return '<i class="fa fa-magic" title="' + desc +  '" alt="' + desc + '"></i>';
+      return '<i class="fa fa-shield" title="' + desc +  '" alt="' + desc + '"></i>';
     }
     return null;
   }.property('admin','moderator'),
@@ -129,6 +126,8 @@ Discourse.User = Discourse.Model.extend({
     return Discourse.Site.currentProp('trustLevels').findProperty('id', parseInt(this.get('trust_level'), 10));
   }.property('trust_level'),
 
+  isBasic: Em.computed.equal('trust_level', 0),
+  isLeader: Em.computed.equal('trust_level', 3),
   isElder: Em.computed.equal('trust_level', 4),
   canManageTopic: Em.computed.or('staff', 'isElder'),
 
@@ -191,6 +190,7 @@ Discourse.User = Discourse.Model.extend({
     var data = this.getProperties('auto_track_topics_after_msecs',
                                'bio_raw',
                                'website',
+                               'location',
                                'name',
                                'locale',
                                'email_digests',
@@ -202,7 +202,9 @@ Discourse.User = Discourse.Model.extend({
                                'new_topic_duration_minutes',
                                'external_links_in_new_tab',
                                'mailing_list_mode',
-                               'enable_quoting');
+                               'enable_quoting',
+                               'disable_jump_reply',
+                               'custom_fields');
 
     _.each(['muted','watched','tracked'], function(s){
       var cats = user.get(s + 'Categories').map(function(c){ return c.get('id')});
@@ -210,6 +212,10 @@ Discourse.User = Discourse.Model.extend({
       if(cats.length === 0) { cats = [-1]; }
       data[s + '_category_ids'] = cats;
     });
+
+    if (!Discourse.SiteSettings.edit_history_available_to_public) {
+      data['edit_history_public'] = this.get('edit_history_public');
+    }
 
     return Discourse.ajax("/users/" + this.get('username_lower'), {
       data: data,
@@ -247,14 +253,15 @@ Discourse.User = Discourse.Model.extend({
     @returns A stream of the user's actions containing the action of id
   **/
   loadUserAction: function(id) {
-    var user = this;
-    var stream = this.get('stream');
+    var self = this,
+        stream = this.get('stream');
     return Discourse.ajax("/user_actions/" + id + ".json", { cache: 'false' }).then(function(result) {
-      if (result) {
-        if ((user.get('streamFilter') || result.action_type) !== result.action_type) return;
-        var action = Discourse.UserAction.collapseStream([Discourse.UserAction.create(result)]);
-        stream.set('itemsLoaded', user.get('itemsLoaded') + 1);
-        stream.insertAt(0, action[0]);
+      if (result && result.user_action) {
+        var ua = result.user_action;
+        if ((self.get('stream.filter') || ua.action_type) !== ua.action_type) return;
+        var action = Discourse.UserAction.collapseStream([Discourse.UserAction.create(ua)]);
+        stream.set('itemsLoaded', stream.get('itemsLoaded') + 1);
+        stream.get('content').insertAt(0, action[0]);
       }
     });
   },
@@ -284,7 +291,6 @@ Discourse.User = Discourse.Model.extend({
     if (this.blank('stats')) return [];
     return this.get('stats').rejectProperty('isPM');
   }.property('stats.@each.isPM'),
-
 
   findDetails: function() {
     var user = this;
@@ -325,33 +331,18 @@ Discourse.User = Discourse.Model.extend({
     });
   },
 
+  avatarTemplate: function() {
+    return Discourse.User.avatarTemplate(this.get('username'), this.get('uploaded_avatar_id'));
+  }.property('uploaded_avatar_id', 'username'),
+
   /*
     Change avatar selection
-
-    @method toggleAvatarSelection
-    @param {Boolean} useUploadedAvatar true if the user is using the uploaded avatar
-    @returns {Promise} the result of the toggle avatar selection
   */
-  toggleAvatarSelection: function(useUploadedAvatar) {
-    return Discourse.ajax("/users/" + this.get("username_lower") + "/preferences/avatar/toggle", {
+  pickAvatar: function(uploadId) {
+    this.set("uploaded_avatar_id", uploadId);
+    return Discourse.ajax("/users/" + this.get("username_lower") + "/preferences/avatar/pick", {
       type: 'PUT',
-      data: { use_uploaded_avatar: useUploadedAvatar }
-    });
-  },
-
-  /*
-    Clear profile background
-
-    @method clearProfileBackground
-    @returns {Promise} the result of the clear profile background request
-  */
-  clearProfileBackground: function() {
-    var user = this;
-    return Discourse.ajax("/users/" + this.get("username_lower") + "/preferences/profile_background/clear", {
-      type: 'PUT',
-      data: { }
-    }).then(function() {
-      user.set('profile_background', null);
+      data: { upload_id: uploadId }
     });
   },
 
@@ -398,7 +389,7 @@ Discourse.User = Discourse.Model.extend({
     return this.get('can_delete_account') && ((this.get('reply_count')||0) + (this.get('topic_count')||0)) <= 1;
   }.property('can_delete_account', 'reply_count', 'topic_count'),
 
-  delete: function() {
+  "delete": function() {
     if (this.get('can_delete_account')) {
       return Discourse.ajax("/users/" + this.get('username'), {
         type: 'DELETE',
@@ -407,11 +398,43 @@ Discourse.User = Discourse.Model.extend({
     } else {
       return Ember.RSVP.reject(I18n.t('user.delete_yourself_not_allowed'));
     }
+  },
+
+  dismissBanner: function (bannerKey) {
+    this.set("dismissed_banner_key", bannerKey);
+    Discourse.ajax("/users/" + this.get('username'), {
+      type: 'PUT',
+      data: { dismissed_banner_key: bannerKey }
+    });
   }
 
 });
 
 Discourse.User.reopenClass(Discourse.Singleton, {
+
+  avatarTemplate: function(username, uploadedAvatarId) {
+    var url;
+    if (uploadedAvatarId) {
+      url = "/user_avatar/" +
+            Discourse.BaseUrl +
+            "/" +
+            username.toLowerCase() +
+            "/{size}/" +
+            uploadedAvatarId + ".png";
+    } else {
+      url = "/letter_avatar/" +
+            username.toLowerCase() +
+            "/{size}/" +
+            Discourse.LetterAvatarVersion + ".png";
+    }
+
+    url = Discourse.getURL(url);
+    if (Discourse.CDN) {
+      url = Discourse.CDN + url;
+    }
+    return url;
+  },
+
   /**
     Find a `Discourse.User` for a given username.
 

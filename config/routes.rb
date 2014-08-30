@@ -3,6 +3,7 @@ require_dependency "scheduler/web"
 require_dependency "admin_constraint"
 require_dependency "staff_constraint"
 require_dependency "homepage_constraint"
+require_dependency "permalink_constraint"
 
 # This used to be User#username_format, but that causes a preload of the User object
 # and makes Guard not work properly.
@@ -14,12 +15,15 @@ Discourse::Application.routes.draw do
   match "/404", to: "exceptions#not_found", via: [:get, :post]
   get "/404-body" => "exceptions#not_found_body"
 
-  mount Sidekiq::Web => "/sidekiq", constraints: AdminConstraint.new
-
-  if Rails.env.production?
-    require 'logster/middleware/viewer'
-    mount Logster::Middleware::Viewer.new(nil) => "/logs", constraints: AdminConstraint.new
+  if Rails.env.development?
+    mount Sidekiq::Web => "/sidekiq"
+    mount Logster::Web => "/logs"
+  else
+    mount Sidekiq::Web => "/sidekiq", constraints: AdminConstraint.new
+    mount Logster::Web => "/logs", constraints: AdminConstraint.new
   end
+
+  resources :about
 
   get "site" => "site#index"
 
@@ -47,6 +51,7 @@ Discourse::Application.routes.draw do
     resources :users, id: USERNAME_ROUTE_FORMAT do
       collection do
         get "list/:query" => "users#index"
+        get "ip-info" => "users#ip_info"
         put "approve-bulk" => "users#approve_bulk"
         delete "reject-bulk" => "users#reject_bulk"
       end
@@ -61,12 +66,15 @@ Discourse::Application.routes.draw do
       put "grant_moderation", constraints: AdminConstraint.new
       put "approve"
       post "refresh_browsers", constraints: AdminConstraint.new
+      post "log_out", constraints: AdminConstraint.new
       put "activate"
       put "deactivate"
       put "block"
       put "unblock"
       put "trust_level"
       put "primary_group"
+      post "groups" => "users#add_group", constraints: AdminConstraint.new
+      delete "groups/:group_id" => "users#remove_group", constraints: AdminConstraint.new
       get "badges"
       get "leader_requirements"
     end
@@ -85,10 +93,12 @@ Discourse::Application.routes.draw do
 
     scope "/logs" do
       resources :staff_action_logs,     only: [:index]
-      resources :screened_emails,       only: [:index]
+      resources :screened_emails,       only: [:index, :destroy]
       resources :screened_ip_addresses, only: [:index, :create, :update, :destroy]
       resources :screened_urls,         only: [:index]
     end
+
+    get "/logs" => "staff_action_logs#index"
 
     get "customize" => "color_schemes#index", constraints: AdminConstraint.new
     get "customize/css_html" => "site_customizations#index", constraints: AdminConstraint.new
@@ -131,14 +141,25 @@ Discourse::Application.routes.draw do
         get "cancel" => "backups#cancel"
         get "rollback" => "backups#rollback"
         put "readonly" => "backups#readonly"
-        get "upload" => "backups#check_chunk"
-        post "upload" => "backups#upload_chunk"
+        get "upload" => "backups#check_backup_chunk"
+        post "upload" => "backups#upload_backup_chunk"
+      end
+    end
+
+    resources :export_csv, constraints: AdminConstraint.new do
+      member do
+        get "download" => "export_csv#download", constraints: { id: /[^\/]+/ }
+      end
+      collection do
+        get "users" => "export_csv#export_user_list"
       end
     end
 
     resources :badges, constraints: AdminConstraint.new do
       collection do
         get "types" => "badges#badge_types"
+        post "badge_groupings" => "badges#save_badge_groupings"
+        post "preview" => "badges#preview"
       end
     end
 
@@ -173,22 +194,25 @@ Discourse::Application.routes.draw do
   post "login" => "static#enter"
   get "login" => "static#show", id: "login"
   get "faq" => "static#show", id: "faq"
+  get "guidelines" => "static#show", id: "guidelines"
   get "tos" => "static#show", id: "tos"
   get "privacy" => "static#show", id: "privacy"
   get "signup" => "list#latest"
 
+  post "users/read-faq" => "users#read_faq"
   get "users/search/users" => "users#search_users"
   get "users/password-reset/:token" => "users#password_reset"
   put "users/password-reset/:token" => "users#password_reset"
   get "users/activate-account/:token" => "users#activate_account"
+  put "users/activate-account/:token" => "users#perform_account_activation", as: 'perform_activate_account'
   get "users/authorize-email/:token" => "users#authorize_email"
   get "users/hp" => "users#get_honeypot_value"
-  get "my/:path", to: 'users#my_redirect'
+  get "my/*path", to: 'users#my_redirect'
 
   get "user_preferences" => "users#user_preferences_redirect"
   get "users/:username/private-messages" => "user_actions#private_messages", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/private-messages/:filter" => "user_actions#private_messages", constraints: {username: USERNAME_ROUTE_FORMAT}
-  get "users/:username" => "users#show", as: 'userpage', constraints: {username: USERNAME_ROUTE_FORMAT}
+  get "users/:username" => "users#show", as: 'user', constraints: {username: USERNAME_ROUTE_FORMAT}
   put "users/:username" => "users#update", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/preferences" => "users#preferences", constraints: {username: USERNAME_ROUTE_FORMAT}, as: :email_preferences
   get "users/:username/preferences/email" => "users#preferences", constraints: {username: USERNAME_ROUTE_FORMAT}
@@ -201,21 +225,33 @@ Discourse::Application.routes.draw do
   get "users/:username/avatar(/:size)" => "users#avatar", constraints: {username: USERNAME_ROUTE_FORMAT} # LEGACY ROUTE
   post "users/:username/preferences/avatar" => "users#upload_avatar", constraints: {username: USERNAME_ROUTE_FORMAT} # LEGACY ROUTE
   post "users/:username/preferences/user_image" => "users#upload_user_image", constraints: {username: USERNAME_ROUTE_FORMAT}
-  put "users/:username/preferences/avatar/toggle" => "users#toggle_avatar", constraints: {username: USERNAME_ROUTE_FORMAT}
-  put "users/:username/preferences/profile_background/clear" => "users#clear_profile_background", constraints: {username: USERNAME_ROUTE_FORMAT}
+  delete "users/:username/preferences/user_image" => "users#destroy_user_image", constraints: {username: USERNAME_ROUTE_FORMAT}
+  put "users/:username/preferences/avatar/pick" => "users#pick_avatar", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/invited" => "users#invited", constraints: {username: USERNAME_ROUTE_FORMAT}
   post "users/:username/send_activation_email" => "users#send_activation_email", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/activity" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/activity/:filter" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/badges" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
   delete "users/:username" => "users#destroy", constraints: {username: USERNAME_ROUTE_FORMAT}
+  get "users/by-external/:external_id" => "users#show"
+  get "users/:username/flagged-posts" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
+  get "users/:username/deleted-posts" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
+  get "users/:username/badges_json" => "user_badges#username"
+
+  post "user_avatar/:username/refresh_gravatar" => "user_avatars#refresh_gravatar"
+  get "letter_avatar/:username/:size/:version.png" => "user_avatars#show_letter",
+      format: false, constraints: {hostname: /[\w\.-]+/}
+  get "user_avatar/:hostname/:username/:size/:version.png" => "user_avatars#show",
+      format: false, constraints: {hostname: /[\w\.-]+/}
+
 
   get "uploads/:site/:id/:sha.:extension" => "uploads#show", constraints: {site: /\w+/, id: /\d+/, sha: /[a-z0-9]{15,16}/i, extension: /\w{2,}/}
   post "uploads" => "uploads#create"
 
   get "posts/by_number/:topic_id/:post_number" => "posts#by_number"
-  put "posts/by_number/:topic_id/:post_number/bookmarks/remove" => "posts#remove_bookmark_by_number"
   get "posts/:id/reply-history" => "posts#reply_history"
+  get "posts/:username/deleted" => "posts#deleted_posts", constraints: {username: USERNAME_ROUTE_FORMAT}
+  get "posts/:username/flagged" => "posts#flagged_posts", constraints: {username: USERNAME_ROUTE_FORMAT}
 
   resources :groups do
     get 'members'
@@ -234,8 +270,6 @@ Discourse::Application.routes.draw do
     end
   end
 
-  get "p/:post_id/:user_id" => "posts#short_link"
-
   resources :notifications
 
   match "/auth/:provider/callback", to: "users/omniauth_callbacks#complete", via: [:get, :post]
@@ -252,7 +286,7 @@ Discourse::Application.routes.draw do
   resources :post_actions do
     collection do
       get "users"
-      post "clear_flags"
+      post "defer_flags"
     end
   end
   resources :user_actions
@@ -266,12 +300,14 @@ Discourse::Application.routes.draw do
 
   resources :categories, :except => :show
   get "category/:id/show" => "categories#show"
+  post "category/uploads" => "categories#upload"
   post "category/:category_id/move" => "categories#move"
   get "category/:category.rss" => "list#category_feed", format: :rss
   get "category/:parent_category/:category.rss" => "list#category_feed", format: :rss
   get "category/:category" => "list#category_latest"
   get "category/:category/none" => "list#category_none_latest"
   get "category/:parent_category/:category" => "list#parent_category_category_latest"
+  post "category/:category_id/notifications" => "categories#set_notifications"
 
   get "top" => "list#top"
   get "category/:category/l/top" => "list#category_top", as: "category_top"
@@ -331,6 +367,8 @@ Discourse::Application.routes.draw do
   put "t/:topic_id/mute" => "topics#mute", constraints: {topic_id: /\d+/}
   put "t/:topic_id/unmute" => "topics#unmute", constraints: {topic_id: /\d+/}
   put "t/:topic_id/autoclose" => "topics#autoclose", constraints: {topic_id: /\d+/}
+  put "t/:topic_id/make-banner" => "topics#make_banner", constraints: {topic_id: /\d+/}
+  put "t/:topic_id/remove-banner" => "topics#remove_banner", constraints: {topic_id: /\d+/}
   put "t/:topic_id/remove-allowed-user" => "topics#remove_allowed_user", constraints: {topic_id: /\d+/}
   put "t/:topic_id/recover" => "topics#recover", constraints: {topic_id: /\d+/}
   get "t/:topic_id/:post_number" => "topics#show", constraints: {topic_id: /\d+/, post_number: /\d+/}
@@ -349,15 +387,26 @@ Discourse::Application.routes.draw do
 
   post "t/:topic_id/notifications" => "topics#set_notifications" , constraints: {topic_id: /\d+/}
 
+  get "p/:post_id(/:user_id)" => "posts#short_link"
+  get "/posts/:id/cooked" => "posts#cooked"
   get "/posts/:id/expand-embed" => "posts#expand_embed"
-  get "raw/:topic_id(/:post_number)" => "posts#markdown"
+  get "/posts/:id/raw" => "posts#markdown_id"
+  get "raw/:topic_id(/:post_number)" => "posts#markdown_num"
 
-  resources :invites
+  resources :invites do
+    collection do
+      get "upload" => "invites#check_csv_chunk"
+      post "upload" => "invites#upload_csv_chunk"
+    end
+  end
+  post "invites/disposable" => "invites#create_disposable_invite"
+  get "invites/redeem/:token" => "invites#redeem_disposable_invite"
   delete "invites" => "invites#destroy"
 
   get "onebox" => "onebox#show"
 
   get "error" => "forums#error"
+  get "exception" => "list#latest"
 
   get "message-bus/poll" => "message_bus#poll"
 
@@ -385,4 +434,5 @@ Discourse::Application.routes.draw do
   # special case for top
   root to: "list#top", constraints: HomePageConstraint.new("top"), :as => "top_lists"
 
+  get "*url", to: 'permalinks#show', constraints: PermalinkConstraint.new
 end

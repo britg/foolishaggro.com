@@ -1,12 +1,12 @@
 require_dependency 'user_destroyer'
 require_dependency 'admin_user_index_query'
-require_dependency 'boost_trust_level'
 
 class Admin::UsersController < Admin::AdminController
 
   before_filter :fetch_user, only: [:suspend,
                                     :unsuspend,
                                     :refresh_browsers,
+                                    :log_out,
                                     :revoke_admin,
                                     :grant_admin,
                                     :revoke_moderation,
@@ -17,6 +17,8 @@ class Admin::UsersController < Admin::AdminController
                                     :block,
                                     :unblock,
                                     :trust_level,
+                                    :add_group,
+                                    :remove_group,
                                     :primary_group,
                                     :generate_api_key,
                                     :revoke_api_key]
@@ -53,6 +55,12 @@ class Admin::UsersController < Admin::AdminController
     @user.suspended_at = nil
     @user.save!
     StaffActionLogger.new(current_user).log_user_unsuspend(@user)
+    render nothing: true
+  end
+
+  def log_out
+    @user.auth_token = nil
+    @user.save!
     render nothing: true
   end
 
@@ -95,6 +103,21 @@ class Admin::UsersController < Admin::AdminController
     render_serialized(@user, AdminUserSerializer)
   end
 
+  def add_group
+    group = Group.find(params[:group_id].to_i)
+    return render_json_error group unless group && !group.automatic
+    group.users << @user
+    render nothing: true
+  end
+
+  def remove_group
+    group = Group.find(params[:group_id].to_i)
+    return render_json_error group unless group && !group.automatic
+    group.users.delete(@user)
+    render nothing: true
+  end
+
+
   def primary_group
     guardian.ensure_can_change_primary_group!(@user)
     @user.primary_group_id = params[:primary_group_id]
@@ -104,9 +127,12 @@ class Admin::UsersController < Admin::AdminController
 
   def trust_level
     guardian.ensure_can_change_trust_level!(@user)
-    logger = StaffActionLogger.new(current_user)
-    BoostTrustLevel.new(user: @user, level: params[:level], logger: logger).save!
+    level = TrustLevel.levels[params[:level].to_i]
+    @user.change_trust_level!(level, log_action_for: current_user)
+
     render_serialized(@user, AdminUserSerializer)
+  rescue Discourse::InvalidAccess => e
+    render_json_error(e.message)
   end
 
   def approve
@@ -157,7 +183,7 @@ class Admin::UsersController < Admin::AdminController
   end
 
   def destroy
-    user = User.find_by(id: params[:id])
+    user = User.find_by(id: params[:id].to_i)
     guardian.ensure_can_delete_user!(user)
     begin
       if UserDestroyer.new(current_user).destroy(user, params.slice(:delete_posts, :block_email, :block_urls, :block_ip, :context))
@@ -176,6 +202,15 @@ class Admin::UsersController < Admin::AdminController
   def leader_requirements
   end
 
+  def ip_info
+    params.require(:ip)
+    ip = params[:ip]
+
+    # should we cache results in redis?
+    location = Excon.get("http://ipinfo.io/#{ip}/json", read_timeout: 30, connect_timeout: 30).body rescue nil
+
+    render json: location
+  end
 
   private
 

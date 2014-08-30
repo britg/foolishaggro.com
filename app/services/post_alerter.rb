@@ -76,6 +76,8 @@ class PostAlerter
 
     user.notifications.where(notification_type: type,
                              topic_id: topic.id).destroy_all
+    # HACK so notification counts sync up correctly
+    user.reload
   end
 
   def create_notification(user, type, post, opts={})
@@ -142,7 +144,7 @@ class PostAlerter
   end
 
   def extract_linked_users(post)
-    post.topic_links.map do |link|
+    post.topic_links.where(reflection: false).map do |link|
       linked_post = link.link_post
       if !linked_post && topic = link.link_topic
         linked_post = topic.posts(post_number: 1).first

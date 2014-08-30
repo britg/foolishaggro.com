@@ -17,7 +17,11 @@ class PostRevisor
   #  :skip_validation ask ActiveRecord to skip validations
   #
   def revise!(editor, new_raw, opts = {})
-    @editor, @new_raw, @opts = editor, new_raw, opts
+    @editor = editor
+    @opts = opts
+    @new_raw = TextCleaner.normalize_whitespaces(new_raw).strip
+
+    # TODO this is not in a transaction - dangerous!
     return false unless should_revise?
     @post.acting_user = @editor
     revise_post
@@ -27,23 +31,13 @@ class PostRevisor
     update_topic_word_counts
     @post.advance_draft_sequence
     PostAlerter.new.after_save_post(@post)
-    publish_revision
+    @post.publish_change_to_clients! :revised
+    BadgeGranter.queue_badge_grant(Badge::Trigger::PostRevision, post: @post)
 
     true
   end
 
   private
-
-  def publish_revision
-    MessageBus.publish("/topic/#{@post.topic_id}",{
-                    id: @post.id,
-                    post_number: @post.post_number,
-                    updated_at: @post.updated_at,
-                    type: "revised"
-                  },
-                  group_ids: @post.topic.secure_group_ids
-    )
-  end
 
   def should_revise?
     @post.raw != @new_raw || @opts[:changed_owner]
@@ -81,6 +75,7 @@ class PostRevisor
   def bump_topic
     unless Post.where('post_number > ? and topic_id = ?', @post.post_number, @post.topic_id).exists?
       @post.topic.update_column(:bumped_at, Time.now)
+      TopicTrackingState.publish_latest(@post.topic)
     end
   end
 
@@ -96,13 +91,11 @@ class PostRevisor
     @post.last_editor_id = @editor.id
     @post.edit_reason = @opts[:edit_reason] if @opts[:edit_reason]
     @post.user_id = @opts[:new_user].id if @opts[:new_user]
+    @post.self_edits += 1 if @editor == @post.user
 
     if @editor == @post.user && @post.hidden && @post.hidden_reason_id == Post.hidden_reasons[:flag_threshold_reached]
-      @post.hidden = false
-      @post.hidden_reason_id = nil
-      @post.topic.update_attributes(visible: true)
-
-      PostAction.clear_flags!(@post, -1)
+      PostAction.clear_flags!(@post, Discourse.system_user)
+      @post.unhide!
     end
 
     @post.extract_quoted_post_numbers

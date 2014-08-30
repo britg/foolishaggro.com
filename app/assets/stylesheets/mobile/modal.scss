@@ -21,7 +21,7 @@
   border: 1px solid rgba(0, 0, 0, 0.3);
 
   @include border-radius-all (6px);
-  box-shadow: 0 3px 7px rgba($primary, 0.3);
+  box-shadow: 0 3px 7px rgba(0,0,0, 0.3);
   background-clip: padding-box;
 }
 
@@ -54,18 +54,16 @@
     font-size: 15px;
     padding: 0 0 0 20px;
   }
-  .close {
-    float: right;
-    font-size: 24px;
-    padding: 15px; // more pixels to touch
-    margin: -15px 0 0 0;
-    text-decoration: none;
-    color: $primary;
-    cursor: pointer;
-  }
 }
-
-
+.close {
+  float: right;
+  font-size: 24px;
+  padding: 15px; // more pixels to touch
+  margin: -15px 0 0 0;
+  text-decoration: none;
+  color: $primary;
+  cursor: pointer;
+}
 
 #move-selected {
   p {
@@ -137,4 +135,27 @@
 
 .modal-tab {
   position: absolute;
+}
+
+/* fixes for the new account confirm dialog on mobile */
+
+.modal-inner-container {
+  margin-bottom: 20px;
+}
+
+.alert {
+  padding: 5px;
+  &.alert-success {
+    background-color:  scale-color($success, $lightness: 90%);
+    color: $success;
+  }
+}
+
+.delete-flag-modal, .agree-flag-modal {
+  .modal-inner-container {
+    width: 300px;
+  }
+  .btn {
+    float: none !important;
+  }
 }

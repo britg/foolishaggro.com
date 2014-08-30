@@ -48,7 +48,7 @@ module Jobs
             # have we successfully downloaded that file?
             if downloaded_urls[src].present?
               url = downloaded_urls[src]
-              escaped_src = src.gsub("?", "\\?").gsub(".", "\\.").gsub("+", "\\+")
+              escaped_src = Regexp.escape(src)
               # there are 6 ways to insert an image in a post
               # HTML tag - <img src="http://...">
               raw.gsub!(/src=["']#{escaped_src}["']/i, "src='#{url}'")
@@ -90,7 +90,7 @@ module Jobs
 
     def extract_images_from(html)
       doc = Nokogiri::HTML::fragment(html)
-      doc.css("img") - doc.css(".onebox-result img") - doc.css("img.avatar")
+      doc.css("img[src]") - doc.css(".onebox-result img") - doc.css("img.avatar")
     end
 
     def is_valid_image_url(src)

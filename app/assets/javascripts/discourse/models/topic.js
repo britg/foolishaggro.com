@@ -1,11 +1,3 @@
-/**
-  A data model representing a Topic
-
-  @class Topic
-  @extends Discourse.Model
-  @namespace Discourse
-  @module Discourse
-**/
 Discourse.Topic = Discourse.Model.extend({
 
   postStream: function() {
@@ -18,22 +10,6 @@ Discourse.Topic = Discourse.Model.extend({
 
   invisible: Em.computed.not('visible'),
   deleted: Em.computed.notEmpty('deleted_at'),
-
-  canConvertToRegular: function() {
-    var a = this.get('archetype');
-    return a !== 'regular' && a !== 'private_message';
-  }.property('archetype'),
-
-  convertArchetype: function() {
-    var a = this.get('archetype');
-    if (a !== 'regular' && a !== 'private_message') {
-      this.set('archetype', 'regular');
-      return Discourse.ajax(this.get('url'), {
-        type: 'PUT',
-        data: {archetype: 'regular'}
-      });
-    }
-  },
 
   searchContext: function() {
     return ({ type: 'topic', id: this.get('id') });
@@ -73,14 +49,15 @@ Discourse.Topic = Discourse.Model.extend({
   urlForPostNumber: function(postNumber) {
     var url = this.get('url');
     if (postNumber && (postNumber > 0)) {
-      if (postNumber >= this.get('highest_post_number')) {
-        url += "/last";
-      } else {
-        url += "/" + postNumber;
-      }
+      url += "/" + postNumber;
     }
     return url;
   },
+
+  totalUnread: function() {
+    var count = (this.get('unread') || 0) + (this.get('new_posts') || 0);
+    return count > 0 ? count : null;
+  }.property('new_posts', 'unread'),
 
   lastReadUrl: function() {
     return this.urlForPostNumber(this.get('last_read_post_number'));
@@ -135,6 +112,7 @@ Discourse.Topic = Discourse.Model.extend({
   }.property('archetype'),
 
   isPrivateMessage: Em.computed.equal('archetype', 'private_message'),
+  isBanner: Em.computed.equal('archetype', 'banner'),
 
   toggleStatus: function(property) {
     this.toggleProperty(property);
@@ -157,6 +135,18 @@ Discourse.Topic = Discourse.Model.extend({
       type: 'PUT',
       data: {status: property, enabled: value ? 'true' : 'false' }
     });
+  },
+
+  makeBanner: function() {
+    var self = this;
+    return Discourse.ajax('/t/' + this.get('id') + '/make-banner', { type: 'PUT' })
+           .then(function () { self.set('archetype', 'banner'); });
+  },
+
+  removeBanner: function() {
+    var self = this;
+    return Discourse.ajax('/t/' + this.get('id') + '/remove-banner', { type: 'PUT' })
+           .then(function () { self.set('archetype', 'regular'); });
   },
 
   starTooltipKey: function() {
@@ -200,14 +190,7 @@ Discourse.Topic = Discourse.Model.extend({
 
     return Discourse.ajax(this.get('url'), {
       type: 'PUT',
-      data: { title: this.get('title'), category: this.get('category.name') }
-    });
-  },
-
-  // Reset our read data for this topic
-  resetRead: function() {
-    return Discourse.ajax("/t/" + this.get('id') + "/timings", {
-      type: 'DELETE'
+      data: { title: this.get('title'), category_id: this.get('category.id') }
     });
   },
 
@@ -310,13 +293,21 @@ Discourse.Topic = Discourse.Model.extend({
   // Is the reply to a post directly below it?
   isReplyDirectlyBelow: function(post) {
     var posts = this.get('postStream.posts');
+    var postNumber = post.get('post_number');
     if (!posts) return;
 
     var postBelow = posts[posts.indexOf(post) + 1];
 
-    // If the post directly below's reply_to_post_number is our post number, it's
-    // considered directly below.
-    return postBelow && postBelow.get('reply_to_post_number') === post.get('post_number');
+    // If the post directly below's reply_to_post_number is our post number or we are quoted,
+    // it's considered directly below.
+    //
+    // TODO: we don't carry information about quoting, this leaves this code fairly fragile
+    //  instead we should start shipping quote meta data with posts, but this will add at least
+    //  1 query to the topics page
+    //
+    return postBelow && (postBelow.get('reply_to_post_number') === postNumber ||
+        postBelow.get('cooked').indexOf('data-post="'+ postNumber + '"') >= 0
+    );
   },
 
   excerptNotEmpty: Em.computed.notEmpty('excerpt'),
@@ -403,6 +394,7 @@ Discourse.Topic.reopenClass({
       opts.userFilters.forEach(function(username) {
         data.username_filters.push(username);
       });
+      data.show_deleted = true;
     }
 
     // Add the summary of filter if we have it
