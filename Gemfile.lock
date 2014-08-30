@@ -53,7 +53,7 @@ GEM
       erubis (>= 2.6.6)
     binding_of_caller (0.7.2)
       debug_inspector (>= 0.0.1)
-    bootstrap-sass (3.1.1.1)
+    bootstrap-sass (3.0.3.0)
       sass (~> 3.2)
     bourbon (3.1.8)
       sass (>= 3.2.0)
@@ -171,7 +171,7 @@ GEM
       thor (~> 0.15)
     libv8 (3.16.14.3)
     listen (0.7.3)
-    logster (0.0.9)
+    logster (0.1.6)
     lru_redux (0.8.1)
     mail (2.5.4)
       mime-types (~> 1.16)
@@ -425,7 +425,7 @@ DEPENDENCIES
   barber
   better_errors
   binding_of_caller
-  bootstrap-sass (~> 3.1.1)
+  bootstrap-sass (~> 3.0.3.0)
   bourbon
   certified
   email_reply_parser-discourse

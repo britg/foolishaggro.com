@@ -1,12 +1,7 @@
 
 .row
 
-  .col-md-1
-
-  .col-md-5
-    .lonelygalaxy
-      %h1 Lonely Galaxy
-      = link_to "Dev Log", "/category/lonely-galaxy", class: "btn btn-primary"
+  .col-md-3
 
   .col-md-3
     .tease.pyroclasm
@@ -30,6 +25,14 @@
 .row
   .col-md-8
 
+    .topic
+      %h3.title
+        Development livestreams daily on
+        = image_tag("pages/twitch_logo.png")
+
+    :erb
+      <object type="application/x-shockwave-flash" height="458" width="750" id="live_embed_player_flash" data="http://www.twitch.tv/widgets/live_embed_player.swf?channel=britgtx" bgcolor="#000000"><param name="allowFullScreen" value="true" /><param name="allowScriptAccess" value="always" /><param name="allowNetworking" value="all" /><param name="movie" value="http://www.twitch.tv/widgets/live_embed_player.swf" /><param name="flashvars" value="hostname=www.twitch.tv&channel=britgtx&auto_play=true&start_volume=25" /></object>
+
     - @topics.each do |topic|
       .topic
         %h3.title= link_to topic.title, topic.relative_url
@@ -50,8 +53,7 @@
 
   .col-md-4
 
-    %h3 Recent Videos
-
+    %h3 Recent Streams
 
     - @videos.each do |video|
       .topic
