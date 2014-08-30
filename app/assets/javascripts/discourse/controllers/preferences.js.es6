@@ -1,15 +1,18 @@
+import ObjectController from 'discourse/controllers/object';
+
 /**
   This controller supports actions related to updating one's preferences
 
   @class PreferencesController
-  @extends Discourse.ObjectController
+  @extends ObjectController
   @namespace Discourse
   @module Discourse
 **/
-export default Discourse.ObjectController.extend({
+export default ObjectController.extend({
 
   allowAvatarUpload: Discourse.computed.setting('allow_uploaded_avatars'),
   allowUserLocale: Discourse.computed.setting('allow_user_locale'),
+  ssoOverridesAvatar: Discourse.computed.setting('sso_overrides_avatar'),
 
   selectedCategories: function(){
     return [].concat(this.get("watchedCategories"), this.get("trackedCategories"), this.get("mutedCategories"));
@@ -22,10 +25,9 @@ export default Discourse.ObjectController.extend({
 
   saveDisabled: function() {
     if (this.get('saving')) return true;
-    if (Discourse.SiteSettings.enable_names && this.blank('newNameInput')) return true;
     if (this.blank('email')) return true;
     return false;
-  }.property('saving', 'newNameInput', 'email'),
+  }.property('saving', 'email'),
 
   cannotDeleteAccount: Em.computed.not('can_delete_account'),
   deleteDisabled: Em.computed.or('saving', 'deleting', 'cannotDeleteAccount'),
@@ -33,8 +35,12 @@ export default Discourse.ObjectController.extend({
   canEditName: Discourse.computed.setting('enable_names'),
 
   canSelectTitle: function() {
-    return Discourse.SiteSettings.enable_badges && this.get('model.badge_count') > 0;
+    return Discourse.SiteSettings.enable_badges && this.get('model.has_title_badges');
   }.property('model.badge_count'),
+
+  canChangePassword: function() {
+    return !Discourse.SiteSettings.enable_sso && Discourse.SiteSettings.enable_local_logins;
+  }.property(),
 
   availableLocales: function() {
     return Discourse.SiteSettings.available_locales.split('|').map( function(s) {
@@ -67,7 +73,10 @@ export default Discourse.ObjectController.extend({
     return this.get('saving') ? I18n.t('saving') : I18n.t('save');
   }.property('saving'),
 
+  imageUploadUrl: Discourse.computed.url('username', '/users/%@/preferences/user_image'),
+
   actions: {
+
     save: function() {
       var self = this;
       this.setProperties({ saving: true, saved: false });

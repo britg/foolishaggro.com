@@ -15,15 +15,22 @@
         display: block;
         span.username {
           color: darken($primary, 40%);
+          display: inline-block;
         }
         span.name {
           font-size: 11px;
+          display: inline-block;
+          width: 90px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          vertical-align: middle;
         }
         &.selected {
-          background-color: scale-color-diff();
+          background-color: dark-light-diff($tertiary, $secondary, 90%, -60%);
         }
         @include hover {
-          background-color: scale-color-diff();
+          background-color: dark-light-diff($highlight, $secondary, 90%, -80%);
           text-decoration: none;
         }
       }

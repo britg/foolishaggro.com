@@ -9,7 +9,13 @@ module Discourse
     extend Sidekiq::ExceptionHandler
   end
 
-  def self.handle_exception(ex, context=nil, parent_logger = nil)
+  # Log an exception.
+  #
+  # If your code is in a scheduled job, it is recommended to use the
+  # error_context() method in Jobs::Base to pass the job arguments and any
+  # other desired context.
+  # See app/jobs/base.rb for the error_context function.
+  def self.handle_exception(ex, context = {}, parent_logger = nil)
     context ||= {}
     parent_logger ||= SidekiqExceptionHandler
 
@@ -201,8 +207,10 @@ module Discourse
     user ||= User.admins.real.order(:id).first
   end
 
+  SYSTEM_USER_ID = -1 unless defined? SYSTEM_USER_ID
+
   def self.system_user
-    User.find_by(id: -1)
+    User.find_by(id: SYSTEM_USER_ID)
   end
 
   def self.store
@@ -250,11 +258,31 @@ module Discourse
     Sidekiq.redis_pool.shutdown{|c| nil}
     # re-establish
     Sidekiq.redis = sidekiq_redis_config
+    start_connection_reaper
     nil
+  end
+
+  def self.start_connection_reaper(interval=30, age=30)
+    # this helps keep connection counts in check
+    Thread.new do
+      while true
+        sleep interval
+        pools = []
+        ObjectSpace.each_object(ActiveRecord::ConnectionAdapters::ConnectionPool){|pool| pools << pool}
+
+        pools.each do |pool|
+          pool.drain(age.seconds)
+        end
+      end
+    end
   end
 
   def self.sidekiq_redis_config
     { url: $redis.url, namespace: 'sidekiq' }
+  end
+
+  def self.static_doc_topic_ids
+    [SiteSetting.tos_topic_id, SiteSetting.guidelines_topic_id, SiteSetting.privacy_topic_id]
   end
 
 end

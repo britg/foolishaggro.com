@@ -1,11 +1,5 @@
-/**
-  This view renders a post.
+var DAY = 60 * 50 * 1000;
 
-  @class PostView
-  @extends Discourse.GroupedView
-  @namespace Discourse
-  @module Discourse
-**/
 Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
   classNames: ['topic-post', 'clearfix'],
   templateName: 'post',
@@ -15,6 +9,19 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
                       'post.deleted',
                       'groupNameClass'],
   postBinding: 'content',
+
+  historyHeat: function() {
+    var updatedAt = this.get('post.updated_at');
+    if (!updatedAt) { return; }
+
+    // Show heat on age
+    var rightNow = new Date().getTime(),
+        updatedAtDate = new Date(updatedAt).getTime();
+
+    if (updatedAtDate > (rightNow - DAY * Discourse.SiteSettings.history_hours_low)) return 'heatmap-high';
+    if (updatedAtDate > (rightNow - DAY * Discourse.SiteSettings.history_hours_medium)) return 'heatmap-med';
+    if (updatedAtDate > (rightNow - DAY * Discourse.SiteSettings.history_hours_high)) return 'heatmap-low';
+  }.property('post.updated_at'),
 
   postTypeClass: function() {
     return this.get('post.post_type') === Discourse.Site.currentProp('post_types.moderator_action') ? 'moderator' : 'regular';
@@ -36,7 +43,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
 
   // If the cooked content changed, add the quote controls
   cookedChanged: function() {
-    Em.run.scheduleOnce('afterRender', this, 'insertQuoteControls');
+    Em.run.scheduleOnce('afterRender', this, '_insertQuoteControls');
   }.observes('post.cooked'),
 
   mouseUp: function(e) {
@@ -66,7 +73,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
 
   repliesShown: Em.computed.gt('post.replies.length', 0),
 
-  updateQuoteElements: function($aside, desc) {
+  _updateQuoteElements: function($aside, desc) {
     var navLink = "",
         quoteTitle = I18n.t("post.follow_quote"),
         postNumber = $aside.data('post');
@@ -100,42 +107,48 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     $('.quote-controls', $aside).html(expandContract + navLink);
   },
 
-  toggleQuote: function($aside) {
-    $aside.data('expanded',!$aside.data('expanded'));
+  _toggleQuote: function($aside) {
+    if (this.get('expanding')) { return; }
+    this.set('expanding', true);
+
+    $aside.data('expanded', !$aside.data('expanded'));
+
+    var self = this,
+        finished = function() {
+          self.set('expanding', false);
+        };
+
     if ($aside.data('expanded')) {
-      this.updateQuoteElements($aside, 'chevron-up');
+      this._updateQuoteElements($aside, 'chevron-up');
       // Show expanded quote
       var $blockQuote = $('blockquote', $aside);
       $aside.data('original-contents',$blockQuote.html());
 
       var originalText = $blockQuote.text().trim();
       $blockQuote.html(I18n.t("loading"));
-      var topic_id = this.get('post.topic_id');
+      var topicId = this.get('post.topic_id');
       if ($aside.data('topic')) {
-        topic_id = $aside.data('topic');
+        topicId = $aside.data('topic');
       }
 
-      var post_id = $aside.data('post');
+      var postId = parseInt($aside.data('post'), 10);
+      topicId = parseInt(topicId, 10);
 
-      topic_id = parseInt(topic_id,10);
-      post_id = parseInt(post_id,10);
-
-      Discourse.ajax("/posts/by_number/" + topic_id + "/" + post_id).then(function (result) {
+      Discourse.ajax("/posts/by_number/" + topicId + "/" + postId).then(function (result) {
         var parsed = $(result.cooked);
         parsed.replaceText(originalText, "<span class='highlighted'>" + originalText + "</span>");
-        $blockQuote.showHtml(parsed);
+        $blockQuote.showHtml(parsed, 'fast', finished);
       });
     } else {
       // Hide expanded quote
-      this.updateQuoteElements($aside, 'chevron-down');
-      $('blockquote', $aside).showHtml($aside.data('original-contents'));
+      this._updateQuoteElements($aside, 'chevron-down');
+      $('blockquote', $aside).showHtml($aside.data('original-contents'), 'fast', finished);
     }
     return false;
   },
 
   // Show how many times links have been clicked on
-  showLinkCounts: function() {
-
+  _showLinkCounts: function() {
     var self = this,
         link_counts = this.get('post.link_counts');
 
@@ -194,7 +207,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
   },
 
   // Add the quote controls to a post
-  insertQuoteControls: function() {
+  _insertQuoteControls: function() {
     var self = this,
         $quotes = this.$('aside.quote');
 
@@ -204,14 +217,14 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     $quotes.each(function(i, e) {
       var $aside = $(e);
       if ($aside.data('post')) {
-        self.updateQuoteElements($aside, 'chevron-down');
+        self._updateQuoteElements($aside, 'chevron-down');
         var $title = $('.title', $aside);
 
         // Unless it's a full quote, allow click to expand
         if (!($aside.data('full') || $title.data('has-quote-controls'))) {
           $title.on('click', function(e) {
             if ($(e.target).is('a')) return true;
-            self.toggleQuote($aside);
+            self._toggleQuote($aside);
           });
           $title.data('has-quote-controls', true);
         }
@@ -219,35 +232,25 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     });
   },
 
-  willDestroyElement: function() {
+  _destroyedPostView: function() {
     Discourse.ScreenTrack.current().stopTracking(this.get('elementId'));
-  },
+    this._unbindExpandMentions();
+  }.on('willDestroyElement'),
 
-  didInsertElement: function() {
+  _postViewInserted: function() {
     var $post = this.$(),
         post = this.get('post'),
-        postNumber = post.get('post_number'),
-        highlightNumber = this.get('controller.highlightOnInsert');
+        postNumber = post.get('post_number');
 
-    // If we're meant to highlight a post
-    if ((highlightNumber > 1) && (highlightNumber === postNumber)) {
-      this.set('controller.highlightOnInsert', null);
-      var $contents = $('.topic-body', $post),
-          origColor = $contents.data('orig-color') || $contents.css('backgroundColor');
-
-      $contents.data("orig-color", origColor);
-      $contents
-        .addClass('highlighted')
-        .stop()
-        .animate({ backgroundColor: origColor }, 2500, 'swing', function(){
-          $contents.removeClass('highlighted');
-        });
-    }
-
-    this.showLinkCounts();
+    this._showLinkCounts();
 
     // Track this post
     Discourse.ScreenTrack.current().track(this.$().prop('id'), postNumber);
+
+    // Highlight the post if required
+    if (postNumber > 1) {
+      Discourse.PostView.considerHighlighting(this.get('controller'), postNumber);
+    }
 
     // Add syntax highlighting
     Discourse.SyntaxHighlighting.apply($post);
@@ -256,6 +259,64 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     this.trigger('postViewInserted', $post);
 
     // Find all the quotes
-    Em.run.scheduleOnce('afterRender', this, 'insertQuoteControls');
+    Em.run.scheduleOnce('afterRender', this, '_insertQuoteControls');
+
+    this._applySearchHighlight();
+    this._bindExpandMentions();
+  }.on('didInsertElement'),
+
+  _bindExpandMentions: function() {
+    var self = this;
+    this.$('.cooked').on('click.discourse-mention', 'a.mention', function(e) {
+      var $target = $(e.target);
+      self.appEvents.trigger('poster:expand', $target);
+      self.get('controller').send('expandPostUsername', $target.text());
+      return false;
+    });
+  },
+
+  _unbindExpandMentions: function() {
+    this.$('.cooked').off('click.discourse-mention');
+  },
+
+  _applySearchHighlight: function() {
+    var highlight = this.get('controller.searchHighlight');
+    var cooked = this.$('.cooked');
+
+    if(!cooked){ return; }
+
+    if(highlight && highlight.length > 2){
+      if(this._highlighted){
+         cooked.unhighlight();
+      }
+      cooked.highlight(highlight);
+      this._highlighted = true;
+
+    } else if(this._highlighted){
+      cooked.unhighlight();
+      this._highlighted = false;
+    }
+  }.observes('controller.searchHighlight', 'cooked')
+});
+
+Discourse.PostView.reopenClass({
+  considerHighlighting: function(controller, postNumber) {
+    var highlightNumber = controller.get('highlightOnInsert');
+
+    // If we're meant to highlight a post
+    if (highlightNumber === postNumber) {
+      controller.set('highlightOnInsert', null);
+      var $contents = $('#post_' + postNumber +' .topic-body'),
+          origColor = $contents.data('orig-color') || $contents.css('backgroundColor');
+
+      $contents.data("orig-color", origColor);
+      $contents
+        .addClass('highlighted')
+        .stop()
+        .animate({ backgroundColor: origColor }, 2500, 'swing', function(){
+          $contents.removeClass('highlighted');
+          $contents.css({'background-color': ''});
+        });
+    }
   }
 });

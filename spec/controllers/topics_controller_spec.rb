@@ -24,7 +24,7 @@ describe TopicsController do
       post = json['posts'][0]
       post['id'].should == p2.id
       post['username'].should == user.username
-      post['avatar_template'].should == user.avatar_template
+      post['avatar_template'].should == "#{Discourse.base_url_no_prefix}#{user.avatar_template}"
       post['name'].should == user.name
       post['created_at'].should be_present
       post['cooked'].should == p2.cooked
@@ -34,7 +34,7 @@ describe TopicsController do
       participant = json['participants'][0]
       participant['id'].should == user.id
       participant['username'].should == user.username
-      participant['avatar_template'].should == user.avatar_template
+      participant['avatar_template'].should == "#{Discourse.base_url_no_prefix}#{user.avatar_template}"
     end
   end
 
@@ -501,7 +501,7 @@ describe TopicsController do
         end
 
         it 'succeeds' do
-          Topic.any_instance.expects(:recover!)
+          PostDestroyer.any_instance.expects(:recover)
           xhr :put, :recover, topic_id: topic.id
           response.should be_success
         end
@@ -516,31 +516,25 @@ describe TopicsController do
     end
 
     describe 'when logged in' do
-      before do
-        @topic = Fabricate(:topic, user: log_in)
-      end
+      let(:topic) { Fabricate(:topic, user: log_in) }
 
       describe 'without access' do
         it "raises an exception when the user doesn't have permission to delete the topic" do
-          Guardian.any_instance.expects(:can_delete?).with(@topic).returns(false)
-          xhr :delete, :destroy, id: @topic.id
+          Guardian.any_instance.expects(:can_delete?).with(topic).returns(false)
+          xhr :delete, :destroy, id: topic.id
           response.should be_forbidden
         end
       end
 
       describe 'with permission' do
         before do
-          Guardian.any_instance.expects(:can_delete?).with(@topic).returns(true)
+          Guardian.any_instance.expects(:can_delete?).with(topic).returns(true)
         end
 
         it 'succeeds' do
-          xhr :delete, :destroy, id: @topic.id
+          PostDestroyer.any_instance.expects(:destroy)
+          xhr :delete, :destroy, id: topic.id
           response.should be_success
-        end
-
-        it 'deletes the topic' do
-          xhr :delete, :destroy, id: @topic.id
-          Topic.exists?(id: @topic_id).should be_false
         end
 
       end
@@ -562,6 +556,11 @@ describe TopicsController do
     it 'can find a topic given a slug in the id param' do
       xhr :get, :show, id: topic.slug
       expect(response).to redirect_to(topic.relative_url)
+    end
+
+    it 'keeps the post_number parameter around when redirecting' do
+      xhr :get, :show, id: topic.slug, post_number: 42
+      expect(response).to redirect_to(topic.relative_url + "/42")
     end
 
     it 'returns 404 when an invalid slug is given and no id' do
@@ -587,7 +586,25 @@ describe TopicsController do
     end
 
     it 'records a view' do
-      lambda { xhr :get, :show, topic_id: topic.id, slug: topic.slug }.should change(View, :count).by(1)
+      lambda { xhr :get, :show, topic_id: topic.id, slug: topic.slug }.should change(TopicViewItem, :count).by(1)
+    end
+
+    it 'records incoming links' do
+      user = Fabricate(:user)
+      get :show, topic_id: topic.id, slug: topic.slug, u: user.username
+
+      IncomingLink.count.should == 1
+    end
+
+    it 'records redirects' do
+      @request.env['HTTP_REFERER'] = 'http://twitter.com'
+      get :show, { id: topic.id }
+
+      @request.env['HTTP_REFERER'] = nil
+      get :show, topic_id: topic.id, slug: topic.slug
+
+      link = IncomingLink.first
+      link.referer.should == 'http://twitter.com'
     end
 
     it 'tracks a visit for all html requests' do
@@ -660,6 +677,9 @@ describe TopicsController do
         it 'shows the topic if valid api key is provided' do
           get :show, topic_id: topic.id, slug: topic.slug, api_key: api_key.key
           expect(response).to be_successful
+          topic.reload
+          # free test, only costs a reload
+          topic.views.should == 1
         end
 
         it 'returns 403 for an invalid key' do
@@ -716,8 +736,8 @@ describe TopicsController do
         end
 
         it 'triggers a change of category' do
-          Topic.any_instance.expects(:change_category).with('incredible').returns(true)
-          xhr :put, :update, topic_id: @topic.id, slug: @topic.title, category: 'incredible'
+          Topic.any_instance.expects(:change_category_to_id).with(123).returns(true)
+          xhr :put, :update, topic_id: @topic.id, slug: @topic.title, category_id: 123
         end
 
         it "returns errors with invalid titles" do
@@ -726,8 +746,8 @@ describe TopicsController do
         end
 
         it "returns errors with invalid categories" do
-          Topic.any_instance.expects(:change_category).returns(false)
-          xhr :put, :update, topic_id: @topic.id, slug: @topic.title, category: ''
+          Topic.any_instance.expects(:change_category_to_id).returns(false)
+          xhr :put, :update, topic_id: @topic.id, slug: @topic.title
           expect(response).not_to be_success
         end
 
@@ -737,8 +757,8 @@ describe TopicsController do
           end
 
           it "can add a category to an uncategorized topic" do
-            Topic.any_instance.expects(:change_category).with('incredible').returns(true)
-            xhr :put, :update, topic_id: @topic.id, slug: @topic.title, category: 'incredible'
+            Topic.any_instance.expects(:change_category_to_id).with(456).returns(true)
+            xhr :put, :update, topic_id: @topic.id, slug: @topic.title, category_id: 456
             response.should be_success
           end
         end
@@ -840,6 +860,50 @@ describe TopicsController do
         Topic.any_instance.expects(:set_auto_close).with(nil, anything)
         xhr :put, :autoclose, topic_id: @topic.id, auto_close_time: nil
       end
+    end
+
+  end
+
+  describe 'make_banner' do
+
+    it 'needs you to be a staff member' do
+      log_in
+      xhr :put, :make_banner, topic_id: 99
+      response.should be_forbidden
+    end
+
+    describe 'when logged in' do
+
+      it "changes the topic archetype to 'banner'" do
+        topic = Fabricate(:topic, user: log_in(:admin))
+        Topic.any_instance.expects(:make_banner!)
+
+        xhr :put, :make_banner, topic_id: topic.id
+        response.should be_success
+      end
+
+    end
+
+  end
+
+  describe 'remove_banner' do
+
+    it 'needs you to be a staff member' do
+      log_in
+      xhr :put, :remove_banner, topic_id: 99
+      response.should be_forbidden
+    end
+
+    describe 'when logged in' do
+
+      it "resets the topic archetype" do
+        topic = Fabricate(:topic, user: log_in(:admin))
+        Topic.any_instance.expects(:remove_banner!)
+
+        xhr :put, :remove_banner, topic_id: topic.id
+        response.should be_success
+      end
+
     end
 
   end

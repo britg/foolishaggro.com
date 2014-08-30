@@ -1,15 +1,14 @@
 /*global Modernizr:true*/
 
 /**
-  Initializes the `Discourse.Capabilities` singleton by sniffing out the browser
-  capabilities.
+  Initializes an object that lets us know about our capabilities.
 **/
 export default {
   name: "sniff-capabilities",
-  initialize: function() {
+  initialize: function(container, application) {
     var $html = $('html'),
         touch = $html.hasClass('touch') || (Modernizr.prefixed("MaxTouchPoints", navigator) > 1),
-        caps = Discourse.Capabilities.current();
+        caps = Ember.Object.create();
 
     // Store the touch ability in our capabilities object
     caps.set('touch', touch);
@@ -23,6 +22,11 @@ export default {
 
     // We consider high res a device with 1280 horizontal pixels. High DPI tablets like
     // iPads should report as 1024.
-    caps.set('highRes', Modernizr.mq("only screen and (min-width: 1280px)"));
+    caps.set('highRes', window.screen.width >= 1280);
+
+    // Inject it
+    application.register('capabilities:main', caps, { instantiate: false });
+    application.inject('view', 'capabilities', 'capabilities:main');
+    application.inject('controller', 'capabilities', 'capabilities:main');
   }
 };

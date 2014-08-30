@@ -21,6 +21,10 @@ class DiscourseSassCompiler
   def initialize(scss, target)
     @scss = scss
     @target = target
+
+    unless Sass::Script::Functions < Sprockets::SassFunctions
+      Sass::Script::Functions.send :include, Sprockets::SassFunctions
+    end
   end
 
   # Compiles the given scss and output the css as a string.
@@ -45,7 +49,7 @@ class DiscourseSassCompiler
       style: :expanded
     }
 
-    ::Sass::Engine.new(@scss, {
+    css = ::Sass::Engine.new(@scss, {
       syntax: :scss,
       cache: false,
       read_cache: false,
@@ -56,6 +60,17 @@ class DiscourseSassCompiler
         environment: context.environment
       }
     }.merge(debug_opts)).render
+
+    # Check if CSS needs to be RTLed after compilation
+    # and run RTLit gem on compiled CSS if true and RTLit gem is available
+    css_output = css
+    if GlobalSetting.rtl_css
+      begin
+        require 'rtlit'
+        css_output = RTLit::Converter.to_rtl(css) if defined?(RTLit)
+      rescue; end
+    end
+    css_output
   end
 
 end
