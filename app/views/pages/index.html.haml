@@ -28,7 +28,10 @@
     .topic
       %h3.title
         Development livestreams daily on
-        = image_tag("pages/twitch_logo.png")
+        = link_to image_tag("pages/twitch_logo.png"), "https://twitch.tv/britgtx"
+      %p
+        = link_to "Click here", "https://twitch.tv/britgtx"
+        to subscribe and get notified when we stream.
 
     :erb
       <object type="application/x-shockwave-flash" height="458" width="750" id="live_embed_player_flash" data="http://www.twitch.tv/widgets/live_embed_player.swf?channel=britgtx" bgcolor="#000000"><param name="allowFullScreen" value="true" /><param name="allowScriptAccess" value="always" /><param name="allowNetworking" value="all" /><param name="movie" value="http://www.twitch.tv/widgets/live_embed_player.swf" /><param name="flashvars" value="hostname=www.twitch.tv&channel=britgtx&auto_play=true&start_volume=25" /></object>
