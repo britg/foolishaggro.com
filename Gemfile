@@ -178,9 +178,7 @@ end
 
 gem 'haml-rails'
 gem 'jquery-rails'
-gem 'anjlab-bootstrap-rails', :require => 'bootstrap-rails',
-                              :github => 'anjlab/bootstrap-rails',
-                              :branch => '3.0.0'
+gem 'bootstrap-sass', '~> 3.0.3.0'
 gem 'rails_autolink'
 
 group :test do

@@ -1,5 +1,5 @@
-@import "twitter/bootstrap";
-@import "bourbon";
+// @import "bourbon";
+@import "bootstrap";
 
 body {
   padding-bottom: 40px;
@@ -60,7 +60,7 @@ header {
   .logo {
     height: 20px;
     float: right;
-    margin-right: 10px;
+    margin-right: 40px;
     margin-top: 16px;
   }
 }
