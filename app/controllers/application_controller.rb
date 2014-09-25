@@ -256,12 +256,12 @@ class ApplicationController < ActionController::Base
 
     def custom_html_json
       data = {
-        top: SiteContent.content_for(:top),
-        bottom: SiteContent.content_for(:bottom)
+        top: SiteText.text_for(:top),
+        bottom: SiteText.text_for(:bottom)
       }
 
       if SiteSetting.tos_accept_required && !current_user
-        data[:tos_signup_form_message] = SiteContent.content_for(:tos_signup_form_message)
+        data[:tos_signup_form_message] = SiteText.text_for(:tos_signup_form_message)
       end
 
       if DiscoursePluginRegistry.custom_html
@@ -292,7 +292,6 @@ class ApplicationController < ActionController::Base
 
     def json_result(obj, opts={})
       if yield(obj)
-
         json = success_json
 
         # If we were given a serializer, add the class to the json that comes back
@@ -302,7 +301,15 @@ class ApplicationController < ActionController::Base
 
         render json: MultiJson.dump(json)
       else
-        render_json_error(obj)
+        error_obj = nil
+        if opts[:additional_errors]
+          error_target = opts[:additional_errors].find do |o|
+            target = obj.send(o)
+            target && target.errors.present?
+          end
+          error_obj = obj.send(error_target) if error_target
+        end
+        render_json_error(error_obj || obj)
       end
     end
 
@@ -347,6 +354,18 @@ class ApplicationController < ActionController::Base
     end
 
   protected
+
+    def render_post_json(post, add_raw=true)
+      post_serializer = PostSerializer.new(post, scope: guardian, root: false)
+      post_serializer.add_raw = add_raw
+      post_serializer.topic_slug = post.topic.slug if post.topic.present?
+
+      counts = PostAction.counts_for([post], current_user)
+      if counts && counts = counts[post.id]
+        post_serializer.post_actions = counts
+      end
+      render_json_dump(post_serializer)
+    end
 
     def api_key_valid?
       request["api_key"] && ApiKey.where(key: request["api_key"]).exists?

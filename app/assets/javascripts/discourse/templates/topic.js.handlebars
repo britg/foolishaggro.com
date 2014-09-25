@@ -1,7 +1,7 @@
 <div class='container'>
   {{custom-html "top"}}
-  {{Discourse.globalNotice}}
-  {{discourse-banner user=currentUser banner=Discourse.banner overlay=view.hasScrolled}}
+  {{global-notice}}
+  {{discourse-banner user=currentUser banner=site.banner overlay=view.hasScrolled}}
 </div>
 
 {{#if postStream.loaded}}
@@ -17,7 +17,7 @@
 
           {{#if editingTopic}}
             {{#if isPrivateMessage}}
-              <span class="private-message-glyph">{{icon envelope}}</span>
+              <span class="private-message-glyph">{{fa-icon envelope}}</span>
             {{else}}
               {{category-chooser valueAttribute="id" value=newCategoryId source=category_id}}
             {{/if}}
@@ -27,7 +27,9 @@
             <button class='btn btn-small no-text' {{action cancelEditingTopic}}><i class='fa fa-times'></i></button>
           {{else}}
             <h1>
-              <span class="private-message-glyph"><i class='fa fa-envelope'></i></span>
+              {{#unless is_warning}}
+                <span class="private-message-glyph"><i class='fa fa-envelope'></i></span>
+              {{/unless}}
               {{#unless isPrivateMessage}}
                 {{#if category.parentCategory}}
                   {{bound-category-link category.parentCategory}}
@@ -59,7 +61,7 @@
 
   <div class="container posts">
 
-    {{view Discourse.SelectedPostsView}}
+    {{view "selected-posts"}}
 
     <div class="row">
       <section class="topic-area" id='topic' data-topic-id='{{unbound id}}'>
@@ -151,5 +153,5 @@
 {{/if}}
 
 {{#if currentUser.canManageTopic}}
-  {{render "topicAdminMenu" content}}
+  {{render "topic-admin-menu" content}}
 {{/if}}

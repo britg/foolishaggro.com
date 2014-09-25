@@ -23,10 +23,7 @@ uk:
     dates:
       tiny:
         half_a_minute: "< 1 хв"
-        date_month: "D MMM"
         date_year: "MMM 'YY"
-      medium:
-        date_year: "D MMM YYYY"
       medium_with_ago:
         x_hours:
           one: "1 годину тому"
@@ -176,7 +173,6 @@ uk:
       phone: Телефон
       other_accounts: Інші облікові записи з цією IP адресою
     user:
-      said: "{{username}} сказав(ла):"
       profile: "Профіль"
       mute: "Mute"
       edit: "Редагувати налаштування"
@@ -271,7 +267,6 @@ uk:
         prefilled: "Електронна скринька відповідає цьому зареєстрованому імені користувача."
       locale:
         title: "Interface language"
-        instructions: "The language used by the forum interface. It will change when you refresh the page."
         default: "(default)"
       password_confirmation:
         title: "Пароль ще раз"
@@ -289,7 +284,6 @@ uk:
         bi_weekly: "кожні два тижні"
       email_direct: "Отримувати електронний лист, коли хтось цитує Вас, відповідає на Ваш допис або згадує Ваше @Ім'я"
       email_private_messages: "Отримувати електронний лист, коли хтось надсилає Вам приватне повідомлення"
-      email_always: "Отримувати електронні листи та виклади новин навіть якщо Ви активні на форумі"
       other_settings: "Інше"
       categories_settings: "Категорії"
       new_topic_duration:
@@ -318,13 +312,11 @@ uk:
         create: "Надіслати Запрошення"
         bulk_invite:
           text: "Масове Запрошення з Файлу"
-          uploading: "ЗАВАНТАЖЕННЯ"
       password:
         title: "Пароль"
         too_short: "Ваш пароль надто короткий."
         common: "Цей пароль надто простий."
         ok: "Ваш пароль добрий."
-        instructions: "Має містити щонайменше %{count} символів."
       ip_address:
         title: "Остання IP-адреса"
       registration_ip_address:
@@ -536,7 +528,6 @@ uk:
         close_topics: "Закрити теми"
         notification_level: "Change Notification Level"
       none:
-        starred: "Ви ще не позначили зірочкою жодної теми. Щоб позначити тему, клацніть зірочку біля її назви."
         unread: "У Вас немає непрочитаних тем."
         new: "У Вас немає нових тем."
         read: "Ви ще не прочитали жодної теми."
@@ -639,8 +630,6 @@ uk:
         pin: "Закріпити тему"
         unarchive: "Розархівувати тему"
         archive: "Заархівувати тему"
-        invisible: "Зробити невидимою"
-        visible: "Зробити видимою"
         reset_read: "Скинути дані про прочитаність"
         multi_select: "Перемістити дописи"
       reply:
@@ -757,7 +746,6 @@ uk:
         delete_replies:
           yes_value: "Так, відповіді також видалити"
           no_value: "Ні, тільки цей допис"
-        wiki: "Wiki допис"
       actions:
         flag: 'Поскаржитися'
         it_too:
@@ -814,9 +802,6 @@ uk:
           side_by_side:
             title: "Показати бік-о-бік результати виведення"
             button: '<i class="fa fa-columns"></i> HTML'
-          side_by_side_markdown:
-            title: "Показати бік-о-бік коди розмітки"
-            button: '<i class="fa fa-columns"></i> Розмітка'
         details:
           edited_by: "Редаговано"
     category:
@@ -899,8 +884,6 @@ uk:
         help: "цю тему закріплено; вона буде відображатися вгорі своєї категорії"
       archived:
         help: "цю тему заархівовано; вона заморожена і її не можна змінити"
-      invisible:
-        help: "ця тема є невидимою; вона не відображається у списках тем, і до неї можна отримати доступ лише за прямим посиланням"
     posts: "Дописи"
     posts_long: "тема містить {{number}} дописів"
     original_post: "Перший допис"
@@ -968,7 +951,6 @@ uk:
         this_week: "This week"
         today: "Today"
         other_periods: "see more top topics"
-    browser_update: 'На жаль, <a href="http://www.discourse.org/faq/#browser">Ваш веб-оглядач надто застарілий, щоб працювати із цим Discourse-форумом</a>. Будь ласка, <a href="http://browsehappy.com">оновіть свій оглядач</a>.'
     permission_types:
       full: "Створювати / Відповідати / Бачити"
       create_post: "Відповідати / Бачити"
@@ -1072,7 +1054,6 @@ uk:
         confirm_revoke: "Are you sure you want to revoke that key?"
         info_html: "Your API key will allow you to create and update topics using JSON calls."
         all_users: "All Users"
-        note_html: "Keep this key <strong>secret</strong>, all users that have it may create arbitrary posts on the forum as any user."
       backups:
         title: "Backups"
         menu:
@@ -1093,8 +1074,6 @@ uk:
           filename: "Filename"
           size: "Size"
         upload:
-          text: "UPLOAD"
-          uploading: "UPLOADING"
           success: "'{{filename}}' has successfully been uploaded."
           error: "There has been an error while uploading '{{filename}}': {{message}}"
         operations:
@@ -1259,12 +1238,6 @@ uk:
             label: "Нова:"
             ip_address: "IP-адреса"
             add: "Додати"
-      impersonate:
-        title: "Втілитися у користувача"
-        username_or_email: "Ім'я користувача або електронна скринька"
-        help: "Використовуйте цей інструмент, щоб втілитися в інший обліковий запис для відлагоджувальних потреб."
-        not_found: "Цього користувача не вдалося знайти."
-        invalid: "Даруйте, Ви не можете втілитися в цього користувача."
       users:
         title: 'Користувачі'
         create: 'Додати адміністратора'
@@ -1286,9 +1259,6 @@ uk:
           pending: 'Користувачі, що очікують на перевірку'
           newuser: 'Користувачі з Рівнем довіри 0 (Новий користувач)'
           basic: 'Користувачі з Рівнем довіри 1 (Базовий користувач)'
-          regular: 'Користувачі з Рівнем довіри 2 (Звичайний користувач)'
-          leader: 'Користувачі з Рівнем довіри 3 (Провідник)'
-          elder: 'Користувачі з Рівнем довіри 4 (Старійшина)'
           admins: 'Адміністратори'
           moderators: 'Модератори'
           blocked: 'Заблоковані користувачі'
@@ -1370,7 +1340,7 @@ uk:
           posts_read: "Прочитано Дописів"
           posts_read_all_time: "Прочитано дописів (весь час)"
           flagged_posts: "Оскаржені дописи"
-      site_content:
+      site_text:
         none: "Виберіть тип вмісту, щоб почати його редагувати."
         title: 'Вміст'
         edit: "Редагування вмісту сайта"
@@ -1424,15 +1394,12 @@ uk:
       navigation:
         title: 'Навігація'
         back: '<b>u</b> Назад'
-        up_down: '<b>k</b>/<b>j</b> Перемістити виділення вгору/вниз'
         open: '<b>o</b> або <b>Enter</b> Відкрити обрану тему'
-        next_prev: '<b>`</b>/<b>~</b> Наступний/попередній розділ'
       application:
         title: 'Застосунок'
         create: '<b>c</b> Створити нову тему'
         notifications: '<b>n</b> Відкрити сповіщення'
         search: '<b>/</b> Пошук'
-        help: '<b>?</b> Відкрити довідку з поєднань клавіш'
       actions:
         title: 'Дії'
         star: '<b>f</b> Позначити тему зірочкою'
@@ -1466,6 +1433,3 @@ uk:
           name: Редактор
         basic_user:
           description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/4">Надані</a> всі основні функції спільноти
-        regular_user:
-          name: Звичайний
-          description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/5">Надано</a> запрошень

@@ -241,6 +241,36 @@ class PostsController < ApplicationController
     render nothing: true
   end
 
+  def post_type
+    guardian.ensure_can_change_post_type!
+
+    post = find_post_from_params
+    post.post_type = params[:post_type].to_i
+    post.version += 1
+    post.save
+
+    render nothing: true
+  end
+
+  def rebake
+    guardian.ensure_can_rebake!
+
+    post = find_post_from_params
+    post.rebake!(invalidate_oneboxes: true)
+
+    render nothing: true
+  end
+
+  def unhide
+    post = find_post_from_params
+
+    guardian.ensure_can_unhide!(post)
+
+    post.unhide!
+
+    render nothing: true
+  end
+
   def flagged_posts
     params.permit(:offset, :limit)
     guardian.ensure_can_see_flagged_posts!
@@ -284,18 +314,6 @@ class PostsController < ApplicationController
 
     guardian.ensure_can_see!(post_revision)
     post_revision
-  end
-
-  def render_post_json(post)
-    post_serializer = PostSerializer.new(post, scope: guardian, root: false)
-    post_serializer.add_raw = true
-    post_serializer.topic_slug = post.topic.slug if post.topic.present?
-
-    counts = PostAction.counts_for([post], current_user)
-    if counts && counts = counts[post.id]
-      post_serializer.post_actions = counts
-    end
-    render_json_dump(post_serializer)
   end
 
   private
@@ -343,12 +361,21 @@ class PostsController < ApplicationController
       permitted << :embed_url
     end
 
+
     params.require(:raw)
-    params.permit(*permitted).tap do |whitelisted|
-        whitelisted[:image_sizes] = params[:image_sizes]
-        # TODO this does not feel right, we should name what meta_data is allowed
-        whitelisted[:meta_data] = params[:meta_data]
+    result = params.permit(*permitted).tap do |whitelisted|
+      whitelisted[:image_sizes] = params[:image_sizes]
+      # TODO this does not feel right, we should name what meta_data is allowed
+      whitelisted[:meta_data] = params[:meta_data]
     end
+
+    # Staff are allowed to pass `is_warning`
+    if current_user.staff?
+      params.permit(:is_warning)
+      result[:is_warning] = (params[:is_warning] == "true")
+    end
+
+    result
   end
 
   def too_late_to(action, post)
@@ -374,6 +401,7 @@ class PostsController < ApplicationController
     # Include deleted posts if the user is staff
     finder = finder.with_deleted if current_user.try(:staff?)
     post = finder.first
+    raise Discourse::NotFound unless post
     # load deleted topic
     post.topic = Topic.with_deleted.find(post.topic_id) if current_user.try(:staff?)
     guardian.ensure_can_see!(post)

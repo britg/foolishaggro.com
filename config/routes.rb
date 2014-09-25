@@ -109,8 +109,11 @@ Discourse::Application.routes.draw do
     post "flags/disagree/:id" => "flags#disagree"
     post "flags/defer/:id" => "flags#defer"
     resources :site_customizations, constraints: AdminConstraint.new
-    resources :site_contents, constraints: AdminConstraint.new
-    resources :site_content_types, constraints: AdminConstraint.new
+    scope "/customize" do
+      resources :site_text, constraints: AdminConstraint.new
+      resources :site_text_types, constraints: AdminConstraint.new
+    end
+
     resources :color_schemes, constraints: AdminConstraint.new
 
     get "version_check" => "versions#show"
@@ -201,6 +204,7 @@ Discourse::Application.routes.draw do
 
   post "users/read-faq" => "users#read_faq"
   get "users/search/users" => "users#search_users"
+  get "users/account-created/" => "users#account_created"
   get "users/password-reset/:token" => "users#password_reset"
   put "users/password-reset/:token" => "users#password_reset"
   get "users/activate-account/:token" => "users#activate_account"
@@ -228,10 +232,11 @@ Discourse::Application.routes.draw do
   delete "users/:username/preferences/user_image" => "users#destroy_user_image", constraints: {username: USERNAME_ROUTE_FORMAT}
   put "users/:username/preferences/avatar/pick" => "users#pick_avatar", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/invited" => "users#invited", constraints: {username: USERNAME_ROUTE_FORMAT}
-  post "users/:username/send_activation_email" => "users#send_activation_email", constraints: {username: USERNAME_ROUTE_FORMAT}
+  post "users/action/send_activation_email" => "users#send_activation_email"
   get "users/:username/activity" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/activity/:filter" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/:username/badges" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
+  get "users/:username/notifications" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
   delete "users/:username" => "users#destroy", constraints: {username: USERNAME_ROUTE_FORMAT}
   get "users/by-external/:external_id" => "users#show"
   get "users/:username/flagged-posts" => "users#show", constraints: {username: USERNAME_ROUTE_FORMAT}
@@ -244,8 +249,8 @@ Discourse::Application.routes.draw do
   get "user_avatar/:hostname/:username/:size/:version.png" => "user_avatars#show",
       format: false, constraints: {hostname: /[\w\.-]+/}
 
-
   get "uploads/:site/:id/:sha.:extension" => "uploads#show", constraints: {site: /\w+/, id: /\d+/, sha: /[a-z0-9]{15,16}/i, extension: /\w{2,}/}
+  get "uploads/:site/:sha" => "uploads#show", constraints: { site: /\w+/, sha: /[a-z0-9]{40}/}
   post "uploads" => "uploads#create"
 
   get "posts/by_number/:topic_id/:post_number" => "posts#by_number"
@@ -262,6 +267,9 @@ Discourse::Application.routes.draw do
   resources :posts do
     put "bookmark"
     put "wiki"
+    put "post_type"
+    put "rebake"
+    put "unhide"
     get "replies"
     get "revisions/:revision" => "posts#revisions"
     put "recover"
@@ -270,7 +278,8 @@ Discourse::Application.routes.draw do
     end
   end
 
-  resources :notifications
+  get "notifications" => "notifications#recent"
+  get "notifications/history" => "notifications#history"
 
   match "/auth/:provider/callback", to: "users/omniauth_callbacks#complete", via: [:get, :post]
   match "/auth/failure", to: "users/omniauth_callbacks#failure", via: [:get, :post]
@@ -352,6 +361,7 @@ Discourse::Application.routes.draw do
   get 'embed/count' => 'embed#count'
 
   # Topic routes
+  get "t/id_for/:slug" => "topics#id_for_slug"
   get "t/:slug/:topic_id/wordpress" => "topics#wordpress", constraints: {topic_id: /\d+/}
   get "t/:slug/:topic_id/moderator-liked" => "topics#moderator_liked", constraints: {topic_id: /\d+/}
   get "t/:topic_id/wordpress" => "topics#wordpress", constraints: {topic_id: /\d+/}

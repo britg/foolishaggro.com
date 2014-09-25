@@ -94,7 +94,7 @@ class TopicQuery
     score = "#{period}_score"
     create_list(:top, unordered: true) do |topics|
       topics = topics.joins(:top_topic).where("top_topics.#{score} > 0")
-      if period == :yearly && @user.try(:trust_level) == TrustLevel.levels[:newuser]
+      if period == :yearly && @user.try(:trust_level) == TrustLevel[0]
         topics.order(TopicQuerySQL.order_top_with_pinned_category_for(score))
       else
         topics.order(TopicQuerySQL.order_top_for(score))
@@ -246,7 +246,7 @@ class TopicQuery
       end
 
       result = apply_ordering(result, options)
-      result = result.listable_topics.includes(category: :topic_only_relative_url)
+      result = result.listable_topics.includes(:category)
       result = result.where('categories.name is null or categories.name <> ?', options[:exclude_category]).references(:categories) if options[:exclude_category]
 
       # Don't include the category topics if excluded
@@ -288,6 +288,10 @@ class TopicQuery
           result = result.where('topics.closed')
         when 'archived'
           result = result.where('topics.archived')
+        when 'visible'
+          result = result.where('topics.visible')
+        when 'invisible'
+          result = result.where('NOT topics.visible')
         end
       end
 

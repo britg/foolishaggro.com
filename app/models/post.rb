@@ -153,15 +153,15 @@ class Post < ActiveRecord::Base
     return raw if cook_method == Post.cook_methods[:raw_html]
 
     # Default is to cook posts
-    cooked = if !self.user || SiteSetting.leader_links_no_follow || !self.user.has_trust_level?(:leader)
-      post_analyzer.cook(*args)
-    else
-      # At trust level 3, we don't apply nofollow to links
-      cloned = args.dup
-      cloned[1] ||= {}
-      cloned[1][:omit_nofollow] = true
-      post_analyzer.cook(*cloned)
-    end
+    cooked = if !self.user || SiteSetting.tl3_links_no_follow || !self.user.has_trust_level?(TrustLevel[3])
+               post_analyzer.cook(*args)
+             else
+               # At trust level 3, we don't apply nofollow to links
+               cloned = args.dup
+               cloned[1] ||= {}
+               cloned[1][:omit_nofollow] = true
+               post_analyzer.cook(*cloned)
+             end
     Plugin::Filter.apply( :after_post_cook, self, cooked )
   end
 
@@ -213,7 +213,7 @@ class Post < ActiveRecord::Base
 
   # Prevent new users from posting the same hosts too many times.
   def has_host_spam?
-    return false if acting_user.present? && acting_user.has_trust_level?(:basic)
+    return false if acting_user.present? && acting_user.has_trust_level?(TrustLevel[1])
 
     total_hosts_usage.each do |_, count|
       return true if count >= SiteSetting.newuser_spam_host_threshold
@@ -293,6 +293,7 @@ class Post < ActiveRecord::Base
     self.update_attributes(hidden: false, hidden_at: nil, hidden_reason_id: nil)
     self.topic.update_attributes(visible: true)
     save(validate: false)
+    publish_change_to_clients!(:acted)
   end
 
   def url
@@ -351,6 +352,8 @@ class Post < ActiveRecord::Base
 
     # make sure we trigger the post process
     trigger_post_process(true)
+
+    publish_change_to_clients!(:rebaked)
 
     new_cooked != old_cooked
   end
@@ -525,7 +528,7 @@ class Post < ActiveRecord::Base
   end
 
   def save_revision
-    modifications = changes.extract!(:raw, :cooked, :edit_reason, :user_id, :wiki)
+    modifications = changes.extract!(:raw, :cooked, :edit_reason, :user_id, :wiki, :post_type)
     # make sure cooked is always present (oneboxes might not change the cooked post)
     modifications["cooked"] = [self.cooked, self.cooked] unless modifications["cooked"].present?
     PostRevision.create!(

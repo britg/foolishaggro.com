@@ -262,11 +262,11 @@ describe User do
   describe "trust levels" do
 
     # NOTE be sure to use build to avoid db calls
-    let(:user) { Fabricate.build(:user, trust_level: TrustLevel.levels[:newuser]) }
+    let(:user) { Fabricate.build(:user, trust_level: TrustLevel[0]) }
 
     it "sets to the default trust level setting" do
-      SiteSetting.expects(:default_trust_level).returns(TrustLevel.levels[:elder])
-      User.new.trust_level.should == TrustLevel.levels[:elder]
+      SiteSetting.default_trust_level = TrustLevel[4]
+      User.new.trust_level.should == TrustLevel[4]
     end
 
     describe 'has_trust_level?' do
@@ -276,22 +276,22 @@ describe User do
       end
 
       it "is true for your basic level" do
-        user.has_trust_level?(:newuser).should be_true
+        user.has_trust_level?(TrustLevel[0]).should be_true
       end
 
       it "is false for a higher level" do
-        user.has_trust_level?(:regular).should be_false
+        user.has_trust_level?(TrustLevel[2]).should be_false
       end
 
       it "is true if you exceed the level" do
-        user.trust_level = TrustLevel.levels[:elder]
-        user.has_trust_level?(:newuser).should be_true
+        user.trust_level = TrustLevel[4]
+        user.has_trust_level?(TrustLevel[1]).should be_true
       end
 
       it "is true for an admin even with a low trust level" do
-        user.trust_level = TrustLevel.levels[:new]
+        user.trust_level = TrustLevel[0]
         user.admin = true
-        user.has_trust_level?(:elder).should be_true
+        user.has_trust_level?(TrustLevel[1]).should be_true
       end
 
     end
@@ -303,7 +303,7 @@ describe User do
 
       it "is a moderator if the user level is moderator" do
         user.moderator = true
-        user.has_trust_level?(:elder).should be_true
+        user.has_trust_level?(TrustLevel[4]).should be_true
       end
 
       it "is staff if the user is an admin" do
@@ -402,6 +402,22 @@ describe User do
       @user2.email = " example@example.com "
 
       @user.email_hash.should == @user2.email_hash
+    end
+  end
+
+  describe 'associated_accounts' do
+    it 'should correctly find social associations' do
+      user = Fabricate(:user)
+      user.associated_accounts.should == I18n.t("user.no_accounts_associated")
+
+      TwitterUserInfo.create(user_id: user.id, screen_name: "sam", twitter_user_id: 1)
+      FacebookUserInfo.create(user_id: user.id, username: "sam", facebook_user_id: 1)
+      GoogleUserInfo.create(user_id: user.id, email: "sam@sam.com", google_user_id: 1)
+      GithubUserInfo.create(user_id: user.id, screen_name: "sam", github_user_id: 1)
+
+      user.reload
+      user.associated_accounts.should == "Twitter(sam), Facebook(sam), Google(sam@sam.com), Github(sam)"
+
     end
   end
 
@@ -844,7 +860,7 @@ describe User do
   end
 
   describe "posted too much in topic" do
-    let!(:user) { Fabricate(:user, trust_level: TrustLevel.levels[:newuser]) }
+    let!(:user) { Fabricate(:user, trust_level: TrustLevel[0]) }
     let!(:topic) { Fabricate(:post).topic }
 
     before do
@@ -877,7 +893,7 @@ describe User do
 
     it "returns false for a user who created the topic" do
       topic_user = topic.user
-      topic_user.trust_level = TrustLevel.levels[:newuser]
+      topic_user.trust_level = TrustLevel[0]
       topic.user.posted_too_much_in_topic?(topic.id).should be_false
     end
 
@@ -1148,6 +1164,32 @@ describe User do
       all_users.include?(inactive).should be_true
       all_users.include?(inactive_old).should be_false
     end
+  end
+
+  describe "hash_passwords" do
+
+    let(:too_long) { "x" * (User.max_password_length + 1) }
+
+    def hash(password, salt)
+      User.new.send(:hash_password, password, salt)
+    end
+
+    it "returns the same hash for the same password and salt" do
+      hash('poutine', 'gravy').should == hash('poutine', 'gravy')
+    end
+
+    it "returns a different hash for the same salt and different password" do
+      hash('poutine', 'gravy').should_not == hash('fries', 'gravy')
+    end
+
+    it "returns a different hash for the same password and different salt" do
+      hash('poutine', 'gravy').should_not == hash('poutine', 'cheese')
+    end
+
+    it "raises an error when passwords are too long" do
+      -> { hash(too_long, 'gravy') }.should raise_error
+    end
+
   end
 
 end

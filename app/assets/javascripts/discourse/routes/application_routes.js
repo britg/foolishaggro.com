@@ -17,6 +17,7 @@ Discourse.Route.buildRoutes(function() {
     this.route('fromParams', { path: '/' });
     this.route('fromParamsNear', { path: '/:nearPost' });
   });
+  this.resource('topicBySlug', { path: '/t/:slug' });
 
   this.resource('discovery', { path: '/' }, function() {
     router = this;
@@ -69,6 +70,7 @@ Discourse.Route.buildRoutes(function() {
     });
 
     this.route('badges');
+    this.route('notifications');
     this.route('flaggedPosts', { path: '/flagged-posts' });
     this.route('deletedPosts', { path: '/deleted-posts' });
 

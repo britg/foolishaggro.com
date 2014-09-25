@@ -37,6 +37,9 @@ en:
       long_with_year_no_time: "MMM D, YYYY"
       long_date_with_year: "MMM D, 'YY LT"
       long_date_without_year: "MMM D, LT"
+      long_date_with_year_without_time: "MMM D, 'YY"
+      long_date_without_year_with_linebreak: "MMM D <br/>LT"
+      long_date_with_year_with_linebreak: "MMM D, 'YY <br/>LT"
       tiny:
         half_a_minute: "< 1m"
         less_than_x_seconds:
@@ -66,7 +69,7 @@ en:
         almost_x_years:
           one:   "1y"
           other: "%{count}y"
-        date_month: "D MMM"
+        date_month: "MMM D"
         date_year: "MMM 'YY"
       medium:
         x_minutes:
@@ -78,7 +81,7 @@ en:
         x_days:
           one: "1 day"
           other: "%{count} days"
-        date_year: "D MMM YYYY"
+        date_year: "MMM D, 'YY"
       medium_with_ago:
         x_minutes:
           one: "1 min ago"
@@ -201,6 +204,7 @@ en:
     disable: "Disable"
     undo: "Undo"
     revert: "Revert"
+    failed: "Failed"
 
     banner:
       close: "Dismiss this banner."
@@ -288,7 +292,7 @@ en:
       no_other_accounts: (none)
 
     user:
-      said: "{{username}} said:"
+      said: "{{username}}:"
       profile: "Profile"
       mute: "Mute"
       edit: "Edit Preferences"
@@ -314,11 +318,11 @@ en:
       admin_tooltip: "This user is an admin"
       suspended_notice: "This user is suspended until {{date}}."
       suspended_reason: "Reason: "
-      mailing_list_mode: "Receive an email every time a post is made on the forum (unless you mute the topic or category)"
+      mailing_list_mode: "Receive an email for every new post (unless you mute the topic or category)"
       watched_categories: "Watched"
       watched_categories_instructions: "You will automatically watch all new topics in these categories. You will be notified of all new posts and topics, plus the count of unread and new posts will also appear next to the topic's listing."
       tracked_categories: "Tracked"
-      tracked_categories_instructions: "You will automatically track all new topics in these categories. A count of unread and new posts will appear next to the topic's listing."
+      tracked_categories_instructions: "You will automatically track all new topics in these categories. A count of unread and new posts will appear next to the topic."
       muted_categories: "Muted"
       muted_categories_instructions: "You will not be notified of anything about new topics in these categories, and they will not appear on your unread tab."
       delete_account: "Delete My Account"
@@ -328,10 +332,11 @@ en:
       unread_message_count: "Messages"
 
       staff_counters:
-        flags_given: "helpful flags cast"
+        flags_given: "helpful flags"
         flagged_posts: "flagged posts"
         deleted_posts: "deleted posts"
         suspensions: "suspensions"
+        warnings_received: "warnings"
 
       messages:
         all: "All"
@@ -377,7 +382,7 @@ en:
 
       email:
         title: "Email"
-        instructions: "Will never be shown to the public."
+        instructions: "Never shown to the public."
         ok: "Looks good. We will email you to confirm."
         invalid: "Please enter a valid email address."
         authenticated: "Your email has been authenticated by {{provider}}."
@@ -385,12 +390,12 @@ en:
 
       name:
         title: "Name"
-        instructions: "Longer version of your name."
+        instructions: "Your full name."
         too_short: "Your name is too short."
         ok: "Your name looks good."
       username:
         title: "Username"
-        instructions: "Must be unique, no spaces, short."
+        instructions: "Unique, no spaces, short."
         short_instructions: "People can mention you as @{{username}}."
         available: "Your username is available."
         global_match: "Email matches the registered username."
@@ -404,7 +409,7 @@ en:
 
       locale:
         title: "Interface language"
-        instructions: "The language used by the forum interface. It will change when you refresh the page."
+        instructions: "User interface language. It will change when you refresh the page."
         default: "(default)"
 
       password_confirmation:
@@ -426,7 +431,7 @@ en:
 
       email_direct: "Receive an email when someone quotes you, replies to your post, or mentions your @username"
       email_private_messages: "Receive an email when someone sends you a private message"
-      email_always: "Receive email notifications and email digests even if you are active on the forum"
+      email_always: "Do not suppress email notifications when I am active on the site"
 
       other_settings: "Other"
       categories_settings: "Categories"
@@ -474,7 +479,7 @@ en:
         bulk_invite:
           none: "You haven't invited anyone here yet. You can send individual invites, or invite a bunch of people at once by <a href='https://meta.discourse.org/t/send-bulk-invites/16468'>uploading a bulk invite file</a>."
           text: "Bulk Invite from File"
-          uploading: "UPLOADING"
+          uploading: "Uploading..."
           success: "File uploaded successfully, you will be notified shortly with progress."
           error: "There was an error uploading '{{filename}}': {{message}}"
 
@@ -483,8 +488,9 @@ en:
         too_short: "Your password is too short."
         common: "That password is too common."
         ok: "Your password looks good."
-        instructions: "Must be at least %{count} characters."
+        instructions: "At least %{count} characters."
 
+      associated_accounts: "Associated accounts"
       ip_address:
         title: "Last IP Address"
       registration_ip_address:
@@ -515,6 +521,7 @@ en:
         network: "Please check your connection."
         network_fixed: "Looks like it's back."
         server: "Error code: {{status}}"
+        forbidden: "You're not allowed to view that."
         unknown: "Something went wrong."
       buttons:
         back: "Go Back"
@@ -525,7 +532,7 @@ en:
     read_only_mode:
       enabled: "An administrator enabled read-only mode. You can continue to browse the site but interactions may not work."
       login_disabled: "Login is disabled while the site is in read only mode."
-    too_few_topics_notice: "Create at least 5 public topics and %{posts} public posts to get discussion started. New users will not be able to earn trust levels unless there's content for them to read. This message appears only to staff."
+    too_few_topics_notice: "Create at least 5 public topics and %{posts} public posts to get discussion started. New users cannot earn trust levels unless there's content for them to read. This message appears only to staff."
 
     learn_more: "learn more..."
 
@@ -544,7 +551,7 @@ en:
     last_post_lowercase: last post
 
     summary:
-      enabled_description: "You're viewing a summary of this topic: just the most interesting posts as determined by the community. To see all posts again, click below."
+      enabled_description: "You're viewing a summary of this topic: the most interesting posts as determined by the community."
       description: "There are <b>{{count}}</b> replies."
       description_time: "There are <b>{{count}}</b> replies with an estimated read time of <b>{{readingTime}} minutes</b>."
       enable: 'Summarize This Topic'
@@ -580,7 +587,11 @@ en:
       reset: "Reset Password"
       complete_username: "If an account matches the username <b>%{username}</b>, you should receive an email with instructions on how to reset your password shortly."
       complete_email: "If an account matches <b>%{email}</b>, you should receive an email with instructions on how to reset your password shortly."
+      complete_username_found: "We found an account that matches the username <b>%{username}</b>, you should receive an email with instructions on how to reset your password shortly."
+      complete_email_found: "We found an account that matches <b>%{email}</b>, you should receive an email with instructions on how to reset your password shortly."
 
+      complete_username_not_found: "No account matches the username <b>%{username}</b>"
+      complete_email_not_found: "No account matches <b>%{email}</b>"
     login:
       title: "Log In"
       username: "User"
@@ -597,6 +608,7 @@ en:
       awaiting_approval: "Your account has not been approved by a staff member yet. You will be sent an email when it is approved."
       requires_invite: "Sorry, access to this forum is by invite only."
       not_activated: "You can't log in yet. We previously sent an activation email to you at <b>{{sentTo}}</b>. Please follow the instructions in that email to activate your account."
+      not_allowed_from_ip_address: "You can't login from that IP address."
       resend_activation_email: "Click here to send the activation email again."
       sent_activation_email_again: "We sent another activation email to you at <b>{{currentEmail}}</b>. It might take a few minutes for it to arrive; be sure to check your spam folder."
       google:
@@ -619,6 +631,7 @@ en:
         message: "Authenticating with GitHub (make sure pop up blockers are not enabled)"
 
     composer:
+      add_warning: "This is an official warning."
       posting_not_on_topic: "Which topic do you want to reply to?"
       saving_draft_tip: "saving"
       saved_draft_tip: "saved"
@@ -728,6 +741,7 @@ en:
       title: "search topics, posts, users, or categories"
       no_results: "No results found."
       searching: "Searching ..."
+      post_format: "#{{post_number}} by {{username}}"
 
       context:
         user: "Search posts by @{{username}}"
@@ -758,13 +772,14 @@ en:
         actions: "Bulk Actions"
         change_category: "Change Category"
         close_topics: "Close Topics"
+        archive_topics: "Archive Topics"
         notification_level: "Change Notification Level"
         selected:
           one: "You have selected <b>1</b> topic."
           other: "You have selected <b>{{count}}</b> topics."
 
       none:
-        starred: "You haven't starred any topics yet. To star a topic, click or tap the star next to the title."
+        starred: "You have no starred topics."
         unread: "You have no unread topics."
         new: "You have no new topics."
         read: "You haven't read any topics yet."
@@ -774,8 +789,9 @@ en:
         category: "There are no {{category}} topics."
         top: "There are no top topics."
         educate:
-          new: '<p>By default, topics are considered new when they were created in the last 2 days.</p><p>You can change this in your <a href="%{userPrefsUrl}">preferences</a>.</p>'
-          unread: '<p>By default, unread indicators will only appear for topics that you have:</p><ul><li>Created</li><li>Replied to</li><li>Read for more than 4 minutes</li></ul><p>Or, if you have explicitly set the topic to Tracked or Watched via the notification control at the bottom of each topic.</p><p>You can change this in your <a href="%{userPrefsUrl}">preferences</a>.</p>'
+          new: '<p>Your new topics appear here.</p><p>By default, topics are considered new and will show a <span class="badge new-topic badge-notification" style="vertical-align:middle;line-height:inherit;">new</span> indicator if they were created in the last 2 days.</p><p>You can change this in your <a href="%{userPrefsUrl}">preferences</a>.</p>'
+          unread: '<p>Your unread topics appear here.</p><p>By default, topics are considered unread and will show unread counts <span class="badge new-posts badge-notification">1</span> if you:</p><ul><li>Created the topic</li><li>Replied to the topic</li><li>Read the topic for more than 4 minutes</li></ul><p>Or if you have explicitly set the topic to Tracked or Watched via the notification control at the bottom of each topic.</p><p>You can change this in your <a href="%{userPrefsUrl}">preferences</a>.</p>'
+          starred: '<p>Your starred topics appear here.</p><p>To star or unstar a topic, use:</p><ul><li>the <i class="fa fa-star"></i> next to any topic title</li><li>the Star button at the bottom of each topic</li></ul>'
       bottom:
         latest: "There are no more latest topics."
         hot: "There are no more hot topics."
@@ -891,16 +907,16 @@ en:
           "0": 'You are ignoring all notifications on this topic.'
         watching_pm:
           title: "Watching"
-          description: "You will be notified of every new post in this private message. A count of unread and new posts will also appear next to the topic's listing."
+          description: "You will be notified of every new post in this private message. A count of unread and new posts will also appear next to the topic."
         watching:
           title: "Watching"
-          description: "You will be notified of every new post in this topic. A count of unread and new posts will also appear next to the topic's listing."
+          description: "You will be notified of every new post in this topic. A count of unread and new posts will also appear next to the topic."
         tracking_pm:
           title: "Tracking"
           description: "A count of unread and new posts will appear next to the private message. You will be notified only if someone mentions your @name or replies to your post."
         tracking:
           title: "Tracking"
-          description: "A count of unread and new posts will appear next to the topic's listing. You will be notified only if someone mentions your @name or replies to your post. "
+          description: "A count of unread and new posts will appear next to the topic. You will be notified only if someone mentions your @name or replies to your post. "
         regular:
           title: "Regular"
           description: "You will be notified only if someone mentions your @name or replies to your post."
@@ -927,8 +943,8 @@ en:
         pin_globally: "Pin Topic Globally"
         unarchive: "Unarchive Topic"
         archive: "Archive Topic"
-        invisible: "Make Invisible"
-        visible: "Make Visible"
+        invisible: "Make Unlisted"
+        visible: "Make Listed"
         reset_read: "Reset Read Data"
         multi_select: "Select Posts"
 
@@ -1030,7 +1046,7 @@ en:
       post_number: "post {{number}}"
       in_reply_to: "reply to"
       last_edited_on: "post last edited on"
-      reply_as_new_topic: "Reply as new Topic"
+      reply_as_new_topic: "Reply as linked Topic"
       continue_discussion: "Continuing the discussion from {{postLink}}:"
       follow_quote: "go to the quoted post"
       show_full: "Show Full Post"
@@ -1059,11 +1075,14 @@ en:
         upload_not_authorized: "Sorry, the file you are trying to upload is not authorized (authorized extension: {{authorized_extensions}})."
         image_upload_not_allowed_for_new_user: "Sorry, new users can not upload images."
         attachment_upload_not_allowed_for_new_user: "Sorry, new users can not upload attachments."
+        attachment_download_requires_login: "Sorry, you need to be logged in to download attachments."
 
       abandon:
         confirm: "Are you sure you want to abandon your post?"
         no_value: "No, keep"
         yes_value: "Yes, abandon"
+
+      via_email: "this post arrived via email"
 
       wiki:
         about: "this post is a wiki; basic users can edit it"
@@ -1090,8 +1109,12 @@ en:
           yes_value: "Yes, delete the replies too"
           no_value: "No, just this post"
         admin: "post admin actions"
-        wiki: "Wiki post"
-        unwiki: "Unwiki post"
+        wiki: "Make Wiki"
+        unwiki: "Remove Wiki"
+        convert_to_moderator: "Add Staff Color"
+        revert_to_regular: "Remove Staff Color"
+        rebake: "Rebuild HTML"
+        unhide: "Unhide"
 
       actions:
         flag: 'Flag'
@@ -1209,8 +1232,8 @@ en:
             title: "Show the rendered output diffs side-by-side"
             button: '<i class="fa fa-columns"></i> HTML'
           side_by_side_markdown:
-            title: "Show the markdown source diffs side-by-side"
-            button: '<i class="fa fa-columns"></i> Markdown'
+            title: "Show the raw source diffs side-by-side"
+            button: '<i class="fa fa-columns"></i> Raw'
         details:
           edited_by: "Edited by"
 
@@ -1255,6 +1278,7 @@ en:
       allow_badges_label: "Allow badges to be awarded in this category"
       edit_permissions: "Edit Permissions"
       add_permission: "Add Permission"
+      everyone_permission: "everyone"
       this_year: "this year"
       position: "position"
       default_position: "Default Position"
@@ -1266,10 +1290,10 @@ en:
         reasons:
         watching:
           title: "Watching"
-          description: "You will automatically watch all new topics in these categories. You will be notified of all new posts and topics, plus the count of unread and new posts will also appear next to the topic's listing."
+          description: "You will automatically watch all new topics in these categories. You will be notified of all new posts and topics, plus the count of unread and new posts will also appear next to the topic."
         tracking:
           title: "Tracking"
-          description: "You will automatically track all new topics in these categories. A count of unread and new posts will appear next to the topic's listing."
+          description: "You will automatically track all new topics in these categories. A count of unread and new posts will appear next to the topic."
         regular:
           title: "Regular"
           description: "You will be notified only if someone mentions your @name or replies to your post."
@@ -1308,6 +1332,8 @@ en:
         other: "%{count} clicks"
 
     topic_statuses:
+      warning:
+        help: "This is an official warning."
       locked:
         help: "This topic is closed; it no longer accepts new replies"
       archived:
@@ -1324,7 +1350,7 @@ en:
       archived:
         help: "This topic is archived; it is frozen and cannot be changed"
       invisible:
-        help: "This topic is invisible; it will not be displayed in topic lists, and can only be accessed via a direct link"
+        help: "This topic is unlisted; it will not be displayed in topic lists, and can only be accessed via a direct link"
 
     posts: "Posts"
     posts_lowercase: "posts"
@@ -1418,7 +1444,7 @@ en:
         today: "Today"
         other_periods: "see more top topics"
 
-    browser_update: 'Unfortunately, <a href="http://www.discourse.org/faq/#browser">your browser is too old to work on this Discourse forum</a>. Please <a href="http://browsehappy.com">upgrade your browser</a>.'
+    browser_update: 'Unfortunately, <a href="http://www.discourse.org/faq/#browser">your browser is too old to work on this site</a>. Please <a href="http://browsehappy.com">upgrade your browser</a>.'
 
     permission_types:
       full: "Create / Reply / See"
@@ -1483,6 +1509,8 @@ en:
         agree_flag_modal_title: "Agree and..."
         agree_flag_hide_post: "Agree (hide post + send PM)"
         agree_flag_hide_post_title: "Hide this post and automatically send the user a private message urging them to edit it"
+        agree_flag_restore_post: "Agree (restore post)"
+        agree_flag_restore_post_title: "Restore this post"
         agree_flag: "Agree with flag"
         agree_flag_title: "Agree with flag and keep the post unchanged"
         defer_flag: "Defer"
@@ -1519,6 +1547,7 @@ en:
         topic_flagged: "This <strong>topic</strong> has been flagged."
         visit_topic: "Visit the topic to take action"
         was_edited: "Post was edited after the first flag"
+        previous_flags_count: "This post has already been flagged {{count}} times."
 
         summary:
           action_type_3:
@@ -1565,7 +1594,7 @@ en:
         confirm_revoke: "Are you sure you want to revoke that key?"
         info_html: "Your API key will allow you to create and update topics using JSON calls."
         all_users: "All Users"
-        note_html: "Keep this key <strong>secret</strong>, all users that have it may create arbitrary posts on the forum as any user."
+        note_html: "Keep this key <strong>secret</strong>, all users that have it may create arbitrary posts as any user."
 
       backups:
         title: "Backups"
@@ -1587,8 +1616,8 @@ en:
           filename: "Filename"
           size: "Size"
         upload:
-          text: "UPLOAD"
-          uploading: "UPLOADING"
+          text: "Upload"
+          uploading: "Uploading..."
           success: "'{{filename}}' has successfully been uploaded."
           error: "There has been an error while uploading '{{filename}}': {{message}}"
         operations:
@@ -1730,7 +1759,7 @@ en:
             user_placeholder: "username"
             address_placeholder: "name@example.com"
             type_placeholder: "digest, signup..."
-            reply_key_placeholder: ""
+            reply_key_placeholder: "reply key"
             skipped_reason_placeholder: "reason"
 
       logs:
@@ -1791,6 +1820,7 @@ en:
           actions:
             block: "Block"
             do_nothing: "Allow"
+            allow_admin: "Allow Admin"
           form:
             label: "New:"
             ip_address: "IP address"
@@ -1799,11 +1829,8 @@ en:
           title: "Error Logs"
 
       impersonate:
-        title: "Impersonate User"
-        username_or_email: "Username or Email of User"
-        help: "Use this tool to impersonate a user account for debugging purposes."
-        not_found: "That user can't be found."
-        invalid: "Sorry, you may not impersonate that user."
+        title: "Impersonate"
+        help: "Use this tool to impersonate a user account for debugging purposes. You will have to log out once finished."
 
       users:
         title: 'Users'
@@ -1832,9 +1859,9 @@ en:
           pending: 'Users Pending Review'
           newuser: 'Users at Trust Level 0 (New User)'
           basic: 'Users at Trust Level 1 (Basic User)'
-          regular: 'Users at Trust Level 2 (Regular User)'
-          leader: 'Users at Trust Level 3 (Leader)'
-          elder: 'Users at Trust Level 4 (Elder)'
+          regular: 'Users at Trust Level 2 (Member)'
+          leader: 'Users at Trust Level 3 (Regular)'
+          elder: 'Users at Trust Level 4 (Leader)'
           admins: 'Admin Users'
           moderators: 'Moderators'
           blocked: 'Blocked Users'
@@ -1845,6 +1872,7 @@ en:
         reject_failures:
           one: "Failed to reject 1 user."
           other: "Failed to reject %{count} users."
+        not_verified: "Not verified"
 
       user:
         suspend_failed: "Something went wrong suspending this user {{error}}"
@@ -1889,6 +1917,7 @@ en:
         topics_entered: Topics Viewed
         flags_given_count: Flags Given
         flags_received_count: Flags Received
+        warnings_received_count: Warnings Received
         flags_given_received_count: 'Flags Given / Received'
         approve: 'Approve'
         approved_by: "approved by"
@@ -1954,10 +1983,9 @@ en:
           external_email: "Email"
           external_avatar_url: "Avatar URL"
 
-      site_content:
+      site_text:
         none: "Choose a type of content to begin editing."
-        title: 'Content'
-        edit: "Edit Site Content"
+        title: 'Text Content'
 
       site_settings:
         show_overriden: 'Only show overridden'
@@ -2021,7 +2049,6 @@ en:
         target_posts: Query targets posts
         auto_revoke: Run revocation query daily
         show_posts: Show post granting badge on badge page
-        preview: Preview badge
         trigger: Trigger
         trigger_type:
           none: "Update daily"
@@ -2029,6 +2056,25 @@ en:
           post_revision: "When a user edits or creates a post"
           trust_level_change: "When a user changes trust level"
           user_change: "When a user is edited or created"
+        preview:
+          link_text: "Preview granted badges"
+          plan_text: "Preview with query plan"
+          modal_title: "Badge Query Preview"
+          sql_error_header: "There was an error with the query."
+          error_help: "See the following links for help with badge queries."
+          bad_count_warning:
+            header: "WARNING!"
+            text: "There are missing grant samples. This happens when the badge query returns user IDs or post IDs that do not exist. This may cause unexpected results later on - please double-check your query."
+          grant_count:
+            zero: "No badges to be assigned."
+            one: "<b>1</b> badge to be assigned."
+            other: "<b>%{count}</b> badges to be assigned."
+          sample: "Sample:"
+          grant:
+            with: <span class="username">%{username}</span>
+            with_post: <span class="username">%{username}</span> for post in %{link}
+            with_post_time: <span class="username">%{username}</span> for post in %{link} at <span class="time">%{time}</span>
+            with_time: <span class="username">%{username}</span> at <span class="time">%{time}</span>
 
     lightbox:
       download: "download"
@@ -2043,26 +2089,31 @@ en:
         unread: '<b>g</b>, <b>u</b> Unread'
         starred: '<b>g</b>, <b>f</b> Starred'
         categories: '<b>g</b>, <b>c</b> Categories'
+        top: '<b>g</b>, <b>t</b> Top'
       navigation:
         title: 'Navigation'
-        jump: '<b>#</b> Go to post number'
+        jump: '<b>#</b> Go to post #'
         back: '<b>u</b> Back'
-        up_down: '<b>k</b>/<b>j</b> Move selection up/down'
+        up_down: '<b>k</b>/<b>j</b> Move selection &uarr; &darr;'
         open: '<b>o</b> or <b>Enter</b> Open selected topic'
-        next_prev: '<b>`</b>/<b>~</b> Next/previous section'
+        next_prev: '<b>shift j</b>/<b>shift k</b> Next/previous section'
       application:
         title: 'Application'
         create: '<b>c</b> Create a new topic'
         notifications: '<b>n</b> Open notifications'
-        site_map_menu: '<b>=</b> Open site map menu'
-        user_profile_menu: '<b>p</b> Open user profile menu'
+        site_map_menu: '<b>=</b> Open site menu'
+        user_profile_menu: '<b>p</b> Open user menu'
+        show_incoming_updated_topics: '<b>.</b> Show updated topics'
         search: '<b>/</b> Search'
-        help: '<b>?</b> Open keyboard shortcuts help'
+        help: '<b>?</b> Open keyboard help'
+        dismiss_new_posts: '<b>x</b>, <b>r</b> Dismiss New/Posts'
+        dismiss_topics: '<b>x</b>, <b>t</b> Dismiss Topics'
       actions:
         title: 'Actions'
         star: '<b>f</b> Star topic'
         share_topic: '<b>shift s</b> Share topic'
         share_post: '<b>s</b> Share post'
+        reply_as_new_topic: '<b>t</b> Reply as linked topic'
         reply_topic: '<b>shift r</b> Reply to topic'
         reply_post: '<b>r</b> Reply to post'
         quote_post: '<b>q</b> Quote post'
@@ -2109,14 +2160,14 @@ en:
         basic_user:
           name: Basic
           description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/4">Granted</a> all essential community functions
-        regular_user:
-          name: Regular
+        member:
+          name: Member
           description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/5">Granted</a> invitations
+        regular:
+          name: Regular
+          description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/6">Granted</a> recategorize, rename, followed links and lounge
         leader:
           name: Leader
-          description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/6">Granted</a> recategorize, rename, followed links and lounge
-        elder:
-          name: Elder
           description: <a href="https://meta.discourse.org/t/what-do-user-trust-levels-do/4924/7">Granted</a> global edit, pin, close, archive, split and merge
         welcome:
           name: Welcome
@@ -2133,6 +2184,24 @@ en:
         great_post:
           name: Great Post
           description: Received 50 likes on a post. This badge can be granted multiple times
+        nice_topic:
+          name: Nice Topic
+          description: Received 10 likes on a topic. This badge can be granted multiple times
+        good_topic:
+          name: Good Topic
+          description: Received 25 likes on a topic. This badge can be granted multiple times
+        great_topic:
+          name: Great Topic
+          description: Received 50 likes on a topic. This badge can be granted multiple times
+        nice_share:
+          name: Nice Share
+          description: Shared a post with 25 unique visitors
+        good_share:
+          name: Good Share
+          description: Shared a post with 300 unique visitors
+        great_share:
+          name: Great Share
+          description: Shared a post with 1000 unique visitors
         first_like:
           name: First Like
           description: Liked a post

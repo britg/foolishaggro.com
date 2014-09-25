@@ -1,7 +1,7 @@
 class Group < ActiveRecord::Base
   include HasCustomFields
 
-  has_many :category_groups
+  has_many :category_groups, dependent: :destroy
   has_many :group_users, dependent: :destroy
 
   has_many :categories, through: :category_groups
@@ -70,16 +70,19 @@ class Group < ActiveRecord::Base
       group.save!
     end
 
-    # the everyone group is special, it can include non-users so there is no
-    # way to have the membership in a table
-    return group if name == :everyone
-
     group.name = I18n.t("groups.default_names.#{name}")
 
     # don't allow shoddy localization to break this
     validator = UsernameValidator.new(group.name)
     unless validator.valid_format?
       group.name = name
+    end
+
+    # the everyone group is special, it can include non-users so there is no
+    # way to have the membership in a table
+    if name == :everyone
+      group.save!
+      return group
     end
 
     # Remove people from groups they don't belong in.

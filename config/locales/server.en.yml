@@ -36,6 +36,7 @@ en:
   is_reserved: "is reserved"
 
   purge_reason: "Automatically deleted due to being old and unverified"
+  disable_remote_images_download_reason: "Remote images download was disabled because there wasn't enough disk space available."
 
   errors:
     messages:
@@ -120,14 +121,15 @@ en:
     errors:
       can_not_modify_automatic: "You can not modify an automatic group"
     default_names:
+      everyone: "everyone"
       admins: "admins"
       moderators: "moderators"
       staff: "staff"
+      trust_level_0: "trust_level_0"
       trust_level_1: "trust_level_1"
       trust_level_2: "trust_level_2"
       trust_level_3: "trust_level_3"
       trust_level_4: "trust_level_4"
-      trust_level_5: "trust_level_5"
 
   education:
     until_posts:
@@ -201,6 +203,8 @@ en:
         name: "Category Name"
       post:
         raw: "Body"
+      user_profile:
+        bio_raw: "About Me"
       user:
         ip_address: ""
     errors:
@@ -210,6 +214,9 @@ en:
       models:
         topic:
           attributes:
+            base:
+              warning_requires_pm: "You can only attach warnings to private messages."
+              too_many_users: "You can only send warnings to one user at a time."
             archetype:
               cant_send_pm: "Sorry, you cannot send a private message to that user."
         user:
@@ -244,9 +251,7 @@ en:
 
       Congratulations! :confetti_ball:
 
-      If you can see this topic, you were recently promoted to [trust level 3 (leader)][trust].
-
-      > Leaders are some of the most active and prolific contributors. They set a positive example for the community through their actions and their posts.
+      If you can see this topic, you were recently promoted to **regular** (trust level 3).
 
       You can now &hellip;
 
@@ -254,12 +259,13 @@ en:
       * Change the category of any topic
       * Have all your links followed ([automatic nofollow](http://en.wikipedia.org/wiki/Nofollow) is removed)
       * Access a private Lounge category only visible to users at trust level 3 and higher
+      * Cast more heavily weighted likes and flags
 
-      Here's the [current list of users who made it to trust level 3](/badges/3/leader). Be sure to say hi!
+      Here's the [current list of fellow regulars](/badges/3/regular). Be sure to say hi.
 
       Thanks for being an important part of this community!
 
-      (For more information on trust levels, [see this topic][trust]. Please note that only members who currently meet the selection criteria will remain at trust level 3. )
+      (For more information on trust levels, [see this topic][trust]. Please note that only members who continue to meet the requirements over time will remain regulars.)
 
       [trust]: https://meta.discourse.org/t/what-do-user-trust-levels-do/4924
 
@@ -285,11 +291,11 @@ en:
     basic:
       title: "basic user"
     regular:
-      title: "regular user"
+      title: "member"
     leader:
-      title: "leader"
+      title: "regular"
     elder:
-      title: "elder"
+      title: "leader"
     change_failed_explanation: "You attempted to demote %{user_name} to '%{new_trust_level}'. However their trust level is already '%{current_trust_level}'. %{user_name} will remain at '%{current_trust_level}'"
 
 
@@ -418,7 +424,7 @@ en:
       long_form: 'flagged this as inappropriate'
     notify_user:
       title: 'Notify {{username}}'
-      description: 'This post contains something I want to talk to this person directly and privately about.'
+      description: 'This post contains something I want to talk to this person directly and privately about. Does not cast a flag.'
       long_form: 'notified user'
       email_title: 'Your post in "%{title}"'
       email_body: "%{link}\n\n%{message}"
@@ -688,7 +694,7 @@ en:
     summary_posts_required: "Minimum posts in a topic before 'Summarize This Topic' is enabled"
     summary_likes_required: "Minimum likes in a topic before 'Summarize This Topic' is enabled"
     summary_percent_filter: "When a user clicks 'Summarize This Topic', show the top % of posts"
-    enable_private_messages: "Allow basic (1) trust level users to create private messages and reply to private messages"
+    enable_private_messages: "Allow trust level 1 users to create private messages and reply to private messages"
 
     enable_long_polling: "Message bus used for notification can use long polling"
     long_polling_interval: "Interval before a new long poll is issued in milliseconds "
@@ -726,7 +732,7 @@ en:
     track_external_right_clicks: "Track external links that are right clicked (eg: open in new tab) disabled by default because it rewrites URLs"
     topics_per_page: "How many topics are loaded by default on the topic list, and when scrolling down to load more topics"
     posts_per_page: "How many posts are loaded by default on a topic, and when scrolling down to load more posts"
-    site_contact_username: "All automated private messages sent by the forum will be from this user; if left blank the default System account will be used."
+    site_contact_username: "All automated private messages will be from this user; if left blank the default System account will be used."
     send_welcome_message: "Send all new users a welcome private message with a quick start guide."
     suppress_reply_directly_below: "Don't show the expandable reply count on a post when there is only a single reply directly below this post."
     suppress_reply_directly_above: "Don't show the expandable in-reply-to on a post when there is only a single reply directly above this post."
@@ -735,6 +741,7 @@ en:
     topics_per_period_in_top_summary: "Number of top topics shown in the default top topics summary."
     topics_per_period_in_top_page: "Number of top topics shown on the expanded 'Show More' top topics."
     redirect_users_to_top_page: "Automatically redirect new and long absent users to the top page."
+    show_email_on_profile: "Show a user's email on their profile (only visible to themselves and staff)"
 
     email_token_valid_hours: "Forgot password / activate account tokens are valid for (n) hours."
     email_token_grace_period_hours: "Forgot password / activate account tokens are still valid for a grace period of (n) hours after being redeemed."
@@ -744,6 +751,7 @@ en:
     allow_index_in_robots_txt: "Specify in robots.txt that this site is allowed to be indexed by web search engines."
     email_domains_blacklist: "A list of email domains that users are not allowed to register accounts with. Example: mailinator.com trashmail.net"
     email_domains_whitelist: "A list of email domains that users MUST register accounts with. WARNING: Users with email domains other than those listed will not be allowed!"
+    forgot_password_strict: "Don't inform users of an account's existance when they use the forgot password dialog."
     version_checks: "Ping the Discourse Hub for version updates and show new version messages on the /admin dashboard"
     new_version_emails: "Send an email to the contact_email address when a new version of Discourse is available."
 
@@ -797,7 +805,7 @@ en:
     allow_restore: "Allow restore, which can replace ALL site data! Leave false unless you plan to restore a backup"
     maximum_backups: "The maximum amount of backups to keep on disk. Older backups are automatically deleted"
     backup_daily: "Automatically create a site backup once a day."
-    enable_s3_backups: "Upload backups to S3 when complete. IMPORTANT: Requires valid S3 credentials entered in Files settings."
+    enable_s3_backups: "Upload backups to S3 when complete. IMPORTANT: requires valid S3 credentials entered in Files settings."
     s3_backup_bucket: "The remote bucket to hold backups. WARNING: Make sure it is a private bucket."
 
     active_user_rate_limit_secs: "How frequently we update the 'last_seen_at' field, in seconds"
@@ -824,7 +832,7 @@ en:
     clean_orphan_uploads_grace_period_hours: "Grace period (in hours) before an orphan upload is removed."
     purge_deleted_uploads_grace_period_days: "Grace period (in days) before a deleted upload is erased."
     purge_inactive_users_grace_period_days: "Grace period (in days) before an inactive user is deleted."
-    enable_s3_uploads: "Place uploads on Amazon S3 storage."
+    enable_s3_uploads: "Place uploads on Amazon S3 storage. IMPORTANT: requires valid S3 credentials (both access key id & secret access key)."
     s3_use_iam_profile: 'Use AWS EC2 IAM role to retrieve keys. NOTE: enabling will override "s3 access key id" and "s3 secret access key" settings.'
     s3_upload_bucket: "The Amazon S3 bucket name that files will be uploaded into. WARNING: must be lowercase, no periods."
     s3_access_key_id: "The Amazon S3 access key id that will be used to upload images."
@@ -836,29 +844,29 @@ en:
     default_invitee_trust_level: "Default trust level (0-4) for invited users."
     default_trust_level: "Default trust level (0-4) for all new users."
 
-    basic_requires_topics_entered: "How many topics a new user must enter before promotion to basic (1) trust level."
-    basic_requires_read_posts: "How many posts a new user must read before promotion to basic (1) trust level."
-    basic_requires_time_spent_mins: "How many minutes a new user must read posts before promotion to basic (1) trust level."
+    tl1_requires_topics_entered: "How many topics a new user must enter before promotion to trust level 1."
+    tl1_requires_read_posts: "How many posts a new user must read before promotion to trust level 1."
+    tl1_requires_time_spent_mins: "How many minutes a new user must read posts before promotion to trust level 1."
 
-    regular_requires_topics_entered: "How many topics a basic user must enter before promotion to regular (2) trust level."
-    regular_requires_read_posts: "How many posts a basic user must read before promotion to regular (2) trust level."
-    regular_requires_time_spent_mins: "How many minutes a basic user must read posts before promotion to regular (2) trust level."
-    regular_requires_days_visited: "How many days a basic user must visit the site before promotion to regular (2) trust level."
-    regular_requires_likes_received: "How many likes a basic user must receive before promotion to regular (2) trust level."
-    regular_requires_likes_given: "How many likes a basic user must cast before promotion to regular (2) trust level."
-    regular_requires_topic_reply_count: "How many topics a basic user must reply to before promotion to regular (2) trust level."
+    tl2_requires_topics_entered: "How many topics a user must enter before promotion to trust level 2."
+    tl2_requires_read_posts: "How many posts a user must read before promotion to trust level 2."
+    tl2_requires_time_spent_mins: "How many minutes a user must read posts before promotion to trust level 2."
+    tl2_requires_days_visited: "How many days a user must visit the site before promotion to trust level 2."
+    tl2_requires_likes_received: "How many likes a user must receive before promotion to trust level 2."
+    tl2_requires_likes_given: "How many likes a user must cast before promotion to trust level 2."
+    tl2_requires_topic_reply_count: "How many topics user must reply to before promotion to trust level 2."
 
-    leader_requires_days_visited: "Minimum number of days that a user needs to have visited the site in the last 100 days to qualify for promotion to leader (3) trust level. (0 to 100)"
-    leader_requires_topics_replied_to: "Minimum number of topics a user needs to have replied to in the last 100 days to qualify for promotion to leader (3) trust level. (0 or higher)"
-    leader_requires_topics_viewed: "The percentage of topics created in the last 100 days that a user needs to have viewed to qualify for promotion to leader (3) trust level. (0 to 100)"
-    leader_requires_posts_read: "The percentage of posts created in the last 100 days that a user needs to have viewed to qualify for promotion to leader (3) trust level. (0 to 100)"
-    leader_requires_topics_viewed_all_time: "The minimum total number of topics a user must have viewed to qualify for leader (3) trust level."
-    leader_requires_posts_read_all_time: "The minimum total number of posts a user must have read to qualify for leader (3) trust level."
-    leader_requires_max_flagged: "User must not have had more than x posts flagged by x different users in the last 100 days to qualify for promotion to leader (3) trust level, where x is this setting's value. (0 or higher)"
-    leader_promotion_min_duration: "The minimum number of days that a promotion to leader lasts before a user can be demoted."
-    leader_requires_likes_given: "The minimum number of likes that must be given in the last 100 days to qualify for promotion to leader (3) trust level."
-    leader_requires_likes_received: "The minimum number of likes that must be received in the last 100 days to qualify for promotion to leader (3) trust level."
-    leader_links_no_follow: "Do not remove rel=nofollow from leader links."
+    tl3_requires_days_visited: "Minimum number of days that a user needs to have visited the site in the last 100 days to qualify for promotion to trust level 3. (0 to 100)"
+    tl3_requires_topics_replied_to: "Minimum number of topics a user needs to have replied to in the last 100 days to qualify for promotion to trust level 3. (0 or higher)"
+    tl3_requires_topics_viewed: "The percentage of topics created in the last 100 days that a user needs to have viewed to qualify for promotion to trust level 3. (0 to 100)"
+    tl3_requires_posts_read: "The percentage of posts created in the last 100 days that a user needs to have viewed to qualify for promotion to trust level 3. (0 to 100)"
+    tl3_requires_topics_viewed_all_time: "The minimum total number of topics a user must have viewed to qualify for trust level 3."
+    tl3_requires_posts_read_all_time: "The minimum total number of posts a user must have read to qualify for trust level 3."
+    tl3_requires_max_flagged: "User must not have had more than x posts flagged by x different users in the last 100 days to qualify for promotion to trust level 3, where x is this setting's value. (0 or higher)"
+    tl3_promotion_min_duration: "The minimum number of days that a promotion to trust level 3 lasts before a user can be demoted back to trust level 2."
+    tl3_requires_likes_given: "The minimum number of likes that must be given in the last 100 days to qualify for promotion to trust level 3."
+    tl3_requires_likes_received: "The minimum number of likes that must be received in the last 100 days to qualify for promotion to trust level 3."
+    tl3_links_no_follow: "Do not remove rel=nofollow from links posted by trust level 3 users."
 
     min_trust_to_create_topic: "The minimum trust level required to create a new topic."
 
@@ -926,6 +934,9 @@ en:
 
     disable_emails: "Prevent Discourse from sending any kind of emails"
 
+    strip_images_from_short_emails: "Strip images from emails having size less than 2800 Bytes"
+    short_email_length: "Short email length in Bytes"
+
     pop3_polling_enabled: "Poll via POP3 for email replies."
     pop3_polling_ssl: "Use SSL while connecting to the POP3 server. (Recommended)"
     pop3_polling_period_mins: "The period in minutes between checking the POP3 account for email. NOTE: requires restart."
@@ -970,7 +981,7 @@ en:
 
     global_notice: "Display an URGENT, EMERGENCY global banner notice to all visitors, change to blank to hide it (HTML allowed)."
 
-    disable_edit_notifications: "Used to disable edit notifications when you activate the 'download_remote_images_to_local' site setting."
+    disable_edit_notifications: "Disables edit notifications by the system user when 'download_remote_images_to_local' is active."
 
     enable_names: "Allow showing user full names. Disable to hide full names."
     display_name_on_posts: "Show a user's full name on their posts in addition to their @username."
@@ -996,6 +1007,8 @@ en:
     show_create_topics_notice: "If the site has fewer than 5 public topics, show a notice asking admins to create some topics."
 
     vacuum_db_days: "Run VACUUM FULL ANALYZE to reclaim DB space after migrations (set to 0 to disable)"
+
+    prevent_anons_from_downloading_files: "Prevent anonymous users from downloading files. WARNING: this will prevent any site assets posted as attachments from working."
 
     errors:
       invalid_email: "Invalid email address."
@@ -1025,7 +1038,7 @@ en:
     granted_badge: "You earned %{link}"
 
   search:
-    within_post: "#%{post_number} by %{username}: %{excerpt}"
+    within_post: "#%{post_number} by %{username}"
     types:
       category: 'Categories'
       topic: 'Results'
@@ -1073,16 +1086,17 @@ en:
     pinned_disabled: "This topic is now unpinned. It will no longer appear at the top of its category."
     pinned_globally_enabled: "This topic is now pinned globally. It will appear at the top of its category and all topic lists until it is unpinned by staff for everyone, or by individual users for themselves."
     pinned_globally_disabled: "This topic is now unpinned. It will no longer appear at the top of its category."
-    visible_enabled: "This topic is now visible. It will be displayed in topic lists."
-    visible_disabled: "This topic is now invisible. It will no longer be displayed in any topic lists. The only way to access this topic is via direct link."
+    visible_enabled: "This topic is now listed. It will be displayed in topic lists."
+    visible_disabled: "This topic is now unlisted. It will no longer be displayed in any topic lists. The only way to access this topic is via direct link."
 
   login:
     not_approved: "Your account hasn't been approved yet. You will be notified by email when you are ready to log in."
     incorrect_username_email_or_password: "Incorrect username, email or password"
     wait_approval: "Thanks for signing up. We will notify you when your account has been approved."
     active: "Your account is activated and ready to use."
-    activate_email: "You're almost done! We sent an activation email to <b>%{email}</b>. Please follow the instructions in the email to activate your account."
+    activate_email: "You're almost done! We sent an activation mail to the email address you provided. Please follow the instructions in the email to activate your account."
     not_activated: "You can't log in yet. We sent an activation email to you. Please follow the instructions in the email to activate your account."
+    not_allowed_from_ip_address: "You can't login as %{username} from that IP address."
     suspended: "You can't log in until %{date}."
     suspended_with_reason: "You can't log in until %{date}. The reason you were suspended: %{reason}"
     errors: "%{errors}"
@@ -1091,8 +1105,10 @@ en:
     omniauth_error: "Sorry, there was an error authorizing your %{strategy} account. Perhaps you did not approve authorization?"
     omniauth_error_unknown: "Something went wrong processing your log in, please try again."
     new_registrations_disabled: "New account registrations are not allowed at this time."
+    password_too_long: "Passwords are limited to 200 characters."
 
   user:
+    no_accounts_associated: "No accounts associated"
     username:
       short: "must be at least %{min} characters"
       long: "must be no more than %{max} characters"
@@ -1143,7 +1159,7 @@ en:
   test_mailer:
     subject_template: "[%{site_name}] Email Deliverability Test"
     text_body_template: |
-      This is a test email sent from your %{site_name} forum at:
+      This is a test email from
 
       [**%{base_url}**][0]
 
@@ -1151,7 +1167,7 @@ en:
 
       - Be *sure* to set the `notification email` from: address correctly in your site settings. **The domain specified in the "from" address of the emails you send is the domain your email will be validated against**.
 
-      - Know how to view the *raw source of the email* in your mail client, so you can examine email headers for important clues. in Gmail, it is the "show original" option in the drop-down menu at the top right of each mail.
+      - Know how to view the raw source of the email in your mail client, so you can examine email headers for important clues. in Gmail, it is the "show original" option in the drop-down menu at the top right of each mail.
 
       - **IMPORTANT:** Does your ISP have a reverse DNS record entered to associate the domain names and IP addresses you send mail from? [Test your Reverse PTR record][2] here. If your ISP does not enter the proper reverse DNS pointer record, it's very unlikely any of your email will be delivered.
 
@@ -1159,11 +1175,9 @@ en:
 
       - Is your domain's [DKIM record][3] correct? This will significantly improve email deliverability. [Test your DKIM record][7] here.
 
-      - If you run your own mail server, check to make sure the IPs of your mail server are [not on any email blacklists][4].
+      - If you run your own mail server, check to make sure the IPs of your mail server are [not on any email blacklists][4]. Also verify that it is definitely sending a fully-qualified hostname that resolves in DNS in its HELO message. If not, this will cause your email to be rejected by many mail services.
 
-      - If you run your own mail server, verify that it is *definitely* sending a fully-qualified hostname that resolves in DNS in its HELO message. If not, this will cause your email to be rejected by many mail services.
-
-      (The *easy* way is to [sign up for Mandrill][6], which has a generous free mailing plan and will be fine for small forums. You'll still need to set up the SPF and DKIM records in your DNS, though!)
+      (The *easy* way is to create a free account on [Mandrill][md] or [Mailgun][mg] or [Mailjet][mj], which have free generous free mailing plans and will be fine for small communities. You'll still need to set up the SPF and DKIM records in your DNS, though!)
 
       We hope you received this email deliverability test OK!
 
@@ -1177,9 +1191,11 @@ en:
       [3]: http://www.dkim.org/
       [4]: http://whatismyipaddress.com/blacklist-check
       [5]: %{base_url}/unsubscribe
-      [6]: http://mandrill.com
       [7]: http://dkimcore.org/tools/dkimrecordcheck.html
       [8]: http://www.openspf.org/SPF_Record_Syntax
+      [md]: http://mandrill.com
+      [mg]: http://www.mailgun.com/
+      [mj]: http://www.mailjet.com/pricing
 
       ----
 
@@ -1267,7 +1283,7 @@ en:
 
     usage_tips:
       text_body_template: |
-        This private message has a few quick tips to get you started:
+        This private message has a few quick tips to get you started.
 
         ## Keep scrolling
 
@@ -1277,57 +1293,57 @@ en:
 
         ## Where am I?
 
-        - For search, your user page, or the menu, use the **icon buttons at the upper right**.
+        - For search, your user page, or the menu, use the **icon <kbd>☰</kbd> buttons at the upper right**.
 
-        - While reading a topic, move back to the top &uarr; by clicking the topic title. Click the green progress bar at the bottom right to see full navigation controls, or use the <kbd>home</kbd> and <kbd>end</kbd> keys.
+        - Any topic title will take you to the next unread post. Use the last activity time and post count to enter at the top or bottom.
 
-            <img src="http://www.discourse.org/images/welcome/progress-bar.png" width="190" height="52">
+        - While reading a topic, jump to the top &uarr; by selecting the topic title. Select the green progress bar at the bottom right for full navigation controls, or use the <kbd>home</kbd> and <kbd>end</kbd> keys.
 
-        - The topic title will always take you to your next unread post. Use the last activity time to quickly jump to the first or last post in a topic.
+            <img src="/images/welcome/progress-bar.png" width="143" height="39">
 
         ## How do I reply?
 
-        - To reply to the overall topic, use the Reply button <img src="http://www.discourse.org/images/welcome/reply-topic.png" width="29" height="25">  at the very bottom of the page.
+        - To reply to the overall topic, use the Reply button <img src="/images/welcome/reply-topic.png" width="29" height="25">  at the very bottom of the page.
 
-        - To reply to a specific post, use the Reply button <img src="http://www.discourse.org/images/welcome/reply-post.png" width="29" height="25"> on that post.
+        - To reply to a specific post, use the Reply button <img src="/images/welcome/reply-post.png" width="29" height="25"> on that post.
 
-        - To take the conversation in a different direction, but keep them linked together, use Reply as New Topic <img src="http://www.discourse.org/images/welcome/reply-as-new-topic.png" width="33" height="25"> to the right of the post.
+        - To take the conversation in a different direction, but keep them linked together, use <img src="/images/welcome/reply-as-linked-topic.png" width="15" height="25"> Reply as linked Topic to the right of the post.
 
         To quote someone in your reply, select the text you wish to quote, then press any Reply button.
 
-        <img src="http://www.discourse.org/images/welcome/quote-reply.png" width="467" height="172">
+        <img src="/images/welcome/quote-reply.png" width="350" height="129">
 
-        (To quote an entire post, use the Import Quote button on the editor toolbar.)
+        To ping someone in your reply, mention their name. Type `@` and an autocompleter will pop up.
 
-        To mention someone's name in your reply, start typing `@` and an autocompleter will pop up.
-
-        <img src="http://www.discourse.org/images/welcome/username-completion.png" width="307" height="174">
-
-        ## What else can I do?
-
-        <img src="http://www.discourse.org/images/welcome/like-link-flag-bookmark.png" width="225" height="61">
-
-        To let someone know that you enjoyed their post, use the **like** button at the bottom of the post. If you see a problem with a post, don't hesitate to use the **flag** button and privately let them, or our staff, know about it.
-
-        You can also share a link to a post, or bookmark a post for later reference on your user page.
+        <img src="/images/welcome/username-completion.png" width="230" height="131">
 
         For [standard Emoji](http://www.emoji-cheat-sheet.com/), just start typing `:` or the traditional smileys `:)` :smile:
 
+        ## What else can I do?
+
+        There are action buttons at the bottom of each post.
+
+        <img src="/images/welcome/like-link-flag-bookmark.png" width="169" height="46">
+
+        To let someone know that you enjoyed their post, use the **like** button. If you see a problem with a post, privately let them, or our staff, know about it with the **flag** button.
+
+        You can also **share** a link to a post, or **bookmark** it for later reference on your user page.
+
         ## Who is talking to me?
 
-        When someone replies to your post, quotes your post, or mentions your `@username`, a number will appear over a conversation button at the top right of the page. Use it see who's talking to you, and where.
+        When someone replies to your post, quotes your post, or mentions your `@username`, a number will immediately appear at the top right of the page. Use it access your **notifications**.
 
-        <img src="http://www.discourse.org/images/welcome/notification-panel.png" width="237" height="78">
+        <img src="/images/welcome/notification-panel.png" width="178" height="59">
 
-        You will get email notifications of direct replies (and private messages) if you are not present on the site when they arrive.
+        Don't worry about missing a reply – you'll be emailed direct replies (and private messages) if you aren't online when they arrive.
 
         ## When are conversations new?
 
-        By default all conversations less than two days old are considered new, and any conversation you've participated in will automatically be tracked.
+        By default all conversations less than two days old are considered new, and any conversation you've participated in (replied to, created, or read for an extended period) will automatically be tracked.
 
         You will see the blue new and number indicators next to these topics:
 
-        <img src="http://www.discourse.org/images/welcome/topics-new-unread.png" width="490" height="119">
+        <img src="/images/welcome/topics-new-unread.png" width="368" height="89">
 
         You can change the individual notification state of a topic via the control at the bottom of the topic (this can also be set per category). To change how you track topics, or the definition of new, see [your user preferences](/my/preferences).
 
@@ -1357,7 +1373,7 @@ en:
 
         1. Log in using any method you like -- but it must resolve to the **same email address** that you received your original invitation email at. Otherwise we won't be able to tell it is you!
 
-        2. Create a unique password for on [your user profile][prefs], and use it to log in.
+        2. Create a unique password for [your user profile][prefs], and use it to log in.
 
         %{new_user_tips}
 
@@ -1445,7 +1461,7 @@ en:
         We're sorry, but your email message to %{destination} (titled %{former_title}) didn't work.
 
         We couldn't find any content in the email. Make sure that you wrote something at the top of the email - we can't parse inline replies.
-        If you're getting this and you did include content, try again in UTF-8 plain text (no HTML).
+        If you're getting this and you did include content, try again with HTML content included in your email (not just plain text only).
 
     email_reject_parsing:
       subject_template: "Email issue -- Content unrecognized"
@@ -1662,6 +1678,14 @@ en:
         If you did not make this request, you can safely ignore this email.
 
         Click the following link to choose a password:
+        %{base_url}/users/password-reset/%{email_token}
+
+    account_created:
+      subject_template: "[%{site_name}] Your New Account"
+      text_body_template: |
+        A new account was created for you at %{site_name}
+
+        Click the following link to choose a password for your new account:
         %{base_url}/users/password-reset/%{email_token}
 
     authorize_email:

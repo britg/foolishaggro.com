@@ -1,6 +1,6 @@
 // styles that apply to the "share" popup when sharing a link to a post or topic
 
-#poster-expansion {
+#user-expansion {
   position: absolute;
   width: 460px;
   left: 20px;
@@ -134,5 +134,10 @@
       padding: 3px 8px;
       font-size: 13px;
     }
+  }
+
+  .suspended {
+    color: $danger;
+    margin-bottom: 10px;
   }
 }

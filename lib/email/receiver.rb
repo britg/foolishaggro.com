@@ -61,7 +61,7 @@ module Email
         end
 
         raise UserNotFoundError if @user.blank?
-        raise UserNotSufficientTrustLevelError.new @user unless @allow_strangers || @user.has_trust_level?(TrustLevel.levels[SiteSetting.email_in_min_trust.to_i])
+        raise UserNotSufficientTrustLevelError.new @user unless @allow_strangers || @user.has_trust_level?(TrustLevel[SiteSetting.email_in_min_trust.to_i])
 
         create_new_topic
       else
@@ -159,7 +159,8 @@ module Email
                  (l =~ /via #{SiteSetting.title}(.*)\:$/) ||
                  # This one might be controversial but so many reply lines have years, times and end with a colon.
                  # Let's try it and see how well it works.
-                 (l =~ /\d{4}/ && l =~ /\d:\d\d/ && l =~ /\:$/)
+                 (l =~ /\d{4}/ && l =~ /\d:\d\d/ && l =~ /\:$/) ||
+                 (l =~ /On \w+ \d+,? \d+,?.*wrote:/)
 
         # Headers on subsequent lines
         break if (0..2).all? { |off| lines[idx+off] =~ REPLYING_HEADER_REGEX }
@@ -241,6 +242,9 @@ module Email
     end
 
     def create_post(user, options)
+      # Mark the reply as incoming via email
+      options[:via_email] = true
+
       creator = PostCreator.new(user, options)
       post = creator.create
 

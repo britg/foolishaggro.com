@@ -1,11 +1,12 @@
 require_dependency 'discourse_hub'
 require_dependency 'user_name_suggester'
 require_dependency 'avatar_upload_service'
+require_dependency 'rate_limiter'
 
 class UsersController < ApplicationController
 
   skip_before_filter :authorize_mini_profiler, only: [:avatar]
-  skip_before_filter :check_xhr, only: [:show, :password_reset, :update, :activate_account, :perform_account_activation, :authorize_email, :user_preferences_redirect, :avatar, :my_redirect]
+  skip_before_filter :check_xhr, only: [:show, :password_reset, :update, :account_created, :activate_account, :perform_account_activation, :authorize_email, :user_preferences_redirect, :avatar, :my_redirect]
 
   before_filter :ensure_logged_in, only: [:username, :update, :change_email, :user_preferences_redirect, :upload_user_image, :pick_avatar, :destroy_user_image, :destroy]
   before_filter :respond_to_suspicious_request, only: [:create]
@@ -17,6 +18,7 @@ class UsersController < ApplicationController
   skip_before_filter :redirect_to_login_if_required, only: [:check_username,
                                                             :create,
                                                             :get_honeypot_value,
+                                                            :account_created,
                                                             :activate_account,
                                                             :perform_account_activation,
                                                             :send_activation_email,
@@ -44,7 +46,7 @@ class UsersController < ApplicationController
   def update
     user = fetch_user_from_params
     guardian.ensure_can_edit!(user)
-    json_result(user, serializer: UserSerializer) do |u|
+    json_result(user, serializer: UserSerializer, additional_errors: [:user_profile]) do |u|
       updater = UserUpdater.new(current_user, user)
       updater.update(params)
     end
@@ -151,6 +153,11 @@ class UsersController < ApplicationController
       return
     end
 
+    if params[:password] && params[:password].length > User.max_password_length
+      render json: { success: false, message: I18n.t("login.password_too_long") }
+      return
+    end
+
     user = User.new(user_params)
 
     authentication = UserAuthenticator.new(user, session)
@@ -176,7 +183,8 @@ class UsersController < ApplicationController
       render json: {
         success: true,
         active: user.active?,
-        message: activation.message
+        message: activation.message,
+        user_id: user.id
       }
     else
       render json: {
@@ -221,12 +229,17 @@ class UsersController < ApplicationController
     if !@user
       flash[:error] = I18n.t('password_reset.no_token')
     elsif request.put?
-      raise Discourse::InvalidParameters.new(:password) unless params[:password].present?
-      @user.password = params[:password]
-      @user.password_required!
-      if @user.save
-        Invite.invalidate_for_email(@user.email) # invite link can't be used to log in anymore
-        logon_after_password_reset
+      @invalid_password = params[:password].blank? || params[:password].length > User.max_password_length
+
+      if @invalid_password
+        @user.errors.add(:password, :invalid)
+      else
+        @user.password = params[:password]
+        @user.password_required!
+        if @user.save
+          Invite.invalidate_for_email(@user.email) # invite link can't be used to log in anymore
+          logon_after_password_reset
+        end
       end
     end
     render layout: 'no_js'
@@ -251,6 +264,9 @@ class UsersController < ApplicationController
     guardian.ensure_can_edit_email!(user)
     lower_email = Email.downcase(params[:email]).strip
 
+    RateLimiter.new(user, "change-email-hr-#{request.remote_ip}", 6, 1.hour).performed!
+    RateLimiter.new(user, "change-email-min-#{request.remote_ip}", 3, 1.minute).performed!
+
     # Raise an error if the email is already in use
     if User.find_by_email(lower_email)
       raise Discourse::InvalidParameters.new(:email)
@@ -266,6 +282,8 @@ class UsersController < ApplicationController
     )
 
     render nothing: true
+  rescue RateLimiter::LimitExceeded
+    render_json_error(I18n.t("rate_limiter.slow_down"))
   end
 
   def authorize_email
@@ -275,6 +293,11 @@ class UsersController < ApplicationController
     else
       flash[:error] = I18n.t('change_email.error')
     end
+    render layout: 'no_js'
+  end
+
+  def account_created
+    expires_now
     render layout: 'no_js'
   end
 
@@ -302,7 +325,14 @@ class UsersController < ApplicationController
   end
 
   def send_activation_email
-    @user = fetch_user_from_params(include_inactive: true)
+
+    RateLimiter.new(nil, "activate-hr-#{request.remote_ip}", 30, 1.hour).performed!
+    RateLimiter.new(nil, "activate-min-#{request.remote_ip}", 6, 1.minute).performed!
+
+    @user = User.find_by_username_or_email(params[:username].to_s)
+
+    raise Discourse::NotFound unless @user
+
     @email_token = @user.email_tokens.unconfirmed.active.first
     enqueue_activation_email if @user
     render nothing: true
@@ -485,10 +515,14 @@ class UsersController < ApplicationController
     end
 
     def suspicious?(params)
+      return false if current_user && is_api? && current_user.admin?
+
       honeypot_or_challenge_fails?(params) || SiteSetting.invite_only?
     end
 
     def honeypot_or_challenge_fails?(params)
+      return false if is_api?
+
       params[:password_confirmation] != honeypot_value ||
         params[:challenge] != challenge_value.try(:reverse)
     end

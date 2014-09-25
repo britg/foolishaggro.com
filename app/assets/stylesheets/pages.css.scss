@@ -24,7 +24,7 @@ body {
 
 header {
   padding-top: 1px;
-  background: url(image_path("pages/lg_bg.jpg")) top center no-repeat;
+  background: url(image_path("pages/garden.jpg")) top center no-repeat;
   background-size: cover;
 
   min-height: 275px;
@@ -39,7 +39,6 @@ header {
 }
 
 .navbar-inverse {
-  background: url(image_path("pages/binding_dark.png"));
 }
 
 @media (min-width: 768px) {

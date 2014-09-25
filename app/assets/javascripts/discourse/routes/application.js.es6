@@ -13,7 +13,7 @@ var ApplicationRoute = Em.Route.extend({
     },
 
     expandUser: function(user) {
-      this.controllerFor('poster-expansion').show(user.get('username'), user.get('uploaded_avatar_id'));
+      this.controllerFor('user-expansion').show(user.get('username'), user.get('uploaded_avatar_id'));
       return true;
     },
 
@@ -41,7 +41,7 @@ var ApplicationRoute = Em.Route.extend({
     showLogin: function() {
       var self = this;
 
-      if (Discourse.get("isReadOnly")) {
+      if (this.site.get("isReadOnly")) {
         bootbox.alert(I18n.t("read_only_mode.login_disabled"));
       } else {
         if(Discourse.SiteSettings.enable_sso) {

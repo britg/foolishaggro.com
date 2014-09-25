@@ -208,8 +208,8 @@ describe TopicsController do
       end
     end
 
-    describe 'forbidden to elders' do
-      let!(:elder) { log_in(:elder) }
+    describe 'forbidden to trust_level_4s' do
+      let!(:trust_level_4) { log_in(:trust_level_4) }
 
       it 'correctly denies' do
         xhr :post, :change_post_owners, topic_id: 111, username: 'user_a', post_ids: [1,2,3]
@@ -542,6 +542,26 @@ describe TopicsController do
     end
   end
 
+  describe 'id_for_slug' do
+    let(:topic) { Fabricate(:post).topic }
+
+    it "returns JSON for the slug" do
+      xhr :get, :id_for_slug, slug: topic.slug
+      response.should be_success
+      json = ::JSON.parse(response.body)
+      json.should be_present
+      json['topic_id'].should == topic.id
+      json['url'].should == topic.url
+      json['slug'].should == topic.slug
+    end
+
+    it "returns invalid access if the user can't see the topic" do
+      Guardian.any_instance.expects(:can_see?).with(topic).returns(false)
+      xhr :get, :id_for_slug, slug: topic.slug
+      response.should_not be_success
+    end
+  end
+
   describe 'show' do
 
     let(:topic) { Fabricate(:post).topic }
@@ -551,6 +571,11 @@ describe TopicsController do
     it 'shows a topic correctly' do
       xhr :get, :show, topic_id: topic.id, slug: topic.slug
       response.should be_success
+    end
+
+    it 'return 404 for an invalid page' do
+      xhr :get, :show, topic_id: topic.id, slug: topic.slug, page: 2
+      response.code.should == "404"
     end
 
     it 'can find a topic given a slug in the id param' do
@@ -622,7 +647,7 @@ describe TopicsController do
       end
 
       it "reviews the user for a promotion if they're new" do
-        user.update_column(:trust_level, TrustLevel.levels[:newuser])
+        user.update_column(:trust_level, TrustLevel[0])
         Promotion.any_instance.expects(:review)
         get :show, topic_id: topic.id, slug: topic.slug
       end

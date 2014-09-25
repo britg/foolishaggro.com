@@ -35,11 +35,13 @@ class User < ActiveRecord::Base
   has_many :invites, dependent: :destroy
   has_many :topic_links, dependent: :destroy
   has_many :uploads
+  has_many :warnings
 
   has_one :user_avatar, dependent: :destroy
   has_one :facebook_user_info, dependent: :destroy
   has_one :twitter_user_info, dependent: :destroy
   has_one :github_user_info, dependent: :destroy
+  has_one :google_user_info, dependent: :destroy
   has_one :oauth2_user_info, dependent: :destroy
   has_one :user_stat, dependent: :destroy
   has_one :user_profile, dependent: :destroy, inverse_of: :user
@@ -99,16 +101,25 @@ class User < ActiveRecord::Base
   # set to true to optimize creation and save for imports
   attr_accessor :import_mode
 
-  scope :blocked, -> { where(blocked: true) } # no index
-  scope :not_blocked, -> { where(blocked: false) } # no index
-  scope :suspended, -> { where('suspended_till IS NOT NULL AND suspended_till > ?', Time.zone.now) } # no index
-  scope :not_suspended, -> { where('suspended_till IS NULL OR suspended_till <= ?', Time.zone.now) }
-  # excluding fake users like the community user
+  # excluding fake users like the system user
   scope :real, -> { where('id > 0') }
+
+  # TODO-PERF: There is no indexes on any of these
+  # and NotifyMailingListSubscribers does a select-all-and-loop
+  # may want to create an index on (active, blocked, suspended_till, mailing_list_mode)?
+  scope :blocked, -> { where(blocked: true) }
+  scope :not_blocked, -> { where(blocked: false) }
+  scope :suspended, -> { where('suspended_till IS NOT NULL AND suspended_till > ?', Time.zone.now) }
+  scope :not_suspended, -> { where('suspended_till IS NULL OR suspended_till <= ?', Time.zone.now) }
+  scope :activated, -> { where(active: true) }
 
   module NewTopicDuration
     ALWAYS = -1
     LAST_VISIT = -2
+  end
+
+  def self.max_password_length
+    200
   end
 
   def self.username_length
@@ -293,7 +304,7 @@ class User < ActiveRecord::Base
   end
 
   def new_user?
-    created_at >= 24.hours.ago || trust_level == TrustLevel.levels[:newuser]
+    created_at >= 24.hours.ago || trust_level == TrustLevel[0]
   end
 
   def seen_before?
@@ -341,7 +352,6 @@ class User < ActiveRecord::Base
     "//www.gravatar.com/avatar/#{email_hash}.png?s={size}&r=pg&d=identicon"
   end
 
-
   # Don't pass this up to the client - it's meant for server side use
   # This is used in
   #   - self oneboxes in open graph data
@@ -388,6 +398,10 @@ class User < ActiveRecord::Base
     PostAction.where(user_id: id, post_action_type_id: PostActionType.flag_types.values).count
   end
 
+  def warnings_received_count
+    warnings.count
+  end
+
   def flags_received_count
     posts.includes(:post_actions).where('post_actions.post_action_type_id' => PostActionType.flag_types.values).count
   end
@@ -400,7 +414,7 @@ class User < ActiveRecord::Base
 
     # Does not apply to staff, non-new members or your own topics
     return false if staff? ||
-                    (trust_level != TrustLevel.levels[:newuser]) ||
+                    (trust_level != TrustLevel[0]) ||
                     Topic.where(id: topic_id, user_id: id).exists?
 
     last_action_in_topic = UserAction.last_action_in_topic(id, topic_id)
@@ -433,7 +447,7 @@ class User < ActiveRecord::Base
   # Use this helper to determine if the user has a particular trust level.
   # Takes into account admin, etc.
   def has_trust_level?(level)
-    raise "Invalid trust level #{level}" unless TrustLevel.valid_level?(level)
+    raise "Invalid trust level #{level}" unless TrustLevel.valid?(level)
     admin? || moderator? || TrustLevel.compare(trust_level, level)
   end
 
@@ -557,7 +571,7 @@ class User < ActiveRecord::Base
   end
 
   def leader_requirements
-    @lq ||= LeaderRequirements.new(self)
+    @lq ||= TrustLevel3Requirements.new(self)
   end
 
   def should_be_redirected_to_top
@@ -620,6 +634,31 @@ class User < ActiveRecord::Base
     user_stat.try(:first_post_created_at)
   end
 
+  def associated_accounts
+    result = []
+    if twitter_user_info
+      result << "Twitter(#{twitter_user_info.screen_name})"
+    end
+
+    if facebook_user_info
+      result << "Facebook(#{facebook_user_info.username})"
+    end
+
+    if google_user_info
+      result << "Google(#{google_user_info.email})"
+    end
+
+    if github_user_info
+      result << "Github(#{github_user_info.screen_name})"
+    end
+
+    user_open_ids.each do |oid|
+      result << "OpenID #{oid.url[0..20]}...(#{oid.email})"
+    end
+
+    result.empty? ? I18n.t("user.no_accounts_associated") : result.join(", ")
+  end
+
   protected
 
   def badge_grant
@@ -669,6 +708,7 @@ class User < ActiveRecord::Base
   end
 
   def hash_password(password, salt)
+    raise "password is too long" if password.size > User.max_password_length
     Pbkdf2.hash_password(password, salt, Rails.configuration.pbkdf2_iterations, Rails.configuration.pbkdf2_algorithm)
   end
 

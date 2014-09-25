@@ -61,6 +61,10 @@ describe Email::Receiver do
       test_parse_body(fixture_file("emails/via_line.eml")).should == "Hello this email has content!"
     end
 
+    it "removes an 'on date wrote' quoting line" do
+      test_parse_body(fixture_file("emails/on_wrote.eml")).should == "Sure, all you need to do is frobnicate the foobar and you'll be all set!"
+    end
+
     it "removes the 'Previous Discussion' marker" do
       test_parse_body(fixture_file("emails/previous.eml")).should == "This will not include the previous discussion that is present in this email."
     end
@@ -125,7 +129,9 @@ Thanks for listening."
         receiver.process
 
         topic.posts.count.should == (start_count + 1)
-        topic.posts.last.cooked.strip.should == fixture_file("emails/valid_reply.cooked").strip
+        created_post = topic.posts.last
+        created_post.via_email.should be_true
+        created_post.cooked.strip.should == fixture_file("emails/valid_reply.cooked").strip
       end
     end
 
@@ -308,7 +314,7 @@ greatest show ever created. Everyone should watch it.
       to = "some@email.com"
 
       Fabricate(:category, email_in_allow_strangers: false, email_in: to)
-      SiteSetting.email_in_min_trust = TrustLevel.levels[:elder].to_s
+      SiteSetting.email_in_min_trust = TrustLevel[4].to_s
 
       # no email in for user
       expect{
