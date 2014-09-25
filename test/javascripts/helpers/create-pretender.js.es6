@@ -34,12 +34,12 @@ export default function() {
       }
     });
 
-    this.get("/404-body", function() {
-      return [200, {"Content-Type": "text/html"}, "<div class='page-not-found'>not found</div>"];
+    this.get("/t/id_for/:slug", function() {
+      return response({id: 280, slug: "internationalization-localization", url: "/t/internationalization-localization/280"});
     });
 
-    this.get("/search", function() {
-      return response([ { type: "topic", more: true, results: [ { url: "some-url" } ] } ]);
+    this.get("/404-body", function() {
+      return [200, {"Content-Type": "text/html"}, "<div class='page-not-found'>not found</div>"];
     });
 
     this.get('/draft.json', function() {

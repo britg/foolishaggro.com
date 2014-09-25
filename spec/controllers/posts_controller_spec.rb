@@ -22,13 +22,13 @@ shared_examples 'finding and showing post' do
 
     it "can't find deleted posts as an anonymous user" do
       xhr :get, action, params
-      response.should be_forbidden
+      response.status.should == 404
     end
 
     it "can't find deleted posts as a regular user" do
       log_in(:user)
       xhr :get, action, params
-      response.should be_forbidden
+      response.status.should == 404
     end
 
     it "can find posts as a moderator" do
@@ -327,7 +327,7 @@ describe PostsController do
       let(:user) {log_in}
       let(:post) {Fabricate(:post, user: user)}
 
-      it "raises an error if the user doesn't have permission to see the post" do
+      it "raises an error if the user doesn't have permission to wiki the post" do
         Guardian.any_instance.expects(:can_wiki?).returns(false)
 
         xhr :put, :wiki, post_id: post.id, wiki: 'true'
@@ -352,6 +352,63 @@ describe PostsController do
 
         wikied_post.reload
         wikied_post.wiki.should be_false
+      end
+
+    end
+
+  end
+
+  describe "post_type" do
+
+    include_examples "action requires login", :put, :post_type, post_id: 2
+
+    describe "when logged in" do
+      let(:user) {log_in}
+      let(:post) {Fabricate(:post, user: user)}
+
+      it "raises an error if the user doesn't have permission to change the post type" do
+        Guardian.any_instance.expects(:can_change_post_type?).returns(false)
+
+        xhr :put, :post_type, post_id: post.id, post_type: 2
+
+        response.should be_forbidden
+      end
+
+      it "can change the post type" do
+        Guardian.any_instance.expects(:can_change_post_type?).returns(true)
+
+        xhr :put, :post_type, post_id: post.id, post_type: 2
+
+        post.reload
+        post.post_type.should == 2
+      end
+
+    end
+
+  end
+
+  describe "rebake" do
+
+    include_examples "action requires login", :put, :rebake, post_id: 2
+
+    describe "when logged in" do
+      let(:user) {log_in}
+      let(:post) {Fabricate(:post, user: user)}
+
+      it "raises an error if the user doesn't have permission to rebake the post" do
+        Guardian.any_instance.expects(:can_rebake?).returns(false)
+
+        xhr :put, :rebake, post_id: post.id
+
+        response.should be_forbidden
+      end
+
+      it "can rebake the post" do
+        Guardian.any_instance.expects(:can_rebake?).returns(true)
+
+        xhr :put, :rebake, post_id: post.id
+
+        response.should be_success
       end
 
     end
@@ -384,6 +441,7 @@ describe PostsController do
     describe 'when logged in' do
 
       let!(:user) { log_in }
+      let(:moderator) { log_in(:moderator) }
       let(:new_post) { Fabricate.build(:post, user: user) }
 
       it "raises an exception without a raw parameter" do
@@ -492,6 +550,24 @@ describe PostsController do
           xhr :post, :create, {raw: 'hello', meta_data: {xyz: 'abc'}}
         end
 
+        context "is_warning" do
+          it "doesn't pass `is_warning` through if you're not staff" do
+            PostCreator.expects(:new).with(user, Not(has_entries('is_warning' => true))).returns(post_creator)
+            xhr :post, :create, {raw: 'hello', archetype: 'private_message', is_warning: 'true'}
+          end
+
+          it "passes `is_warning` through if you're staff" do
+            PostCreator.expects(:new).with(moderator, has_entries('is_warning' => true)).returns(post_creator)
+            xhr :post, :create, {raw: 'hello', archetype: 'private_message', is_warning: 'true'}
+          end
+
+          it "passes `is_warning` as false through if you're staff" do
+            PostCreator.expects(:new).with(moderator, has_entries('is_warning' => false)).returns(post_creator)
+            xhr :post, :create, {raw: 'hello', archetype: 'private_message', is_warning: 'false'}
+          end
+
+        end
+
       end
 
     end
@@ -537,7 +613,7 @@ describe PostsController do
       end
 
       it "ensures trust level 4 can see the revisions" do
-        log_in(:elder)
+        log_in(:trust_level_4)
         xhr :get, :revisions, post_id: post_revision.post_id, revision: post_revision.number
         response.should be_success
       end

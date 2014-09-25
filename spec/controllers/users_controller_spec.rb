@@ -287,14 +287,28 @@ describe UsersController do
         EmailToken.expects(:confirm).with(token).returns(user)
       end
 
+      it "fails when the password is blank" do
+        put :password_reset, token: token, password: ''
+        assigns(:user).errors.should be_present
+        session[:current_user_id].should be_blank
+      end
+
+      it "fails when the password is too long" do
+        put :password_reset, token: token, password: ('x' * (User.max_password_length + 1))
+        assigns(:user).errors.should be_present
+        session[:current_user_id].should be_blank
+      end
+
       it "logs in the user" do
         put :password_reset, token: token, password: 'newpassword'
+        assigns(:user).errors.should be_blank
         session[:current_user_id].should be_present
       end
 
       it "doesn't log in the user when not approved" do
         SiteSetting.expects(:must_approve_users?).returns(true)
         put :password_reset, token: token, password: 'newpassword'
+        assigns(:user).errors.should be_blank
         session[:current_user_id].should be_blank
       end
     end
@@ -508,6 +522,11 @@ describe UsersController do
       include_examples 'failed signup'
     end
 
+    context 'when password is too long' do
+      let(:create_params) { {name: @user.name, username: @user.username, password: "x" * (User.max_password_length + 1), email: @user.email} }
+      include_examples 'failed signup'
+    end
+
     context 'when password param is missing' do
       let(:create_params) { {name: @user.name, username: @user.username, email: @user.email} }
       include_examples 'failed signup'
@@ -690,7 +709,7 @@ describe UsersController do
     it 'filters by email' do
       inviter = Fabricate(:user)
       invitee = Fabricate(:user)
-      invite = Fabricate(
+      _invite = Fabricate(
         :invite,
         email: 'billybob@example.com',
         invited_by: inviter,
@@ -713,7 +732,7 @@ describe UsersController do
     it 'filters by username' do
       inviter = Fabricate(:user)
       invitee = Fabricate(:user, username: 'billybob')
-      invite = Fabricate(
+      _invite = Fabricate(
         :invite,
         invited_by: inviter,
         email: 'billybob@example.com',
@@ -784,7 +803,7 @@ describe UsersController do
           it 'does not return invites' do
             user = log_in
             inviter = Fabricate(:user)
-            invitee = Fabricate(:user)
+            _invitee = Fabricate(:user)
             Fabricate(:invite, invited_by: inviter)
             stub_guardian(user) do |guardian|
               guardian.stubs(:can_see_invite_details?).
@@ -801,7 +820,7 @@ describe UsersController do
 
       context 'with redeemed invites' do
         it 'returns invites' do
-          user = log_in
+          _user = log_in
           inviter = Fabricate(:user)
           invitee = Fabricate(:user)
           invite = Fabricate(:invite, invited_by: inviter, user: invitee)

@@ -1,10 +1,10 @@
 <h3>{{view.title}}</h3>
 
 {{#if date}}
-  <span class="date">{{bound-raw-date date}}</span>
+  <span class="date">{{displayDate}}</span>
 {{/if}}
 
-<div><input type='text' readonly /></div>
+<div><input type='text' /></div>
 
 {{each shareLinks itemView='share-link'}}
 

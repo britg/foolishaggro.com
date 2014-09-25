@@ -7,9 +7,6 @@
     .has-icon .starred:before {
       content: "\f005";
     }
-    .has-icon .unread:before {
-      content: "\f02e";
-    }
   }
 }
 
@@ -307,4 +304,8 @@ ol.category-breadcrumb {
 
 .top-title-buttons {
   display: inline;
+}
+
+div.education {
+  color: scale-color($primary, $lightness: 50%);
 }

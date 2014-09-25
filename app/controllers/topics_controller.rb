@@ -30,6 +30,13 @@ class TopicsController < ApplicationController
 
   skip_before_filter :check_xhr, only: [:show, :feed]
 
+  def id_for_slug
+    topic = Topic.find_by(slug: params[:slug].downcase)
+    guardian.ensure_can_see!(topic)
+    raise Discourse::NotFound unless topic
+    render json: {slug: topic.slug, topic_id: topic.id, url: topic.url}
+  end
+
   def show
     flash["referer"] ||= request.referer
 
@@ -50,9 +57,14 @@ class TopicsController < ApplicationController
       redirect_to_correct_topic(topic, opts[:post_number]) && return
     end
 
+    page = params[:page].to_i
+    if (page < 0) || ((page - 1) * SiteSetting.posts_per_page > @topic_view.topic.highest_post_number)
+      raise Discourse::NotFound
+    end
+
     discourse_expires_in 1.minute
 
-    redirect_to_correct_topic(@topic_view.topic, opts[:post_number]) && return if slugs_do_not_match || (!request.xhr? && params[:slug].nil?)
+    redirect_to_correct_topic(@topic_view.topic, opts[:post_number]) && return if slugs_do_not_match || (!request.format.json? && params[:slug].nil?)
 
     track_visit_to_topic
 
@@ -115,7 +127,8 @@ class TopicsController < ApplicationController
 
     success = false
     Topic.transaction do
-      success = topic.save && topic.change_category_to_id(params[:category_id].to_i)
+      success = topic.save
+      success &= topic.change_category_to_id(params[:category_id].to_i) unless topic.private_message?
     end
 
     # this is used to return the title to the client as it may have been changed by "TextCleaner"
@@ -404,7 +417,7 @@ class TopicsController < ApplicationController
         username: request['u'],
         ip_address: request.remote_ip
       )
-    end unless request.xhr?
+    end unless request.format.json?
 
     Scheduler::Defer.later "Track Visit" do
       TopicViewItem.add(topic_id, ip, user_id)
@@ -416,7 +429,7 @@ class TopicsController < ApplicationController
   end
 
   def should_track_visit_to_topic?
-    !!((!request.xhr? || params[:track_visit]) && current_user)
+    !!((!request.format.json? || params[:track_visit]) && current_user)
   end
 
   def perform_show_response

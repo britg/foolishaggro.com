@@ -213,7 +213,7 @@ class CookedPostProcessor
     Oneboxer.apply(@doc) { |url| Oneboxer.onebox(url, args) }
 
     # make sure we grab dimensions for oneboxed images
-    oneboxed_images.each { |img| puts "image: #{img["src"]}"; limit_size!(img) }
+    oneboxed_images.each { |img| limit_size!(img) }
   end
 
   def optimize_urls
@@ -245,7 +245,12 @@ class CookedPostProcessor
   def disable_if_low_on_disk_space
     if available_disk_space < SiteSetting.download_remote_images_threshold
       SiteSetting.download_remote_images_to_local = false
-      SystemMessage.create(Discourse.site_contact_user, :download_remote_images_disabled)
+      # log the site setting change
+      reason = I18n.t("disable_remote_images_download_reason")
+      staff_action_logger = StaffActionLogger.new(Discourse.system_user)
+      staff_action_logger.log_site_setting_change("download_remote_images_to_local", true, false, { details: reason })
+      # also send a private message to the site contact user
+      SystemMessage.create_from_system_user(Discourse.site_contact_user, :download_remote_images_disabled)
       return true
     end
     false

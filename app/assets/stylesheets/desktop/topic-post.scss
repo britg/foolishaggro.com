@@ -513,20 +513,6 @@ button.expand-post {
   margin-top: 10px;
 }
 
-.quote-button {
-  display: none;
-  position: absolute;
-  background-color: scale-color($primary, $lightness: 50%);
-  color: $secondary;
-  padding: 10px;
-  z-index: 401;
-
-  &:hover {
-    background-color: scale-color($primary, $lightness: 40%);
-    cursor: pointer;
-  }
-}
-
 .quote-button.visible {
   display: block;
 }
@@ -536,19 +522,20 @@ iframe {
 }
 
 .extra-info-wrapper {
-  float: left;
-  width: 46%;
+  overflow: hidden;
 
   .topic-statuses {
-    i         { color: $header_primary; }
+    i  { color: $header_primary; }
+    i.fa-envelope { color: $danger; }
     .unpinned { color: $header_primary; }
   }
-  .topic-link { color: $header_primary;
-  display: block;
-white-space: nowrap;
-overflow: hidden;
-text-overflow: ellipsis;
 
+  .topic-link {
+    color: $header_primary;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -557,7 +544,6 @@ text-overflow: ellipsis;
     margin: 5px 0 0 0;
     font-size: 1.6em;
     line-height: 1.3em;
-    width: 820px;
 
   }
 
@@ -611,7 +597,7 @@ text-overflow: ellipsis;
 
 .moderator {
   .topic-body {
-    background-color: dark-light-diff($highlight, $secondary, 50%, -80%);
+    background-color: dark-light-diff($highlight, $secondary, 70%, -80%);
   }
 }
 
@@ -680,15 +666,6 @@ blockquote > *:last-child {
     }
   }
 
-  .title {
-    border-left: 5px solid darken(scale-color-diff(), 10%);
-    background-color: scale-color-diff();
-    padding: 12px 12px 0 12px;
-    /* blockquote is underneath this and has top margin */
-    .avatar { margin-right: 7px; }
-    img { margin-top: -4px; }
-  }
-
   aside {
     .quote, .title, blockquote, .onebox, .onebox-result {
       background: darken(scale-color-diff(), 5%);
@@ -702,23 +679,7 @@ blockquote > *:last-child {
 
 }
 
-.quote-controls {
-  float: right;
-  color: scale-color($primary, $lightness: 50%);
-  a {
-    margin: 0;
-  }
-  .back:before
-  {
-    display: inline-block;
-    margin-left: 8px;
-    color: scale-color($primary, $lightness: 50%);
-    font-family: "FontAwesome";
-    position: relative;
-    z-index: 20;
-    content: "\f062";
-  }
-}
+
 
 .gutter {
   margin-top: 13px;
@@ -731,8 +692,14 @@ blockquote > *:last-child {
   li {margin-bottom: 10px;}
   i {font-size: 12px;}
 
-  .reply-new, .track-link {
+  .reply-new {
     padding-left: 27px;
+    display:block;
+    overflow:hidden;
+  }
+
+  .track-link {
+    padding-left: 10px;
     display: block;
     overflow: hidden;
     }
@@ -748,7 +715,7 @@ blockquote > *:last-child {
       margin-top: -2px;
       margin-left: -17px;
     }
-    a.track-link {color: scale-color($primary, $lightness: 50%);}
+    
     a.toggle-more {
       display: block;
       text-align: right;
@@ -774,19 +741,12 @@ $topic-avatar-width: 45px;
   }
 }
 .topic-avatar {
- border-top: 1px solid dark-light-diff($primary, $secondary, 90%, -75%);
- padding-top: 16px;
- width: $topic-avatar-width;
- float: left;
- position: relative;
- z-index: 2;
-
- .wiki {
-   margin-top: 14px;
-   color: scale-color($primary, $lightness: 60%);
-   margin-left: 5px;
-   cursor: pointer;
- }
+  border-top: 1px solid dark-light-diff($primary, $secondary, 90%, -75%);
+  padding-top: 16px;
+  width: $topic-avatar-width;
+  float: left;
+  position: relative;
+  z-index: 2;
 }
 
 .gap {
@@ -1033,7 +993,7 @@ span.highlighted {
 .read-state {
   color: scale-color($tertiary, $lightness: 50%);
   position: absolute;
-  right: -8px;
+  right: -2px;
   top: 13px;
   font-size: 8px;
 }
@@ -1049,11 +1009,6 @@ span.highlighted {
 
 @media all
 and (max-width : 1140px) {
-  .extra-info {
-    h1 {
-      width: 720px;
-    }
-  }
   .post-cloak .reply-to-tab {
     right: 320px;
   }
@@ -1062,11 +1017,6 @@ and (max-width : 1140px) {
 
 @media all
 and (max-width : 975px) {
-  .extra-info {
-    h1 {
-      width: 650px;
-    }
-  }
   .post-cloak .reply-to-tab {
     right: 300px;
   }
@@ -1081,11 +1031,7 @@ and (max-width : 940px) {
 
 @media all
 and (max-width : 870px) {
-  .extra-info {
-    h1 {
-      width: 520px;
-    }
-  }
+
   .gutter {
     display: none;
     }

@@ -103,7 +103,6 @@ nl:
       trust_level_2: "trust_level_2"
       trust_level_3: "trust_level_3"
       trust_level_4: "trust_level_4"
-      trust_level_5: "trust_level_5"
   education:
     until_posts:
       one: "één bericht"
@@ -194,12 +193,6 @@ nl:
       title: "nieuw lid"
     basic:
       title: "lid"
-    regular:
-      title: "regulier lid"
-    leader:
-      title: "leider"
-    elder:
-      title: "ervaren lid"
     change_failed_explanation: "Je probeerde %{user_name} te degraderen naar '%{new_trust_level}'. Echter, het trust level is al '%{current_trust_level}'. %{user_name} blijft op trust level '%{current_trust_level}'"
   rate_limiter:
     slow_down: "Je hebt deze actie te vaak uitgevoerd. Probeer het later nog een keer."
@@ -319,7 +312,6 @@ nl:
       long_form: 'heeft dit als ongepast gemeld'
     notify_user:
       title: 'Stuur {{username}} een privébericht'
-      description: 'In dit bericht staat iets waarover ik de schrijver direct en privé wil spreken.'
       long_form: 'bericht aan schrijver verstuurd'
       email_body: "%{link}\n\n%{message}"
     notify_moderators:
@@ -516,7 +508,6 @@ nl:
     apple_touch_icon_url: "Icoon voor Apple touch devices. Aanbevolen grootte is 144px bij 144px."
     email_custom_headers: "Een lijst van custom email headers, gescheiden door een pipe (|)"
     use_https: "Gebruik http of https voor de volledige url van de site (Discourse.base_url)? GEBRUIK DIT NIET ALS HTTPS NOG NIET OPGEZET IS!"
-    enable_private_messages: "Sta nieuwe leden (trustlevel 1) toe privé-berichten te maken en er op te reageren"
     enable_long_polling: "De 'message bus' die gebruikt wordt voor notificaties kan 'long polling' gebruiken."
     long_polling_interval: "Het interval in milliseconden voor dat een nieuwe 'long poll' wordt uitgestuurd"
     polling_interval: "Hoe vaak een cliënt een 'poll' moet uitvoeren in milliseconden"
@@ -584,11 +575,6 @@ nl:
     newuser_spam_host_threshold: "Hoe vaak kan een gebruiker linken naar dezelfde host in hun `newuser_spam_host_posts` berichten voordat deze links als spam gezien worden."
     reply_by_email_enabled: "Ondersteuning voor antwoorden per e-mail."
     reply_by_email_address: "Template voor antwoorden per e-mail, bijvoorbeeld: %{reply_key}@reageer.mijnforum.nl"
-    pop3s_polling_enabled: "Mail ophalen via POP3S?"
-    pop3s_polling_port: "De poort voor POP3S."
-    pop3s_polling_host: "De host voor POP3S."
-    pop3s_polling_username: "De username voor het POP3S e-mailaccount."
-    pop3s_polling_password: "Het wachtwoord voor het POP3S e-mailaccount."
     email_in_min_trust: "Het minium trustlevel dat een gebruiker moet hebben om nieuwe topics te kunnen mailen."
     delete_user_max_post_age: "Gebruikers wiens eerste bericht ouder dan (x) dagen is kunnen niet meer verwijderd worden."
     delete_all_posts_max: "Het maximaal aantal berichten dat ineens verwijderd kan worden met de 'Verwijder alle berichten'-knop. Als een gebruiker meer berichten heeft, kunnen de berichten niet in een keer verwijderd worden en kan de gebruiker dus niet verwijderd worden."
@@ -628,7 +614,6 @@ nl:
     invitee_accepted: "%{display_username} heeft je uitnodiging geaccepteerd"
     linked: "%{display_username} heeft je gelinkt in %{link}"
   search:
-    within_post: "#%{post_number} door %{username}: %{excerpt}"
     types:
       category: 'Categorieën'
       topic: 'Resultaten'
@@ -668,8 +653,6 @@ nl:
     pinned_disabled: "Deze topic is niet langer gepind en zal niet meer bovenaan de lijst van topics in zijn categorie staan."
     pinned_globally_enabled: "Deze topic is nu globaal vastgepind en zal bovenaan de lijst van topics in zijn categorie en alle andere topiclijsten staan. Wanneer iemand op 'Verwijder pin' drukt, zal de topic voor diegene niet meer bovenaan staan."
     pinned_globally_disabled: "Deze topic is niet langer gepind en zal niet meer bovenaan de lijst van topics in zijn categorie staan."
-    visible_enabled: "Deze topic is nu zichtbaar en zal weer worden weergegeven in topiclijsten."
-    visible_disabled: "Deze topic is nu onzichtbaar en zal niet worden weergegeven in topiclijsten, en kan alleen via een directe link worden bezocht."
   login:
     not_approved: "Je account is nog niet goedgekeurd. Je zal via de mail een bericht van ons ontvangen wanneer je in kan loggen."
     incorrect_username_email_or_password: "Incorrecte gebruikersnaam, e-mailadres of wachtwoord"

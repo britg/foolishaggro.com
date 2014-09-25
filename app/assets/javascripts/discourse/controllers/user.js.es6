@@ -8,6 +8,10 @@ export default ObjectController.extend({
 
   collapsedInfo: Em.computed.not('indexStream'),
 
+  showEmailOnProfile: Discourse.computed.setting('show_email_on_profile'),
+
+  showEmail: Ember.computed.and('email', 'showEmailOnProfile'),
+
   websiteName: function() {
     var website = this.get('website');
     if (Em.isEmpty(website)) { return; }
@@ -19,6 +23,8 @@ export default ObjectController.extend({
   canSeePrivateMessages: function() {
     return this.get('viewingSelf') || Discourse.User.currentProp('admin');
   }.property('viewingSelf'),
+
+  canSeeNotificationHistory: Em.computed.alias('canSeePrivateMessages'),
 
   showBadges: function() {
     return Discourse.SiteSettings.enable_badges && (this.get('content.badge_count') > 0);

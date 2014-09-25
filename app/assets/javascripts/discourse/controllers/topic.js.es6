@@ -40,8 +40,8 @@ export default ObjectController.extend(Discourse.SelectedPostsCount, {
 
   init: function() {
     this._super();
-    this.set('selectedPosts', new Em.Set());
-    this.set('selectedReplies', new Em.Set());
+    this.set('selectedPosts', []);
+    this.set('selectedReplies', []);
   },
 
   actions: {
@@ -275,8 +275,7 @@ export default ObjectController.extend(Discourse.SelectedPostsCount, {
           var selectedPosts = self.get('selectedPosts'),
               selectedReplies = self.get('selectedReplies'),
               postStream = self.get('postStream'),
-              toRemove = new Ember.Set();
-
+              toRemove = [];
 
           Discourse.Post.deleteMany(selectedPosts, selectedReplies);
           postStream.get('posts').forEach(function (p) {
@@ -380,7 +379,28 @@ export default ObjectController.extend(Discourse.SelectedPostsCount, {
     },
 
     toggleWiki: function(post) {
+      // the request to the server is made in an observer in the post class
       post.toggleProperty('wiki');
+    },
+
+    togglePostType: function (post) {
+      // the request to the server is made in an observer in the post class
+      var regular = Discourse.Site.currentProp('post_types.regular'),
+          moderator = Discourse.Site.currentProp('post_types.moderator_action');
+
+      if (post.get("post_type") === moderator) {
+        post.set("post_type", regular);
+      } else {
+        post.set("post_type", moderator);
+      }
+    },
+
+    rebakePost: function (post) {
+      post.rebake();
+    },
+
+    unhidePost: function (post) {
+      post.unhide();
     }
   },
 
@@ -496,30 +516,30 @@ export default ObjectController.extend(Discourse.SelectedPostsCount, {
       }
 
       var postStream = topicController.get('postStream');
-      if (data.type === "revised" || data.type === "acted") {
-        // TODO we could update less data for "acted"
-        // (only post actions)
-        postStream.triggerChangedPost(data.id, data.updated_at);
-        return;
+      switch (data.type) {
+        case "revised":
+        case "acted":
+        case "rebaked": {
+          // TODO we could update less data for "acted" (only post actions)
+          postStream.triggerChangedPost(data.id, data.updated_at);
+          return;
+        }
+        case "deleted": {
+          postStream.triggerDeletedPost(data.id, data.post_number);
+          return;
+        }
+        case "recovered": {
+          postStream.triggerRecoveredPost(data.id, data.post_number);
+          return;
+        }
+        case "created": {
+          postStream.triggerNewPostInStream(data.id);
+          return;
+        }
+        default: {
+          Em.Logger.warn("unknown topic bus message type", data);
+        }
       }
-
-      if (data.type === "deleted") {
-        postStream.triggerDeletedPost(data.id, data.post_number);
-        return;
-      }
-
-      if (data.type === "recovered") {
-        postStream.triggerRecoveredPost(data.id, data.post_number);
-        return;
-      }
-
-      if (data.type === "created") {
-        postStream.triggerNewPostInStream(data.id);
-        return;
-      }
-
-      // log a warning
-      Em.Logger.warn("unknown topic bus message type", data);
     });
   },
 

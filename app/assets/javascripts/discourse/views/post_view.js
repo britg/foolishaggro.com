@@ -7,7 +7,9 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
                       'selected',
                       'post.hidden:post-hidden',
                       'post.deleted',
-                      'groupNameClass'],
+                      'byTopicCreator:topic-creator',
+                      'groupNameClass',
+                      'post.wiki:wiki'],
   postBinding: 'content',
 
   historyHeat: function() {
@@ -52,7 +54,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     }
 
     var $adminMenu = this.get('adminMenu');
-    if ($adminMenu && !$(e.target).is($adminMenu) && $adminMenu.has($(e.target)).length === 0) {
+    if ($adminMenu && !$(e.target).is($adminMenu)) {
       $adminMenu.hide();
       this.set('adminMenu', null);
     }
@@ -183,6 +185,11 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
           topicController = this.get('controller'),
           origScrollTop = $(window).scrollTop();
 
+      if (Discourse.Mobile.mobileView) {
+        Discourse.URL.routeTo(this.get('post.topic').urlForPostNumber(this.get('post.reply_to_post_number')));
+        return;
+      }
+
 
       if (replyHistory.length > 0) {
         var origHeight = this.$('.embedded-posts.top').height();
@@ -234,7 +241,6 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
 
   _destroyedPostView: function() {
     Discourse.ScreenTrack.current().stopTracking(this.get('elementId'));
-    this._unbindExpandMentions();
   }.on('willDestroyElement'),
 
   _postViewInserted: function() {
@@ -262,22 +268,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
     Em.run.scheduleOnce('afterRender', this, '_insertQuoteControls');
 
     this._applySearchHighlight();
-    this._bindExpandMentions();
   }.on('didInsertElement'),
-
-  _bindExpandMentions: function() {
-    var self = this;
-    this.$('.cooked').on('click.discourse-mention', 'a.mention', function(e) {
-      var $target = $(e.target);
-      self.appEvents.trigger('poster:expand', $target);
-      self.get('controller').send('expandPostUsername', $target.text());
-      return false;
-    });
-  },
-
-  _unbindExpandMentions: function() {
-    this.$('.cooked').off('click.discourse-mention');
-  },
 
   _applySearchHighlight: function() {
     var highlight = this.get('controller.searchHighlight');
@@ -289,7 +280,7 @@ Discourse.PostView = Discourse.GroupedView.extend(Ember.Evented, {
       if(this._highlighted){
          cooked.unhighlight();
       }
-      cooked.highlight(highlight);
+      cooked.highlight(highlight.split(/\s+/));
       this._highlighted = true;
 
     } else if(this._highlighted){

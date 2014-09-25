@@ -23,6 +23,7 @@ he:
   log_in: "התחברות"
   via: "%{username} עם %{site_name}"
   is_reserved: "שמור"
+  purge_reason: "נמחק באופן אוטומטי מכיוון שהיה ישן וללא שינוי"
   errors:
     messages:
       too_long_validation: "מוגבל לאורך של  %{max} תוים: את/ה הקשת %{length}."
@@ -97,14 +98,15 @@ he:
     errors:
       can_not_modify_automatic: "אתה לא יכול לשנות קבוצה אוטומטית"
     default_names:
+      everyone: "כולם"
       admins: "מנהלים ראשיים"
       moderators: "מנהלים"
       staff: "צוות"
+      trust_level_0: "רמת_אמון_0"
       trust_level_1: "trust_level_1"
       trust_level_2: "trust_level_2"
       trust_level_3: "trust_level_3"
       trust_level_4: "trust_level_4"
-      trust_level_5: "trust_level_5"
   education:
     until_posts:
       one: "הודעה אחת"
@@ -160,6 +162,8 @@ he:
         name: "שם קטגוריה"
       post:
         raw: "גוף"
+      user_profile:
+        bio_raw: "אודותיי"
     errors:
       messages:
         is_invalid: "אינו קביל; נסה להיות מעט יותר מפורט"
@@ -167,6 +171,9 @@ he:
       models:
         topic:
           attributes:
+            base:
+              warning_requires_pm: "את/ה יכולים להוסיף אזהרות רק למסרים פרטיים."
+              too_many_users: "את/ה יכולים לשלוח אזהרות רק למשתמש/ת אחד בכל פעם."
             archetype:
               cant_send_pm: "סליחה, אינך יכול לשלוח הודעה פרטית למשתמש הזה."
         user:
@@ -185,11 +192,11 @@ he:
   vip_category_name: "לאונג' (סלון הכבוד)"
   vip_category_description: "קטגוריה אקסקלוסיבית למשתמשים עם רמת אמון 3 או יותר."
   meta_category_name: "מטא"
+  meta_category_description: "דיון אודות אתר זה, הארגון שמאחוריו, איך הוא פועל ואיך נוכל לשפר אותו."
   staff_category_name: "צוות"
   staff_category_description: "קטגוריה פרטית לדיוני הצוות. נושאים נראים רק למנהלים ומנהלים ראשיים."
   lounge_welcome:
     title: "ברוכים הבאים ללאונג'"
-    body: "\nברכות!  :confetti_ball:\n\nאם את/ה יכולים לראות נושא זה, כרגע קודמתם ל[רמת אמון 3 (מוביל)][trust].\n\nמובילים הם משתתפים בעלי פרופיל מהחשובים והפעילים יותר. הם מהווים דוגמא חיובית לקהילה באמצעות פעולותיהם והפרסומים שלהם.\n\nאתם יכולים עכשיו &hellip;\n\n* לערוך את הכותרת של כל נושא\n* להחליף את הקטגוריה של כל נושא\n* לאפשר לכל הקישורים שלכם להיות נעקבים (האפשרות [automatic nofollow](http://en.wikipedia.org/wiki/Nofollow) כעת הוסרה)\n\n* לגשת לקטגוריית הלאונג' הזמינה רק למשתמשים בעלי רמת אמון 3 ומעלה\n\nהנה [רשימת המשתמשים שמחזיקים כעת ברמת אמון 3] (/badges/3/leader). אתם מוזמנים להגיד שלום!\n\nתודה רבה על חלקכם החשוב בקהילה הזו!\n\n(למידע נוסף על רמות אמון, [ראו נושא זה][trust]. שימו לב בבקשה שרק חברים שכעת עומדים בקריטריון הנבחר ישארו ברמת אמון 3). \n\n[trust]: https://meta.discourse.org/t/what-do-user-trust-levels-do/4924\n"
   category:
     topic_prefix: "אודות הקטגוריה %{category}"
     replace_paragraph: "[החלף את הפסקה הראשונה הזו עם תיאור קצר של הקטגוריה החדש שלך. התיאור הזה יופיע באיזור בחירת הקטגוריה, כך שיש לנסות לשמור עליו באורך פחות מ-200 תויים. עד שתעריך את המלל הזה או תיצור נושאים, הקטגוריה הזו לא תופיע בעמוד הקטגוריות.]"
@@ -211,13 +218,14 @@ he:
     basic:
       title: "משתמש בסיסי"
     regular:
-      title: "משתמש רגיל"
+      title: "חבר/ה"
     leader:
-      title: "מנהיג"
+      title: "רגיל/ה"
     elder:
-      title: "זקן שבט"
+      title: "מוביל/ה"
     change_failed_explanation: "ניסית להוריד את דרגת %{user_name} לדרגה '%{new_trust_level}'. אולם הדרגה שלהם היא כבר '%{current_trust_level}'. %{user_name} יישאר '%{current_trust_level}'"
   rate_limiter:
+    slow_down: "ביצעתם פעולה זו מספר רב מידי של פעמים, נסו שוב מאוחר יותר"
     too_many_requests: "יש לנו מגבלה יומית על מספר הפעמים שניתן לבצע פעולה זו. אנא המתן %{time_left} לפני ניסיון חוזר."
     hours:
       one: "שעה אחת"
@@ -335,7 +343,7 @@ he:
       long_form: 'דוגלל כלא ראוי'
     notify_user:
       title: 'התרע ל-{{username}}'
-      description: 'ההודעה הזו כוללת משהו עליו אני רוצה לדבר עם האדם ישירות ובפרטיות.'
+      description: 'פרסום זה מכיל משהו שארצה לשוחח עליו עם האדם הזה באופן ישיר ופרטי. אין צורך בסימון.'
       long_form: 'המשתמש הותרע'
       email_title: 'הפרסום שלךב"%{title}"'
       email_body: "%{link}\n\n%{message}"
@@ -374,6 +382,7 @@ he:
       email_body: "%{link}\n\n%{message}"
   flagging:
     you_must_edit: '<p> ההודעה שלך סומנה על ידי הקהילה. אנא <a href="/my/private-messages"> בדוק/בדקי את ההודעת הפרטיות שלך </a> </p>'
+    user_must_edit: '<p>פרסום זה סומן על ידי הקהילה וכרגע מוסתר באופן זמני.</p>'
   archetypes:
     regular:
       title: "נושא רגיל"
@@ -503,6 +512,9 @@ he:
     education_new_topic:
       title: "New User Education: First Topics"
       description: "Pop up just-in-time guidance automatically displayed above the composer when new users begin typing their first two new topics."
+    usage_tips:
+      title: "הדרכה למשתמש/ת חדשים"
+      description: "הדרכה ומידע חשוב למשתמשים חדשים."
     welcome_user:
       title: "Welcome: New User"
       description: "A private message automatically sent to all new users when they sign up."
@@ -589,7 +601,7 @@ he:
     summary_posts_required: "מספר הפרסומים המנימאלי בנושא לפני שהאפשרות \"סיכום נושא זה\" תתאפשר"
     summary_likes_required: "מינימום הלייקים לנושא לפני שהאפשרות \"סיכום נושא זה\" תתאפשר"
     summary_percent_filter: "כאשר משתמש/ת מקליקים על \"סיכום נושא זה\", הציגו את  % o הפרסומים הראשונים"
-    enable_private_messages: "Allow basic (1) trust level users to create private messages and reply to private messages"
+    enable_private_messages: "אפשרו למשתמשים בעלי רמת אמון 1 ליצור מסרים פרטיים ולהשיב למסרים פרטיים"
     enable_long_polling: "Message bus used for notification can use long polling"
     long_polling_interval: "Interval before a new long poll is issued in milliseconds "
     polling_interval: "How often should logged in user clients poll in milliseconds"
@@ -621,7 +633,6 @@ he:
     track_external_right_clicks: "Track external links that are right clicked (eg: open in new tab) disabled by default because it rewrites URLs"
     topics_per_page: "כמה נושאים נטענים כברירת מחדל ברשימת הנושאים, ומתי גלילה למטה טוענת נושאים נוספים"
     posts_per_page: "כמה פרסומים נטענים כברירת מחדל בנושא, ומתי גלילה מטה תטען פרסומים נוספים"
-    site_contact_username: "כל ההודעות האוטומטיות האישיות שישלחו על ידי הפורום ישלחו ממשתמש זה; אם תשאירו שדה זה ריק, חשבון ברירת המחדל של המערכת ישמש לכך."
     send_welcome_message: "שלחו כל המשתמשים החדשים הודעת \"ברוכים הבאים\" פרטים עם הדרכה ראשונית כיצד להתחיל."
     suppress_reply_directly_below: "אל תציגו את סך התגובות המצטבר בפרסום כאשר ישנה תגובה ישירה אחת לפרסום זה."
     suppress_reply_directly_above: "אל תציגו את את אפשרות ההרחבה \"בתגובה ל..\" לפרסום כאשר יש רק תגובה אחת ישירה מעל לפרסום זה."
@@ -699,25 +710,6 @@ he:
     enable_flash_video_onebox: "אפשרו הטמעת קישורי swf ו-flv (פלאש של אדובי) בפרסומים. אזהרה: עלול להביא לבעיות בטיחות באתר."
     default_invitee_trust_level: "ברירת מחדל של דרגת אמון (0-4) של משתמשים מוזמנים."
     default_trust_level: "ברירת המחדל של דרגות אמון (0-4) של משתמשים חדשים."
-    basic_requires_topics_entered: "לכמה נושאים חייבים משתמש/ת חדשים להיכנס לפני שיקודמו לרמת אמון בסיסית (1)."
-    basic_requires_read_posts: "כמה פרסומים חייבים לקרוא משתמש/ת חדשים לפני שיוקדמו לרמת אמון בסיסית (1)."
-    basic_requires_time_spent_mins: "כמה דקות חייבים משתמש/ת חדשים לקרוא פרסומים לפני שיקודמו לרמת אמון בסיסית (1)."
-    regular_requires_topics_entered: "לכמה נושאים משתמש/ת בסיסיים חייבים להיכנס לפני שיקודמו לרמת אמון רגילה (2)."
-    regular_requires_read_posts: "כמה פרסומים חייבים משתמש/ת בסיסיים לקרוא לפני שיקודמו לרמת אמון רגילה (2)."
-    regular_requires_time_spent_mins: "כמה דקות חייבים משתמש/ת בסיסיים לקרוא פרסומים לפני שיקודמו לרמת אמון רגילה (2)."
-    regular_requires_days_visited: "כמה ימים חייבים משתמש/ת בסיסיים לבקר באתר לפני שיקודמו לרמת אמון רגילה (2)?"
-    regular_requires_likes_received: "כמה לייקים חייב/ת משתמש/ת בסיסיים לקבל לפני שיקודמו לרמת אמון רגילה (2)?"
-    regular_requires_likes_given: "כמה לייקים חייבים משתמש/ת בסיסיים להעניק לפני שיקודמו לרמת אמון רגילה (2)."
-    regular_requires_topic_reply_count: "לכמה נושאים חייבים משתמש/ת בסיסיים להשיב לפני שיקודמו לרמת אמון רגילה (2)."
-    leader_requires_days_visited: "מספר הימים המינימלי שמשתמש/ת צריכים לבקר באתר ב-100 הימים האחרונים כדי להיות זכאים לקידום לדרגת אמון של מוביל/ה (3). (בין 0 ל-100)"
-    leader_requires_topics_replied_to: "מספר הנושאים המינימלי להם נדרשים משתמש/ת להשיב ב-100 הימים האחרונים כדי להיות זכאים לקידום לדרגת אמון של מוביל/ה (3). (0 ומעלה)"
-    leader_requires_topics_viewed: "אחוז הנושאים שנוצרו ב-100 הימים האחרונים בהם צריך משתמש/ת לצפות כדי להיות זכאים לקידום לדרגת אמון של מוביל/ה (3). (בין 0 ל-100)"
-    leader_requires_posts_read: "אחוז הפרסומים שנוצרו ב-100 הימים האחרונים בהם צריכים משתמש/ת לצפות כדי להיות זכאים לקידום לרמת אמון של מוביל/ה (3). (בין 0 ל-100)"
-    leader_requires_topics_viewed_all_time: "מספר הנושאים המינימלי בהם חייבים משתמש/ת לצפות כדי להיות זכאים לדרגת אמון של מוביל/ה (3)."
-    leader_requires_posts_read_all_time: "המספר המינימלי של פרסומים שחייבים משתמש/ת לקרוא כדי להיות זכאים לדרגת אמון של מוביל/ה (3)."
-    leader_requires_max_flagged: "למשתמש/ת חייבים להיות לא יותר מ-x פרסומים מסומנים על ידי x משתמשים אחרים ב-100 הימים האחרונים כדי להיות זכאים להיות מקודמים לדרגת אמון של מוביל/ה (3). x הוא ערך ההגדרה. (0 ומעלה)"
-    leader_promotion_min_duration: "מספר הימים המינימלי שקידום לדרגת אמון של מוביל/ה נמשך לפני שהמשתמש/ת יכולים להיות מורדים בדרגה."
-    leader_links_no_follow: "האם לקישורים ממובילים תוצמד התכונה \"לא למעקב\"."
     min_trust_to_create_topic: "The minimum trust level required to create a new topic."
     min_trust_to_edit_wiki_post: "דרגת האמון המינימלי הנדרשת כדי לערוך פרסום שמסומן כ-wiki."
     newuser_max_links: "כמה קישורים יכול/ה משתמש/ת חדשים להוספים לפרסום."
@@ -751,13 +743,6 @@ he:
     levenshtein_distance_spammer_emails: "כאשר מתאימים דוא\"ל של ספאמרים, מספר ההבדלים בתווים שעדיין מאפשרים התאמה מטושטשת."
     reply_by_email_enabled: "אפשרו  תגובה לנושאים באמצעות הדוא\"ל."
     reply_by_email_address: "Template for reply by email incoming email address, for example: %{reply_key}@reply.example.com or replies+%{reply_key}@example.com"
-    pop3s_polling_enabled: "בדיקה באמצעות POP3 לתגובות דוא\"ל."
-    pop3s_polling_insecure: "בדיקה באמצעות טקסט פשוט ו-POP3 ללא SSL."
-    pop3s_polling_period_mins: "משך הזמן בדקות בין בדיקת דוא\"ל בחשבונות POP3. שימו לב: דורש אתחול."
-    pop3s_polling_port: "החיבור (port) ממנו יש למשוך חשבון POP3S."
-    pop3s_polling_host: "המארח לבדיקת דוא\"ל באמצעות POP3S."
-    pop3s_polling_username: "שם המשתמש/ת למשיכת הדוא\"ל מחשבון ה-POP3S."
-    pop3s_polling_password: "הסיסמא למשיכה הדוא\"ל מחשבון ה-POP3S."
     email_in: "אפשרו למשתמשים לפרסם נושאים חדשים באמצעות דוא\"ל (דורש משיכה באמצעוצ pop3). הגדירו את הכתובת בלשונית \"הגדרות\" עבור כל קטגוריה."
     email_in_min_trust: "רמת האמון המינימלית הנדרשת למשתמש/ת כדי שיוכלו להעלות נושאים חדשים באמצעות הדוא\"ל."
     email_prefix: "ה[תווית] שתשמש בנושא הודעות הדוא\"ל. אם לא יוגדר, ברירת המחדל תכוון ל'כותרת' אם לא יוגדר אחרת."
@@ -784,7 +769,6 @@ he:
     dominating_topic_minimum_percent: "איזה אחוז מהפרסומים משתמש צריך לייצר בנושא לפני שיקבל תזכורת לגבי שליטת/שתלטנות יתר על הנושא."
     suppress_uncategorized_badge: "אל תציגו את התג (badge) לנושאים נטולי קטגוריה ברשימת הנושאים."
     global_notice: "הציגו הודעת אזהרה דחופה כללית לכל המבקרים, החליפו לריק כדי להסתיר אותה (ניתן להשתמש ב-HTML)."
-    disable_edit_notifications: "משמש כדי לנטרל התראות עריכה כאשר תפעילו את האפשרות 'הורדת_תמונות_מרחוק_למקומי' בהעדפות האתר."
     enable_names: "אפשרו הצגת שמות מלאים של משתמשים. בטלו אפשרות זו כדי להסתיר את השמות המלאים."
     display_name_on_posts: "הצגת שמם המלא של משתמשים בפרסומיהם, בנוסף ל@שם_המשתמש שלהם."
     invites_per_page: "ברירת המחדל, הזמנות המוצגות בעמוד המשתמש."
@@ -832,7 +816,6 @@ he:
     invitee_accepted: "%{display_username} קיבל את הזמנתך"
     linked: "%{display_username} קישר אליך ב %{link}"
   search:
-    within_post: "#%{post_number} מאת %{username}: %{excerpt}"
     types:
       category: 'קטגוריות'
       topic: 'תוצאות'
@@ -872,8 +855,6 @@ he:
     pinned_disabled: "הנושא הזה הוסר מנעיצה. הוא לא יוצג יותר בראש הקטגוריה שלו."
     pinned_globally_enabled: "הנושא הזה עכשיו נעוץ גלובאלית. הוא יופיע בראש הקטגוריה שלו ובראש כל רשימות הנושאים עד שיוסר מנעיצה על ידי מנהל או שכפתור הנקה נעיצות יילחץ."
     pinned_globally_disabled: "הנושא הזה הוסר מנעיצה. הוא לא יא יופיע יותר בראש הקטגוריה שלו."
-    visible_enabled: "הנושא הזה נראה. הוא יוצג ברשימות נושאים."
-    visible_disabled: "הנושא הזה בלתי נראה. הוא לא יוצג יותר באף רשימת נושאים. הדרך היחידה לגשת לנושא הזה היא דרך קישור ישיר."
   login:
     not_approved: "חשבונך טרם אושר. יישלח אליך דואר אלקטרוני כשהוא יהיה מוכן להתחברות."
     incorrect_username_email_or_password: "שם משתמש, דואר אלקטרוני או סיסמה לא נכונים"
@@ -937,50 +918,6 @@ he:
       הודעה זו נשלחה על ידי משתמש/ת מוכרים כך שאינך חייב/ת להתחבר.
   test_mailer:
     subject_template: "[%{site_name}] Email Deliverability Test"
-    text_body_template: |+
-      זהו מייל שנשלח אליך מהפורום %{site_name} ב:
-
-      [**%{base_url}**][0]
-
-      משלוח המייל הוא תהליך מסובך. הנה כמה דברים חשובים שכדאי שתבדקו קודם:
-
-      - היו *בטוחים* לכוון נכון את כתובת ה'מאת:' ב'התראת הדוא"ל' בהגדרות האתר שלכם. **המתחם המפורט בשדה הכתובת "מאת" של המיילים שאתם שולחים הוא שם המתחם של כתובת הדוא"ל שתאומת ותיבדק**.
-
-      - דעו כיצד לצפות ב*טקסט המקור של המייל* בשרת הדוא"ל שלכם, כך שתוכלו לחפש רמזים חשובים בכותרות מיילים. בג'ימייל מדובר באפשרות "הצג מקור" בתפריט הנפתח שבפינה השמאלית העליונה של כל מייל.
-
-      - ** חשוב: ** האם לספק השירות שלכם יש רשומת DNS הפוכה (reverse DNS record) מוזנת כדי לקשר את שם המתחם וכתובת ה-IP ממנה אתם שולחים דוא"ל? [בדקו את רשומת ה-PTR ההפוכה][2] כאן. אם ספק השירות שלכם לא הזין את רשומת מצביע ה-DNS ההפוך הנכונה, סביר להניח שאף אחד מהמיילים שלכם ישלח.
-
-      - האם [רשומת ה-SPF][8] של המתחם שלכם נכונה? [בדקו את רשומת ה-SPF שלכם][1] כאן. שימוש לב שסוג הרשומה הנכון והרשמי ל-SPF הוא -TXT.
-
-      - האם [רשומת ה-DKIM][3] של המתחם שלכם נכונה? זה יכול לשפר באופן מובהק את משלוח המיילים. [בדקו את רשומת ה-DKIM שלכם][7] כאן.
-
-      - אם אתם מריצים שרת דוא"ל משלכם, בדקו וודאו שה-IPs של שרת המייל [אינם מופיעים ברשימות שחורות][4].
-
-      - אם אתם מריצים שרת מייל משלכם, וודאו שהוא *בוודאות* שולח שם מתחם תקין לגמרי שמפורש ב-DNS במספר ה-HELO שלו. אם לא, זה יגרום לדוא"ל שלכם להידחות על ידי שרתי מייל רבים.
-
-      (*הדרך הקלה* היא [להירשם ל-Mandrill][6], המציעים תוכנית חינמית ונדיבה של דיוור שיכולה להתאים לפורומים קטנים. עדיין תזדקקו לההתקין את רשומות ה-SPF וה-DKIM ב-DNS שלכם!)
-
-      אנחנו מקווים שקיבלתם את מבחן השליחה הזה תקין!
-
-      בהצלחה,
-
-      החברים שלכם ב-[Discourse]](http://www.discourse.org)
-
-      [0]: %{base_url}
-      [1]: http://www.kitterman.com/spf/validate.html
-      [2]: http://mxtoolbox.com/ReverseLookup.aspx
-      [3]: http://www.dkim.org/
-      [4]: http://whatismyipaddress.com/blacklist-check
-      [5]: %{base_url}/unsubscribe
-      [6]: http://mandrill.com
-      [7]: http://dkimcore.org/tools/dkimrecordcheck.html
-      [8]: http://www.openspf.org/SPF_Record_Syntax
-
-      ----
-      כדאי שתופיע בתחתית כל מייל שאתם שולחים האפשרות להסרה מרשימת הדיוור, אז בואו ניצור אחת. מייל זה נשלח על ידי שם-החברה, ברחוב כלשהוא 55, בעיר, בארה"ב 12345. אם תרצו להסיר עצמכם ממיילים עתידיים [לחצו כאן להסרה][5].
-
-      <small>כדאי שתופיע בתחתית כל מייל שאתם שולחים האפשרות להסרה מרשימת הדיוור, אז בואו ניצור אחת. מייל זה נלח על ידי שם-החברה, ברחוב כלשהוא 55, בעיר, בארה"ב 12345. אם תרצו להסיר עצמכם ממיילים עתידיים [לחצו כאן להסרה][5].</small>
-
   new_version_mailer:
     subject_template: "[%{site_name}] גרסת Discourse חדשה, עדכון זמין."
   new_version_mailer_with_notes:
@@ -1021,7 +958,6 @@ he:
         תהנו מהביקור!
     welcome_invite:
       subject_template: "Welcome to %{site_name}!"
-      text_body_template: "תודה שקיבלת את הזמנתך אל %{site_name} - ברוכים הבאים!\n\nיצרנו עבורך שם משתמש/ת באופן אוטומטי: **%{username}**, אבל תוכלו לשנות אותו בכל עת באמצעות ביקור בתפריט ההעדפות [your user profile][prefs].\n\nכדי להתחבר שוב מחדש נקטו באחת משתי הפעולות:\n\n1. התחבר/י בכל דרך שנוחה לך - \nאך עליכם לכלול את **אותה כתובת דוא\"ל** בה קיבלת את ההזמנה המקורית. אחרת, לא נוכל לדעת שאלה באמת אתם!\n\n2. צרו סיסמא ייחודית בתפריט ההעדפות [your user profile][prefs], והשתמשו בה כדי להתחבר.\n\n\n%{new_user_tips}\n\n אנו מאמין ב [התנהגות קהילתית מתורבתת](%{base_url}/guidelines) בכל עת\n\nתהנו מהביקור שלכם!\n\n [prefs]: %{user_preferences_url}\n"
     export_succeeded:
       subject_template: "Export completed successfully"
       text_body_template: "The export was successful."
@@ -1073,12 +1009,6 @@ he:
       text_body_template: "אנו מצטערים, אבל הודעת הדוא\"ל שלך אל %{destination} (titled %{former_title}) didn't work.\nלא עברה.\n\nלא ידוע לנו על חשבון עם כתובת דוא\"ל זו. נסו לשלוח מכתובת דוא\"ל אחרת או ליצור קשר עם אנשי הצוות. \n"
     email_reject_empty:
       subject_template: "בעיית דוא\"ל - אין תוכן"
-      text_body_template: |
-        אנו מצטערים, אבל הודעת הדוא"ל שלך אל %{destination} (titled %{former_title}) לא עברה.
-
-        לא הצלחנו לאתר תוכן בדוא"ל. וודאו שכתבתים משהו בראש הדוא"ל - לא נוכל לפענח תגובות בגוף הטקסט.
-
-        אם אתם מקבלים הודעה זו וכללתם בה תוכן, אנא נסו שוב באמצעות שימוש בקידוד טקסט פשוט  UTF-8 (ללא HTML).
     email_reject_parsing:
       subject_template: "סוגיית דוא\"ל -- תוכן בלתי מוכר"
       text_body_template: |

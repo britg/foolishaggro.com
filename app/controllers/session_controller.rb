@@ -51,8 +51,13 @@ class SessionController < ApplicationController
       return
     end
 
+    RateLimiter.new(nil, "login-hr-#{request.remote_ip}", 30, 1.hour).performed!
+    RateLimiter.new(nil, "login-min-#{request.remote_ip}", 6, 1.minute).performed!
+
     params.require(:login)
     params.require(:password)
+
+    return invalid_credentials if params[:password].length > User.max_password_length
 
     login = params[:login].strip
     login = login[1..-1] if login[0] == "@"
@@ -84,6 +89,11 @@ class SessionController < ApplicationController
       return
     end
 
+    if ScreenedIpAddress.block_login?(user, request.remote_ip)
+      not_allowed_from_ip_address(user)
+      return
+    end
+
     (user.active && user.email_confirmed?) ? login(user) : not_activated(user)
   end
 
@@ -103,8 +113,13 @@ class SessionController < ApplicationController
       email_token = user.email_tokens.create(email: user.email)
       Jobs.enqueue(:user_email, type: :forgot_password, user_id: user.id, email_token: email_token.token)
     end
-    # always render of so we don't leak information
-    render json: {result: "ok"}
+
+    json = { result: "ok" }
+    unless SiteSetting.forgot_password_strict
+      json[:user_found] = user.present?
+    end
+
+    render json: json
 
   rescue RateLimiter::LimitExceeded
     render_json_error(I18n.t("rate_limiter.slow_down"))
@@ -149,6 +164,10 @@ class SessionController < ApplicationController
       sent_to_email: user.find_email || user.email,
       current_email: user.email
     }
+  end
+
+  def not_allowed_from_ip_address(user)
+    render json: {error: I18n.t("login.not_allowed_from_ip_address", username: user.username)}
   end
 
   def failed_to_login(user)

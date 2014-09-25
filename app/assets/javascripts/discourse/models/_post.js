@@ -76,23 +76,30 @@ Discourse.Post = Discourse.Model.extend({
   }.observes('bookmarked'),
 
   wikiChanged: function() {
-    var self = this;
+    var data = { wiki: this.get("wiki") };
+    this._updatePost("wiki", data);
+  }.observes('wiki'),
 
-    Discourse.ajax('/posts/' + this.get('id') + '/wiki', {
-      type: 'PUT',
-      data: {
-        wiki: this.get('wiki') ? true : false
-      }
-    }).then(function() {
-      self.incrementProperty('version');
-    }, function(error) {
+  postTypeChanged: function () {
+    var data = { post_type: this.get("post_type") };
+    this._updatePost("post_type", data);
+  }.observes("post_type"),
+
+  _updatePost: function (field, data) {
+    var self = this;
+    Discourse.ajax("/posts/" + this.get("id") + "/" + field, {
+      type: "PUT",
+      data: data
+    }).then(function () {
+      self.incrementProperty("version");
+    }, function (error) {
       if (error && error.responseText) {
         bootbox.alert($.parseJSON(error.responseText).errors[0]);
       } else {
-        bootbox.alert(I18n.t('generic_error'));
+        bootbox.alert(I18n.t("generic_error"));
       }
     });
-  }.observes('wiki'),
+  },
 
   internalLinks: function() {
     if (this.blank('link_counts')) return null;
@@ -149,6 +156,7 @@ Discourse.Post = Discourse.Model.extend({
       var data = {
         raw: this.get('raw'),
         topic_id: this.get('topic_id'),
+        is_warning: this.get('is_warning'),
         reply_to_post_number: this.get('reply_to_post_number'),
         category: this.get('category'),
         archetype: this.get('archetype'),
@@ -225,7 +233,7 @@ Discourse.Post = Discourse.Model.extend({
   setDeletedState: function(deletedBy) {
     this.set('oldCooked', this.get('cooked'));
 
-    // Moderators can delete posts. Regular users can only trigger a deleted at message.
+    // Moderators can delete posts. Users can only trigger a deleted at message.
     if (deletedBy.get('staff')) {
       this.setProperties({
         deleted_at: new Date(),
@@ -283,34 +291,29 @@ Discourse.Post = Discourse.Model.extend({
     @param {Discourse.Post} otherPost The post we're updating from
   **/
   updateFromPost: function(otherPost) {
-    var post = this;
+    var self = this;
     Object.keys(otherPost).forEach(function (key) {
-      var value = otherPost[key];
-      // optimisation
-      var oldValue = post[key];
+      var value = otherPost[key],
+          oldValue = self[key];
 
-      if(!value) {
-        value = null;
+      if (key === "replyHistory") {
+        return;
       }
 
-      if(!oldValue) {
-        oldValue = null;
-      }
+      if (!value) { value = null; }
+      if (!oldValue) { oldValue = null; }
 
       var skip = false;
-
       if (typeof value !== "function" && oldValue !== value) {
-
         // wishing for an identity map
-        if(key === "reply_to_user" && value && oldValue) {
+        if (key === "reply_to_user" && value && oldValue) {
           skip = value.username === oldValue.username || Em.get(value, "username") === Em.get(oldValue, "username");
         }
 
-        if(!skip) {
-          post.set(key, value);
+        if (!skip) {
+          self.set(key, value);
         }
       }
-
     });
   },
 
@@ -324,12 +327,24 @@ Discourse.Post = Discourse.Model.extend({
   updateFromJson: function(obj) {
     if (!obj) return;
 
+    var skip, oldVal;
+
     // Update all the properties
     var post = this;
     _.each(obj, function(val,key) {
       if (key !== 'actions_summary'){
-        if (val) {
-          post.set(key, val);
+        oldVal = post[key];
+        skip = false;
+
+        if (val && val !== oldVal) {
+
+          if (key === "reply_to_user" && val && oldVal) {
+            skip = val.username === oldVal.username || Em.get(val, "username") === Em.get(oldVal, "username");
+          }
+
+          if(!skip) {
+            post.set(key, val);
+          }
         }
       }
     });
@@ -401,6 +416,14 @@ Discourse.Post = Discourse.Model.extend({
         cooked_hidden: false
       });
     });
+  },
+
+  rebake: function () {
+    return Discourse.ajax("/posts/" + this.get("id") + "/rebake", { type: "PUT" });
+  },
+
+  unhide: function () {
+    return Discourse.ajax("/posts/" + this.get("id") + "/unhide", { type: "PUT" });
   }
 });
 

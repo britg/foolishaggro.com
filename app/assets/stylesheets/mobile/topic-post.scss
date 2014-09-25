@@ -121,7 +121,11 @@ button {
 }
 
 a.reply-to-tab {
-  display: none;
+  position: absolute;
+  z-index: 400;
+  right: 80px;
+  color: scale-color($primary, $lightness: 50%);
+  span { display: none; }
 }
 
 a.star {
@@ -211,7 +215,7 @@ a.star {
   .map {
     li {
       float: left;
-      padding: 7px 11px;
+      padding: 7px 8px;
       &:last-of-type {
         border-right: 0;
       }
@@ -225,7 +229,10 @@ a.star {
       float: left;
     }
   }
-  .avatars,
+  li.avatars {
+    display: none;
+  }
+
   .links,
   .information {
     padding: 7px 10px;
@@ -258,7 +265,7 @@ a.star {
       border: 0;
       border-bottom: 1px solid scale-color-diff();
       border-left: 1px solid scale-color-diff();
-      padding: 0 23px;
+      padding: 0 15px;
       color: $primary;
       background: scale-color-diff();
       &:hover {
@@ -330,21 +337,7 @@ span.post-count {
 
 .topic-post {
   &.moderator {
-    background-color: scale-color($highlight, $lightness: 60%);
-  }
-}
-
-.quote-button {
-  display: none;
-  position: absolute;
-  background-color: scale-color($primary, $lightness: 50%);
-  color: $primary;
-  padding: 10px;
-  z-index: 401;
-
-  &:hover {
-    background-color: scale-color($primary, $lightness: 50%);
-    cursor: pointer;
+    background-color: scale-color($highlight, $lightness: 75%);
   }
 }
 
@@ -387,19 +380,6 @@ iframe {
   position: relative;
 }
 
-.wiki {
-  float: left;
-  padding: 10px;
-  color: #408040;
-  i {
-    float: left;
-  }
-  h3 {
-    float: left;
-    margin-left: 10px;
-  }
-}
-
 .modal-body {
   input[type=text] {
     font-size: 16px;
@@ -407,7 +387,6 @@ iframe {
     margin-top: 10px;
   }
 }
-
 
 #share-link {
   width: 290px;
@@ -474,32 +453,6 @@ blockquote > *:first-child {
 }
 blockquote > *:last-child {
   margin-bottom: 0 !important;
-}
-
-.quote-controls {
-  float: right;
-  color: $primary;
-  a {
-    margin: 0;
-  }
-  .back:before {
-    display: inline-block;
-    margin-left: 8px;
-    color: $primary;
-    font-family: "FontAwesome";
-    position: relative;
-    z-index: 20;
-    content: "\f062";
-  }
-}
-
-
-.quote .title {
-  border-left: 5px solid scale-color($primary, $lightness: 75%);
-  background-color: scale-color-diff();
-  padding: 10px 10px 10px 12px;
-  clear: both;
-  .avatar { margin-right: 7px; }
 }
 
 .gutter { display: none; }
