@@ -61,7 +61,7 @@
           %strong= topic.user.username
           - topic.category.try(:tap) do |cat|
             in
-            %span.label.label-info= cat.name
+            %span.label.label-info= link_to cat.name, category_path(cat.slug)
 
         .content= topic.posts.first.excerpt.html_safe
 
