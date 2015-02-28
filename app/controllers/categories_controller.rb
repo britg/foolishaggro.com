@@ -2,9 +2,13 @@ require_dependency 'category_serializer'
 
 class CategoriesController < ApplicationController
 
-  before_filter :ensure_logged_in, except: [:index, :show]
+  before_filter :ensure_logged_in, except: [:index, :show, :redirect]
   before_filter :fetch_category, only: [:show, :update, :destroy]
-  skip_before_filter :check_xhr, only: [:index]
+  skip_before_filter :check_xhr, only: [:index, :redirect]
+
+  def redirect
+    redirect_to "/c/#{params[:path]}"
+  end
 
   def index
     @description = SiteSetting.site_description
@@ -32,7 +36,7 @@ class CategoriesController < ApplicationController
     guardian.ensure_can_create!(Category)
 
     file = params[:file] || params[:files].first
-    upload = Upload.create_for(current_user.id, file.tempfile, file.original_filename, File.size(file.tempfile))
+    upload = Upload.create_for(current_user.id, file.tempfile, file.original_filename, file.tempfile.size)
     if upload.errors.blank?
       render json: { url: upload.url, width: upload.width, height: upload.height }
     else
@@ -75,22 +79,40 @@ class CategoriesController < ApplicationController
 
   def update
     guardian.ensure_can_edit!(@category)
-    json_result(@category, serializer: CategorySerializer) { |cat|
+
+    json_result(@category, serializer: CategorySerializer) do |cat|
+
       cat.move_to(category_params[:position].to_i) if category_params[:position]
+
       if category_params.key? :email_in and category_params[:email_in].length == 0
         # properly null the value so the database constrain doesn't catch us
         category_params[:email_in] = nil
       end
+
       category_params.delete(:position)
+
       cat.update_attributes(category_params)
-    }
+    end
+  end
+
+  def update_slug
+    @category = Category.find(params[:category_id].to_i)
+    guardian.ensure_can_edit!(@category)
+
+    custom_slug = params[:slug].to_s
+
+    if custom_slug.present? && @category.update_attributes(slug: custom_slug)
+      render json: success_json
+    else
+      render_json_error(@category)
+    end
   end
 
   def set_notifications
     category_id = params[:category_id].to_i
     notification_level = params[:notification_level].to_i
 
-    CategoryUser.set_notification_level_for_category(current_user, notification_level , category_id)
+    CategoryUser.set_notification_level_for_category(current_user, notification_level, category_id)
     render json: success_json
   end
 
@@ -125,9 +147,11 @@ class CategoriesController < ApplicationController
                         :email_in_allow_strangers,
                         :parent_category_id,
                         :auto_close_hours,
+                        :auto_close_based_on_last_post,
                         :logo_url,
                         :background_url,
                         :allow_badges,
+                        :slug,
                         :permissions => [*p.try(:keys)])
       end
     end

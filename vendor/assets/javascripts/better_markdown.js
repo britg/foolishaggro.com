@@ -690,7 +690,7 @@
       inline_until_char = DialectHelpers.inline_until_char;
 
   // A robust regexp for matching URLs. Thakns: https://gist.github.com/dperini/729294
-  var urlRegexp = /(?:(?:https?|ftp):\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:\/[^\s]*)?/i.source;
+  var urlRegexp = /(?:(?:https?|ftp):\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]+-?)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:\/[^\s]*)?/i.source;
 
   /**
    * Gruber dialect
@@ -825,7 +825,6 @@
         // TODO: Cache this regexp for certain depths.
         // Create a regexp suitable for matching an li for a given stack depth
         function regex_for_depth( depth ) {
-
           return new RegExp(
             // m[1] = indent, m[2] = list_type
             "(?:^(" + indent_re + "{0," + depth + "} {0,3})(" + any_list + ")\\s+)|" +
@@ -871,8 +870,11 @@
               replace = new RegExp("^" + indent_re + "{" + depth + "}", "gm"),
               ret = [];
 
+
           while ( blocks.length > 0 ) {
-            if ( re.exec( blocks[0] ) ) {
+            // HACK: Fixes a v8 issue
+            test = blocks[0].replace(/^ {8,}/, '        ');
+            if ( re.exec( test ) ) {
               var b = blocks.shift(),
                   // Now remove that indent
                   x = b.replace( replace, "");
@@ -1185,6 +1187,16 @@
           res = this.dialect.inline[ m[1] ].call(
                     this,
                     text.substr( m.index ), m, previous_nodes || [] );
+
+          // If no inline code executed, fallback
+          if (!res) {
+            var fn = this.dialect.inline[m[1][0]];
+            if (fn) {
+              res = fn.call(
+                    this,
+                    text.substr( m.index ), m, previous_nodes || [] );
+            }
+          }
         }
         // Default for now to make dev easier. just slurp special and output it.
         res = res || [ m[1].length, m[1] ];

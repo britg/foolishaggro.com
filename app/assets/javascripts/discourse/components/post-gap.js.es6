@@ -1,17 +1,8 @@
-/**
-  Handles a gap between posts with a click to load more
-
-  @class PostGapComponent
-  @extends Ember.Component
-  @namespace Discourse
-  @module Discourse
-**/
 export default Ember.Component.extend({
   classNameBindings: [':gap', 'gap::hidden'],
 
-  _setup: function() {
+  initGaps: function(){
     this.set('loading', false);
-
     var before = this.get('before') === 'true',
         gaps = before ? this.get('postStream.gaps.before') : this.get('postStream.gaps.after');
 
@@ -19,6 +10,11 @@ export default Ember.Component.extend({
       this.set('gap', gaps[this.get('post.id')]);
     }
   }.on('init'),
+
+  gapsChanged: function(){
+    this.initGaps();
+    this.rerender();
+  }.observes('post.hasGap'),
 
   render: function(buffer) {
     if (this.get('loading')) {

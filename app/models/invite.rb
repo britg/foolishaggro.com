@@ -1,5 +1,10 @@
+require_dependency 'rate_limiter'
+
 class Invite < ActiveRecord::Base
+  include RateLimiter::OnCreateRecord
   include Trashable
+
+  rate_limit :limit_invites_per_day
 
   belongs_to :user
   belongs_to :topic
@@ -10,6 +15,7 @@ class Invite < ActiveRecord::Base
   has_many :topic_invites
   has_many :topics, through: :topic_invites, source: :topic
   validates_presence_of :invited_by_id
+  validates :email, email: true
 
   before_create do
     self.invite_key ||= SecureRandom.hex
@@ -95,7 +101,6 @@ class Invite < ActiveRecord::Base
     invite
   end
 
-
   # generate invite tokens without email
   def self.generate_disposable_tokens(invited_by, quantity=nil, group_names=nil)
     invite_tokens = []
@@ -179,8 +184,17 @@ class Invite < ActiveRecord::Base
     user
   end
 
+  def resend_invite
+    self.update_columns(created_at: Time.zone.now, updated_at: Time.zone.now)
+    Jobs.enqueue(:invite_email, invite_id: self.id)
+  end
+
+  def limit_invites_per_day
+    RateLimiter.new(invited_by, "invites-per-day", SiteSetting.max_invites_per_day, 1.day.to_i)
+  end
+
   def self.base_directory
-    File.join(Rails.root, "public", "csv", RailsMultisite::ConnectionManagement.current_db)
+    File.join(Rails.root, "public", "uploads", "csv", RailsMultisite::ConnectionManagement.current_db)
   end
 
   def self.chunk_path(identifier, filename, chunk_number)

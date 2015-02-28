@@ -1,4 +1,7 @@
+require_dependency 'topic_list_responder'
+
 class ListController < ApplicationController
+  include TopicListResponder
 
   skip_before_filter :check_xhr
 
@@ -57,17 +60,29 @@ class ListController < ApplicationController
         list_opts[:no_definitions] = true
       end
 
+
       list = TopicQuery.new(user, list_opts).public_send("list_#{filter}")
       list.more_topics_url = construct_next_url_with(list_opts)
       list.prev_topics_url = construct_prev_url_with(list_opts)
       if Discourse.anonymous_filters.include?(filter)
         @description = SiteSetting.site_description
         @rss = filter
+
+        if use_crawler_layout?
+          filter_title = I18n.t("js.filters.#{filter.to_s}.title")
+          if list_opts[:category]
+            @title = I18n.t('js.filters.with_category', filter: filter_title, category: Category.find(list_opts[:category]).name)
+          else
+            @title = I18n.t('js.filters.with_topics', filter: filter_title)
+          end
+        end
       end
-      respond(list)
+
+      respond_with_list(list)
     end
 
     define_method("category_#{filter}") do
+      canonical_url "#{Discourse.base_url}#{@category.url}"
       self.send(filter, { category: @category.id })
     end
 
@@ -76,6 +91,7 @@ class ListController < ApplicationController
     end
 
     define_method("parent_category_category_#{filter}") do
+      canonical_url "#{Discourse.base_url}#{@category.url}"
       self.send(filter, { category: @category.id })
     end
 
@@ -107,7 +123,7 @@ class ListController < ApplicationController
       url_prefix = "topics" unless action == :topics_by
       list.more_topics_url = url_for(construct_next_url_with(list_opts, url_prefix))
       list.prev_topics_url = url_for(construct_prev_url_with(list_opts, url_prefix))
-      respond(list)
+      respond_with_list(list)
     end
   end
 
@@ -116,18 +132,12 @@ class ListController < ApplicationController
     discourse_expires_in 1.minute
 
     @title = @category.name
-    @link = "#{Discourse.base_url}/category/#{@category.slug_for_url}"
+    @link = "#{Discourse.base_url}#{@category.url}"
     @description = "#{I18n.t('topics_in_category', category: @category.name)} #{@category.description}"
-    @atom_link = "#{Discourse.base_url}/category/#{@category.slug_for_url}.rss"
+    @atom_link = "#{Discourse.base_url}#{@category.url}.rss"
     @topic_list = TopicQuery.new.list_new_in_category(@category)
 
     render 'list', formats: [:rss]
-  end
-
-  def popular_redirect
-    # We've renamed popular to latest. Use a redirect until we're sure we can
-    # safely remove this.
-    redirect_to latest_path, :status => 301
   end
 
   def top(options=nil)
@@ -158,7 +168,12 @@ class ListController < ApplicationController
       list.for_period = period
       list.more_topics_url = construct_next_url_with(top_options)
       list.prev_topics_url = construct_prev_url_with(top_options)
-      respond(list)
+
+      if use_crawler_layout?
+        @title = I18n.t("js.filters.top.#{period}.title")
+      end
+
+      respond_with_list(list)
     end
 
     define_method("category_top_#{period}") do
@@ -175,25 +190,6 @@ class ListController < ApplicationController
   end
 
   protected
-
-  def respond(list)
-    discourse_expires_in 1.minute
-
-    list.draft_key = Draft::NEW_TOPIC
-    list.draft_sequence = DraftSequence.current(current_user, Draft::NEW_TOPIC)
-    list.draft = Draft.get(current_user, list.draft_key, list.draft_sequence) if current_user
-
-    respond_to do |format|
-      format.html do
-        @list = list
-        store_preloaded("topic_list_#{list.filter}", MultiJson.dump(TopicListSerializer.new(list, scope: guardian)))
-        render 'list'
-      end
-      format.json do
-        render_serialized(list, TopicListSerializer)
-      end
-    end
-  end
 
   def next_page_params(opts = nil)
     page_params(opts).merge(page: params[:page].to_i + 1)
@@ -250,10 +246,12 @@ class ListController < ApplicationController
       min_posts: params[:min_posts],
       max_posts: params[:max_posts],
       status: params[:status],
+      filter: params[:filter],
       state: params[:state],
       search: params[:search]
     }
     options[:no_subcategories] = true if params[:no_subcategories] == 'true'
+    options[:slow_platform] = true if slow_platform?
 
     options
   end

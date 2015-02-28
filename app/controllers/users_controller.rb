@@ -8,7 +8,7 @@ class UsersController < ApplicationController
   skip_before_filter :authorize_mini_profiler, only: [:avatar]
   skip_before_filter :check_xhr, only: [:show, :password_reset, :update, :account_created, :activate_account, :perform_account_activation, :authorize_email, :user_preferences_redirect, :avatar, :my_redirect]
 
-  before_filter :ensure_logged_in, only: [:username, :update, :change_email, :user_preferences_redirect, :upload_user_image, :pick_avatar, :destroy_user_image, :destroy]
+  before_filter :ensure_logged_in, only: [:username, :update, :change_email, :user_preferences_redirect, :upload_user_image, :pick_avatar, :destroy_user_image, :destroy, :check_emails]
   before_filter :respond_to_suspicious_request, only: [:create]
 
   # we need to allow account creation with bad CSRF tokens, if people are caching, the CSRF token on the
@@ -28,8 +28,12 @@ class UsersController < ApplicationController
   def show
     @user = fetch_user_from_params
     user_serializer = UserSerializer.new(@user, scope: guardian, root: 'user')
+    if params[:stats].to_s == "false"
+      user_serializer.omit_stats = true
+    end
     respond_to do |format|
       format.html do
+        @restrict_fields = guardian.restrict_user_fields?(@user)
         store_preloaded("user_#{@user.username}", MultiJson.dump(user_serializer))
       end
 
@@ -39,6 +43,23 @@ class UsersController < ApplicationController
     end
   end
 
+  def card_badge
+  end
+
+  def update_card_badge
+    user = fetch_user_from_params
+    guardian.ensure_can_edit!(user)
+
+    user_badge = UserBadge.find_by(id: params[:user_badge_id].to_i)
+    if user_badge && user_badge.user == user && user_badge.badge.image.present?
+      user.user_profile.update_column(:card_image_badge_id, user_badge.badge.id)
+    else
+      user.user_profile.update_column(:card_image_badge_id, nil)
+    end
+
+    render nothing: true
+  end
+
   def user_preferences_redirect
     redirect_to email_preferences_path(current_user.username_lower)
   end
@@ -46,6 +67,19 @@ class UsersController < ApplicationController
   def update
     user = fetch_user_from_params
     guardian.ensure_can_edit!(user)
+
+    if params[:user_fields].present?
+      params[:custom_fields] = {} unless params[:custom_fields].present?
+      UserField.where(editable: true).each do |f|
+        val = params[:user_fields][f.id.to_s]
+        val = nil if val === "false"
+        val = val[0...UserField.max_length] if val
+
+        return render_json_error(I18n.t("login.missing_user_field")) if val.blank? && f.required?
+        params[:custom_fields]["user_field_#{f.id}"] = val
+      end
+    end
+
     json_result(user, serializer: UserSerializer, additional_errors: [:user_profile]) do |u|
       updater = UserUpdater.new(current_user, user)
       updater.update(params)
@@ -58,10 +92,28 @@ class UsersController < ApplicationController
     user = fetch_user_from_params
     guardian.ensure_can_edit_username!(user)
 
-    result = user.change_username(params[:new_username])
+    # TODO proper error surfacing (result is a Model#save call)
+    result = user.change_username(params[:new_username], current_user)
     raise Discourse::InvalidParameters.new(:new_username) unless result
 
-    render nothing: true
+    render json: {
+      id: user.id,
+      username: user.username
+    }
+  end
+
+  def check_emails
+    user = fetch_user_from_params(include_inactive: true)
+    guardian.ensure_can_check_emails!(user)
+
+    StaffActionLogger.new(current_user).log_check_email(user, context: params[:context])
+
+    render json: {
+      email: user.email,
+      associated_accounts: user.associated_accounts
+    }
+  rescue Discourse::InvalidAccess
+    render json: failed_json, status: 403
   end
 
   def badge_title
@@ -73,7 +125,9 @@ class UsersController < ApplicationController
     user_badge = UserBadge.find_by(id: params[:user_badge_id])
     if user_badge && user_badge.user == user && user_badge.badge.allow_title?
       user.title = user_badge.badge.name
+      user.user_profile.badge_granted_title = true
       user.save!
+      user.user_profile.save!
     else
       user.title = ''
       user.save!
@@ -148,23 +202,40 @@ class UsersController < ApplicationController
   end
 
   def create
+    params.permit(:user_fields)
+
     unless SiteSetting.allow_new_registrations
-      render json: { success: false, message: I18n.t("login.new_registrations_disabled") }
-      return
+      return fail_with("login.new_registrations_disabled")
     end
 
     if params[:password] && params[:password].length > User.max_password_length
-      render json: { success: false, message: I18n.t("login.password_too_long") }
-      return
+      return fail_with("login.password_too_long")
     end
 
     user = User.new(user_params)
 
+    # Handle custom fields
+    user_fields = UserField.all
+    if user_fields.present?
+      field_params = params[:user_fields] || {}
+      fields = user.custom_fields
+
+      user_fields.each do |f|
+        field_val = field_params[f.id.to_s]
+        if field_val.blank?
+          return fail_with("login.missing_user_field") if f.required?
+        else
+          fields["user_field_#{f.id}"] = field_val[0...UserField.max_length]
+        end
+      end
+
+      user.custom_fields = fields
+    end
+
     authentication = UserAuthenticator.new(user, session)
 
     if !authentication.has_authenticator? && !SiteSetting.enable_local_logins
-      render nothing: true, status: 500
-      return
+      return render nothing: true, status: 500
     end
 
     authentication.start
@@ -179,6 +250,9 @@ class UsersController < ApplicationController
     if user.save
       authentication.finish
       activation.finish
+
+      # save user email in session, to show on account-created page
+      session["user_created_message"] = activation.message
 
       render json: {
         success: true,
@@ -211,7 +285,7 @@ class UsersController < ApplicationController
   end
 
   def password_reset
-    expires_now()
+    expires_now
 
     if EmailToken.valid_token_format?(params[:token])
       @user = EmailToken.confirm(params[:token])
@@ -227,7 +301,7 @@ class UsersController < ApplicationController
     end
 
     if !@user
-      flash[:error] = I18n.t('password_reset.no_token')
+      @error = I18n.t('password_reset.no_token')
     elsif request.put?
       @invalid_password = params[:password].blank? || params[:password].length > User.max_password_length
 
@@ -242,7 +316,7 @@ class UsersController < ApplicationController
         end
       end
     end
-    render layout: 'no_js'
+    render layout: 'no_ember'
   end
 
   def logon_after_password_reset
@@ -255,7 +329,7 @@ class UsersController < ApplicationController
                 'password_reset.success_unapproved'
               end
 
-    flash[:success] = I18n.t(message)
+    @success = I18n.t(message)
   end
 
   def change_email
@@ -293,17 +367,18 @@ class UsersController < ApplicationController
     else
       flash[:error] = I18n.t('change_email.error')
     end
-    render layout: 'no_js'
+    render layout: 'no_ember'
   end
 
   def account_created
+    @message = session['user_created_message']
     expires_now
-    render layout: 'no_js'
+    render layout: 'no_ember'
   end
 
   def activate_account
     expires_now
-    render layout: 'no_js'
+    render layout: 'no_ember'
   end
 
   def perform_account_activation
@@ -321,7 +396,7 @@ class UsersController < ApplicationController
     else
       flash[:error] = I18n.t('activation.already_done')
     end
-    render layout: 'no_js'
+    render layout: 'no_ember'
   end
 
   def send_activation_email
@@ -362,40 +437,15 @@ class UsersController < ApplicationController
     render json: to_render
   end
 
-  # [LEGACY] avatars in quotes/oneboxes might still be pointing to this route
-  # fixing it requires a rebake of all the posts
-  def avatar
-    user = User.find_by(username_lower: params[:username].downcase)
-    if user.present?
-      size = determine_avatar_size(params[:size])
-      url = user.avatar_template.gsub("{size}", size.to_s)
-      expires_in 1.day
-      redirect_to url
-    else
-      raise ActiveRecord::RecordNotFound
-    end
-  end
-
-  def determine_avatar_size(size)
-    size = size.to_i
-    size = 64 if size == 0
-    size = 10 if size < 10
-    size = 128 if size > 128
-    size
-  end
-
-  # LEGACY: used by the API
-  def upload_avatar
-    params[:image_type] = "avatar"
-    upload_user_image
-  end
-
   def upload_user_image
     params.require(:image_type)
     user = fetch_user_from_params
     guardian.ensure_can_edit!(user)
 
     file = params[:file] || params[:files].first
+
+    # HACK FOR IE9 to prevent the "download dialog"
+    response.headers["Content-Type"] = "text/plain" if request.user_agent =~ /MSIE 9/
 
     begin
       image = build_user_image_from(file)
@@ -411,6 +461,8 @@ class UsersController < ApplicationController
         upload_avatar_for(user, upload)
       when "profile_background"
         upload_profile_background_for(user.user_profile, upload)
+      when "card_background"
+        upload_card_background_for(user.user_profile, upload)
       end
     else
       render status: 422, text: upload.errors.full_messages
@@ -430,7 +482,7 @@ class UsersController < ApplicationController
     end
     user.save!
 
-    render nothing: true
+    render json: success_json
   end
 
   def destroy_user_image
@@ -440,6 +492,8 @@ class UsersController < ApplicationController
     image_type = params.require(:image_type)
     if image_type == 'profile_background'
       user.user_profile.clear_profile_background
+    elsif image_type == 'card_background'
+      user.user_profile.clear_card_background
     else
       raise Discourse::InvalidParameters.new(:image_type)
     end
@@ -451,7 +505,7 @@ class UsersController < ApplicationController
     @user = fetch_user_from_params
     guardian.ensure_can_delete_user!(@user)
 
-    UserDestroyer.new(current_user).destroy(@user, {delete_posts: true, context: params[:context]})
+    UserDestroyer.new(current_user).destroy(@user, { delete_posts: true, context: params[:context] })
 
     render json: success_json
   end
@@ -463,6 +517,19 @@ class UsersController < ApplicationController
     end
 
     render json: success_json
+  end
+
+  def staff_info
+    @user = fetch_user_from_params
+    guardian.ensure_can_see_staff_info!(@user)
+
+    result = {}
+
+    %W{number_of_deleted_posts number_of_flagged_posts number_of_flags_given number_of_suspensions number_of_warnings}.each do |info|
+      result[info] = @user.send(info)
+    end
+
+    render json: result
   end
 
   private
@@ -497,8 +564,11 @@ class UsersController < ApplicationController
 
     def upload_profile_background_for(user_profile, upload)
       user_profile.upload_profile_background(upload)
-      # TODO: add a resize job here
+      render json: { url: upload.url, width: upload.width, height: upload.height }
+    end
 
+    def upload_card_background_for(user_profile, upload)
+      user_profile.upload_card_background(upload)
       render json: { url: upload.url, width: upload.width, height: upload.height }
     end
 
@@ -536,4 +606,9 @@ class UsersController < ApplicationController
         :active
       ).merge(ip_address: request.ip, registration_ip_address: request.ip)
     end
+
+    def fail_with(key)
+      render json: { success: false, message: I18n.t(key) }
+    end
+
 end

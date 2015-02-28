@@ -6,15 +6,20 @@
 # https://www.transifex.com/projects/p/discourse-org/
 
 da:
+  stringex:
+    characters:
+      number: "-"
+  i18n:
+    transliterate:
+      rule:
+        ț: "t"
+        Ț: "t"
+        ș: "s"
+        Ș: "s"
   dates:
     short_date_no_year: "D MMM"
     short_date: "D MMM, YYYY"
     long_date: "MMMM D, YYYY h:mma"
-  time:
-    formats:
-      short: "%Y-%m-%d"
-      short_no_year: "%B %-d"
-      date_only: "%b %-d, %Y"
   title: "Discourse"
   topics: "Emner"
   posts: "indlæg"
@@ -23,9 +28,38 @@ da:
   log_in: "Log ind"
   via: "%{username} via %{site_name}"
   is_reserved: "er reservet"
+  purge_reason: "Automatisk slettet som forladt, ikke aktiveret, konto"
+  disable_remote_images_download_reason: "Fjerndownload af billeder deaktiveret grundet utilstrækkelig diskplads"
   errors:
+    format: '%{attribute} %{message}'
     messages:
       too_long_validation: "er begrænset til %{max} tegn; du har brugt %{length}."
+      invalid_boolean: "Ugyldig boolsk operator"
+      taken: "er allerede blevet taget"
+      accepted: skal accepteres
+      blank: kan ikke være tom
+      present: skal være tomt
+      confirmation: "matcher ikke %{attribute}"
+      empty: kan ikke være tom
+      equal_to: skal være %{count}
+      even: skal være et lige tal
+      exclusion: er reserveret
+      greater_than: skal være større end %{count}
+      greater_than_or_equal_to: skal være større eller lig med %{count}
+      inclusion: er ikke inkluderet i listen
+      invalid: er ikke gyldig
+      less_than: skal være mindre end %{count}
+      less_than_or_equal_to: skal være mindre end eller lig med %{count}
+      not_a_number: er ikke et nummer
+      not_an_integer: skal være et heltal
+      odd: skal være et ulige tal
+      record_invalid: 'Kunne ikke valideres: %{errors}'
+      restrict_dependent_destroy:
+        one: "Kan ikke slette fordi en afhængighed %{record} findes"
+        many: "Kan ikke slette fordi en afhængighed %{record} findes"
+      too_long:
+        one: er for lang (maximum er 1 tegn)
+        other: er for lang (maximum er %{count} tegn)
     embed:
       load_from_remote: "Der opstod en fejl ved indlæsningen af dette indlæg."
   bulk_invite:
@@ -93,6 +127,7 @@ da:
     latest: "Seneste emner"
     hot: "Populære emner"
   too_late_to_edit: "Dette indlæg er gammelt og kan ikke længere redigeres eller slettes."
+  excerpt_image: "billede"
   groups:
     errors:
       can_not_modify_automatic: "Du kan ikke modificere en automatisk gruppe"
@@ -101,6 +136,7 @@ da:
       admins: "admins"
       moderators: "moderatorer"
       staff: "staff"
+      trust_level_0: "tillidsniveau_0"
       trust_level_1: "tillidsniveau_1"
       trust_level_2: "tillidsniveau_2"
       trust_level_3: "tillidsniveau_3"
@@ -141,14 +177,6 @@ da:
       Har du overvejet at **[besøge din brugerprofil](%{profile_path})** og uploade et billede, som repræsenterer dig?
 
       Det er nemmere at følge diskussioner og finde interessanter mennesker i samtaler når alle har en unik avatar!
-    sequential_replies: |
-      ### Overvej at svare på flere indlæg på én gang
-
-      I stedet for at lave mange svar i stribe til et emne, bør du overveje at lave et enkelt svar, som indeholder citater eller @navn-referencer til tidligere indlæg.
-
-      Du kan redigere dit forrige svar for at tilføje et citat ved at markere teksten og vælge <b>citér svar</b>-knappen som dukker op.
-
-      Det er nemmere for alle at læse emner som har færre detaljerede svar i stedet for mange mindre, individuelle svar.
     dominating_topic: |
       ### Lad andre deltage i samtalen
 
@@ -173,6 +201,8 @@ da:
         name: "Kategorinavn"
       post:
         raw: "Brødtekst"
+      user_profile:
+        bio_raw: "Om mig"
     errors:
       messages:
         is_invalid: "er ugyldig; prøv at være lidt mere beskrivende"
@@ -180,8 +210,9 @@ da:
       models:
         topic:
           attributes:
-            archetype:
-              cant_send_pm: "Beklager, du kan ikke sende en privat besked til den bruger."
+            base:
+              warning_requires_pm: "Du kan kun vedhæfte advarsler til private beskeder."
+              too_many_users: "Du kan kun sende advarsler til en bruger ad gangen."
         user:
           attributes:
             password:
@@ -198,6 +229,7 @@ da:
   vip_category_name: "Lounge"
   vip_category_description: "En ekslusiv kategori der kun er tilgængelig for medlemmer med tillidsniveu 3 eller højere."
   meta_category_name: "meta"
+  meta_category_description: "Diskussion om dette site, hvordan det er indrettet, hvordan det virker og hvordan vi kan forbedre det."
   staff_category_name: "Staff"
   staff_category_description: "Privat gruppe for staff diskussioner. Emner er kun synlige for administratorer og moderatorer."
   lounge_welcome:
@@ -219,8 +251,14 @@ da:
       title: "ny bruger"
     basic:
       title: "basis-bruger"
-    change_failed_explanation: "Du forsøgte at degradere  %{user_name} til '%{new_trust_level}'. Imidlertid er deres tillidsniveau allerede '%{current_trust_level}'. %{user_name} bliver på '%{current_trust_level}'"
+    regular:
+      title: "medlem"
+    leader:
+      title: "stamgæst"
+    elder:
+      title: "leder"
   rate_limiter:
+    slow_down: "Du har forsøgt denne handling for ofte, prøv igen senere"
     too_many_requests: "Vi har en daglig grænse for hvor mange gange den pågældende handling kan udføres. Vent venligst %{time_left} før du prøver igen."
     hours:
       one: "1 time"
@@ -319,14 +357,14 @@ da:
   activation:
     action: "Aktiver din konto"
     already_done: "Beklager, dette bekræftelses-link er ikke længere gyldigt. Måske er din konto allerede aktiv?"
-    please_continue: "Din nye konto er bekræftet og du er nu logget ind."
+    please_continue: "Din nye konto er bekræftet; du bliver nu ledt til forsiden."
     continue_button: "Fortsæt til %{site_name}"
     welcome_to: "Velkommen til %{site_name}!"
     approval_required: "En moderator skal godkende din nye konto før du kan tilgå forummet. Du får en e-mail, når din konto er godkendt!"
   post_action_types:
     off_topic:
       title: 'Uden for emnet'
-      description: 'Dette indlæg ligger langt uden for emnet, og burde flyttes til et andet emne. Hvis det er et emne, hører det nok ikke til her.'
+      description: 'Dette indlæg er ikke relevant for denne diskussion som defineret af titlen og det første indlæg. Det skal nok flyttes et andet sted hen.'
       long_form: 'markerede dette som uden for emnet'
     spam:
       title: 'Spam'
@@ -337,12 +375,11 @@ da:
       description: 'Dette indlæg har indhold som en rimelig person ville opfatte som stødende, udtryk for misbrug eller som et brud på <a href="/guidelines">vores sammenholds retningslinjer</a>.'
       long_form: 'markerede dette som stødende'
     notify_user:
-      title: 'Underret {{username}}'
-      long_form: 'underrettede bruger'
+      description: 'Dette indlæg indeholder noget jeg gerne vil drøfte direkte og privat med vedkommende,  Bliver ikke markeret.'
+      email_title: 'Dit indlæg i "%{title}"'
       email_body: "%{link}\n\n%{message}"
     notify_moderators:
-      title: 'Underret moderatorer'
-      long_form: 'underrettede moderatorer'
+      description: 'Dette indlæg kræver moderatorernes opmærksomhed baseret på en anden grund som ikke er nævnt ovenfor.'
       email_title: 'Et indlæg i "%{title}" kræver moderatorernes opmærksomhed'
       email_body: "%{link}\n\n%{message}"
     bookmark:
@@ -366,8 +403,6 @@ da:
       title: 'Upassende'
       long_form: 'markeret upassende'
     notify_moderators:
-      title: 'Underret moderatorer'
-      long_form: 'underrettede moderatorer'
       email_title: 'Emnet "%{title}" kræver moderator-opmærksomhed'
       email_body: "%{link}\n\n%{message}"
   flagging:
@@ -397,7 +432,6 @@ da:
       xaxis: "Dag"
       yaxis: "Antal besøg"
     signups:
-      title: "Brugere"
       xaxis: "Dag"
       yaxis: "Antal nye brugere"
     topics:
@@ -467,6 +501,20 @@ da:
       title: "Top henviste emner"
       xaxis: "Emne"
       num_clicks: "Klik"
+    page_view_anon_reqs:
+      title: "Anonym"
+      xaxis: "Dag"
+    page_view_logged_in_reqs:
+      title: "Logget ind"
+      xaxis: "Dag"
+    page_view_crawler_reqs:
+      xaxis: "Dag"
+    page_view_total_reqs:
+      title: "Total"
+      xaxis: "Dag"
+    http_background_reqs:
+      title: "Baggrund"
+      xaxis: "Dag"
   dashboard:
     rails_env_warning: "Din server kører i %{env}-tilstand."
     ruby_version_warning: "Du kører en version af Ruby 2.0.0 som har kendte problemer. Opgradér til patch-level 247 eller senere."
@@ -481,15 +529,7 @@ da:
     s3_config_warning: 'Serveren er konfigureret til at uploade filer til s3, men mindst én af følgende indstillinger er ikke angivet: s3_access_key_id, s3_secret_access_key eller s3_upload_bucket. Gå til <a href="/admin/site_settings">indstillinger</a> og opdatér indstillingerne. <a href="http://meta.discourse.org/t/how-to-set-up-image-uploads-to-s3/7229" target="_blank">Se "How to set up image uploads to S3?" for mere information</a>.'
     image_magick_warning: 'Serveren er konfigureret til at lave thumbnails af store billeder, men ImageMagick er ikke installeret. Installér ImageMagick med din foretrukne package manager eller <a href="http://www.imagemagick.org/script/binary-releases.php" target="_blank">download den seneste udgave</a>.'
     failing_emails_warning: 'Der er %{num_failed_jobs} mislykkede e-mail-jobs. Kontrollér din config/discourse.conf-fil og kontrollér at e-mail-serverens indstillinger er korrekte. <a href="/sidekiq/retries" target="_blank">Se mislykkede jobs i Sidekiq</a>.'
-    default_logo_warning: "Du har ikke tilpasset sitets logoer. Opdatér logo_url, logo_small_url, og favicon_url under <a href='/admin/site_settings'>indstillinger</a>."
-    contact_email_missing: "Du har ikke angivet en e-mail-adresse for dit site. Opdatér venligst contact_email under <a href='/admin/site_settings'>indstillinger</a>."
-    contact_email_invalid: "Sitets e-mail-adresse er ugyldig. Opdatér venligst contact_email under <a href='/admin/site_settings'>indstillinger</a>."
-    title_nag: "Sitets titel er stadig sat til standardværdien.. Opdatér den venligst med sitets title under <a href='/admin/site_settings'>indstillinger</a>."
-    site_description_missing: "Indstillingen site_description er tom. Skriv en kort beskrivelse af forummet under <a href='/admin/site_settings'>indstillinger</a>."
     consumer_email_warning: "Dit site er konfigureret til at bruge Gmail (eller en anden offentlig e-mail-tjeneste) til at sende e-mail. <a href='http://support.google.com/a/bin/answer.py?hl=en&answer=166852' target='_blank'>Gmail har en  grænse for, hvor mange mails du kan sende</a>. Overvej at bruge en e-mail-udbyder som mandrill.com for at sikre at din mail bliver leveret."
-    access_password_removal: "Dit site brugte indstillingen access_password setting, som er blevet fjernet. Indstillingerne login_required og must_approve_users er blevet aktiveret i stedet. Du kan ændre dem under <a href='/admin/site_settings'>indstillinger</a>. Husk at <a href='/admin/users/list/pending'>godkende brugere som afventer godkendelse</a>. (Denne besked forsvinder efter 2 dage.)"
-    site_contact_username_warning: "Indstillingen site_contact_username er tom. Opdatér den venligst under <a href='/admin/site_settings'>indstillinger</a>. Sæt den til brugernavnet på en admin-bruger som skal stå som afsender af systembeskeder."
-    notification_email_warning: "Indstillingen notification_email er tom. Opdatér den venligst under <a href='/admin/site_settings'>indstillinger</a>."
   content_types:
     education_new_reply:
       title: "Uddannelse af nye brugere: Første svar"
@@ -497,6 +537,9 @@ da:
     education_new_topic:
       title: "Uddannelse af nye brugere: Første emner"
       description: "Automatisk hjælp som vises over editoren når nye brugere begynder at skrive deres første to emner."
+    usage_tips:
+      title: "Tips til nye brugere"
+      description: "Vejledning og vigtig information til nye brugere."
     welcome_user:
       title: "Velkomst: Ny bruger"
       description: "En privat besked som automatisk sendes til nye brugere når de tilmelder sig."
@@ -506,10 +549,6 @@ da:
     login_required_welcome_message:
       title: "Log ind påkrævet: Velkomstbesked"
       description: "Velkomstbesked som vises til anonyme brugere når indstillingen 'log ind påkrævet' er aktiveret."
-    tos_user_content_license:
-      title: "Servicevilkår: Indholdslicens"
-    tos_miscellaneous:
-      title: "Servicevilkår: Diverse"
     login_required:
       title: "Log ind påkrævet: Hjemmeside"
       description: "Teksten som vises til anonyme brugere når login er påkrævet på sitet."
@@ -521,11 +560,14 @@ da:
       description: "HTML som vises i toppen af alle sider (efter headeren, før navgationen eller emnetitlen)"
     bottom:
       title: "Bunden af siderne"
-      description: "HTML som tilføjes i bunden af alle sider"
   site_settings:
     default_locale: "Standardsproget for denne Discourse-instans (ISO 639-1 kode)."
     min_post_length: "Minimumlængde tilladt for indlæg i tegn"
     min_private_message_post_length: "Minimumlængde tilladt for private beskeder i tegn"
+    max_post_length: "Maksimal længde af indlæg i tegn"
+    min_topic_title_length: "Minimumslængde af emnetitel i tegn."
+    max_topic_title_length: "Maksimumslængde af emnetitel i tegn."
+    min_private_message_title_length: "Minimumslængde af titel på privat besked i tegn"
     allow_uncategorized_topics: "Tillad emner at blive oprettet uden en kategori."
     unique_posts_mins: "Hvor mange minutter der skal gå før en bruger kan skrive et indlæg med det samme indhold igen."
     queue_jobs: "KUN FOR UDVIKLERE! ADVARSEL! Brug sidekiq som jobkø. Hvis dette slås fra går dit site i stykker."
@@ -535,8 +577,6 @@ da:
     apple_touch_icon_url: "Ikon til Apple touch-enheder. Den anbefalede størrelse er 144px gange 144px."
     email_custom_headers: "En liste af brugerdefinerede e-mail-headers adskilt af |-tegn."
     enable_long_polling: "Message bus til underretninger kan bruge long polling"
-    long_polling_interval: "Interval før det lave et nyt long poll, i millisekunder."
-    polling_interval: "Hvor ofte skal indloggede brugere polle, i millisekunder."
     anon_polling_interval: "Hvor ofte skal anonyme brugere polle, i millisekunder."
     auto_track_topics_after: "Globalt antal millisekunder før et emne automatisk spores, kan tilsidesættes af brugerne (0 for altid, -1 for aldrig)."
     new_topic_duration_minutes: "Globalt antal minutter et emne opfattes som nyt, kan tilsidesættes af brugerne (-1 for altid, -2 for seneste besøg)."
@@ -547,11 +587,9 @@ da:
     ga_tracking_code: "Google analytics sporingskode, f.eks.: UA-12345678-9; se http://google.com/analytics."
     ga_domain_name: "Google analytics domænenavn, f.eks.: example.com; se http://google.com/analytics."
     enable_noscript_support: "Aktivér standard webcrawler søgemaskineunderstøttelse vha. noscript-tagget"
-    top_menu: "Angiv hvilke elementer der skal vises i hjemmesidenavigationen, og i hvilken rækkefølge. Eksempel: latest|new|unread|starred|categories|top|read|posted."
     post_menu: "Angiv hvilke elementer der skal vises i indlægsmenuen, og i hvilken rækkefølge. Eksempel: like|edit|flag|delete|share|bookmark|reply."
     share_links: "Angiv hvilke elementer der skal vises i “del“-dialogboksen og i hvilken rækkefølge."
     track_external_right_clicks: "Spor højreklik på eksterne links (f.eks.: åbn i ny tab); deaktiveret som standard fordi den omskriver URLer"
-    enable_badges: "Aktiver badge systemet (eksperimentielt)"
     port: "KUN FOR UDVIKLERE! ADVARSEL! Brug denne HTTP-port i stedet for standarden, som er port 80. Lad feltet stå tomt for at bruge standardværdien."
     force_hostname: "KUN FOR UDVIKLERE! ADVARSEL! Angiv et host-navn i URLen. Lad feltet stå tomt for at bruge standardværdien."
     invite_expiry_days: "Hvor længe brugerinvitationsnøgler er gyldige, i dage."
@@ -571,7 +609,6 @@ da:
     previous_visit_timeout_hours: "Hvor lang tid et besøg varer før vi regner det med i det 'forrige' besøg, i timer."
     clean_orphan_uploads_grace_period_hours: "Grace-periode (i timer) før et forældreløst upload bliver fjernet."
     purge_deleted_uploads_grace_period_days: "Grace-periode (i dage) før et slettet upload bliver fjernet."
-    s3_upload_bucket: "Navn på Amazon S3 bucket som filer uploades til. ADVARSEL: kun små bogstaver og ingen punktummer."
     min_trust_to_create_topic: "Det mindste tillidsniveau der skal til for at oprette et nyt emne."
     title_fancy_entities: "Omdan almindelige ASCII-tegn i emnetitler til fancy HTML-entities, i stil med SmartyPants http://daringfireball.net/projects/smartypants/"
     title_prettify: "Undgå hyppige tastefejl i titlen, inklusive overforbrug af store bogstaver, første bogstav med småt, gentagne ! og ?, ekstra . i slutningen, etc."
@@ -620,18 +657,6 @@ da:
     archived_disabled: "Dette emne er nu ikke længere arkiveret. Det er ikke længere frosset fast, og kan ændres."
     closed_enabled: "Dette emne er nu lukket. Nye indlæg tillades ikke."
     closed_disabled: "Dette emne er nu åbent. Nye indlæg tillades."
-    autoclosed_enabled_days:
-      zero: "Dette emne blev automatisk lukket efter 1 dag. Nye svar er ikke længere tilladt."
-      one: "Dette emne blev automatisk lukket efter 1 dag. Nye svar er ikke længere tilladt."
-      other: "Dette emne blev automatisk lukket efter %{count} dage. Nye svar er ikke længere tilladt."
-    autoclosed_enabled_hours:
-      zero: "Dette emne blev automatisk lukket efter 1 time. Nye svar er ikke længere tilladt."
-      one: "Dette emne blev automatisk lukket efter 1 time. Nye svar er ikke længere tilladt."
-      other: "Dette emne blev automatisk lukket efter %{count} timer. Nye svar er ikke længere tilladt."
-    autoclosed_enabled_minutes:
-      zero: "Dette emne blev automatisk lukket efter 1 minut. Nye svar er ikke længere tilladt."
-      one: "Dette emne blev automatisk lukket efter 1 minut. Nye svar er ikke længere tilladt."
-      other: "Dette emne blev automatisk lukket efter %{count} minutter. Nye svar er ikke længere tilladt."
     autoclosed_disabled: "Dette emne er nu åbnet. Nye svar er tilladt."
     pinned_enabled: "Dette emne er nu fastgjort. Det vil stå i toppen af dets kategori indtil det bliver frigjort af \"staff\" for alle eller af hver bruger individuelt for dem selv."
     pinned_disabled: "Dette emne er nu frigjort. Det optræder ikke længere i toppen af dets kategori."
@@ -640,14 +665,13 @@ da:
     incorrect_username_email_or_password: "Ugyldigt navn, e-mail eller adgangskode"
     wait_approval: "Tak for din tilmelding. Du får besked, når din konto er blevet godkendt."
     active: "Din konto er aktiv og klar."
-    activate_email: "Du er næsten færdig! Vi har sendt en aktiverings-e-mail til <b>%{email}</b>. Følg venligst instruktionerne i e-mail’en for at aktivere din konto."
+    activate_email: "<p>Du er næsten færdig! Vi har sendt en aktiverings-mail til  <b>%{email}</b>. Følg venligst instruktionerne i den for at aktivere din konto.</p><p>Hvis du ikke modtager den, skal du kigge i din spam-mappe eller få tilsendt en ny aktiverings.</p>"
     not_activated: "Du kan ikke logge ind endnu. Vi har sendt en aktiverings-e-mail til dig. Følg venligst instruktionerne i e-mail’en for at aktivere din konto."
     suspended: "Du kan ikke logge ind før %{date}."
     suspended_with_reason: "Du kan ikke logge ind før %{date}. Begrundelse for din suspendering: %{reason}"
     errors: "%{errors}"
     not_available: "Ikke ledigt. Prøv %{suggestion}?"
     something_already_taken: "Noget gik galt, måske er brugernavnet eller e-mail-adressen allerede registreret. Prøv “Glemt adgangskode“-linket."
-    omniauth_error: "Beklager, der opstod en fejl ved autorisationen af din %{strategy}-konto. Måske har du ikke godkendt autorisationen?"
     omniauth_error_unknown: "Noget gik galt ved behandlingen af dit login, prøv venligst igen."
   user:
     username:
@@ -673,14 +697,18 @@ da:
       subject_template: "Indlæg skjult på grund af feedback fra brugerne"
     welcome_user:
       subject_template: "Velkommen til %{site_name}!"
+      text_body_template: |
+        Tak fordi du oprettede dig på %{site_name} - og velkommen!
+
+        %{new_user_tips}
+
+        Vi tror på [civiliseret opførsel](%{base_url}/guidelines) til alle tider.
+
+        Nyd dit ophold!
+
+        (Hvis du har brug for at kommunikere privat med [staben](%{base_url}/about) som en ny bruger, kan du bare svare på denne private besked.)
     welcome_invite:
       subject_template: "Velkommen til %{site_name}!"
-    export_succeeded:
-      subject_template: "Eksport lykkedes"
-      text_body_template: "Eksporten lykkedes."
-    import_succeeded:
-      subject_template: "Import lykkedes"
-      text_body_template: "Importen lykkedes."
     too_many_spam_flags:
       subject_template: "Ny konto blokeret"
     blocked_by_staff:
@@ -762,17 +790,15 @@ da:
         ---
         %{respond_instructions}
     digest:
-      why: "En kort opsummering fra %{site_link} siden %{last_seen_at} hvor vi sidst så dig."
+      why: "Et kort resume af %{site_link} siden dit sidste besøg %{last_seen_at}"
       subject_template: "[%{site_name}] Uddrag for %{date}"
       new_activity: "Ny aktivitet på dine emner og indlæg:"
       top_topics: "Populære emner"
       other_new_topics: "Populære emner"
-      unsubscribe: "Denne besked med uddrag sendes fra %{site_link} når vi ikke set dig i et stykke tid. For at afmelde %{unsubscribe_link}."
+      unsubscribe: "Dette resume er sent fra %{site_link} hvor vi ikke har set dig i et stykke tid. Hvis du ikke vil modtage disse mails, så %{unsubscribe_link}."
       click_here: "klik her"
       from: "%{site_name} opsummering"
       read_more: "Læs mere"
-      more_topics: "Der er skrevet %{new_topics_since_seen} andre nye emner siden %{last_seen_at} hvor du sidst besøgte os."
-      more_topics_category: "Der er skrevet %{new_topics_since_seen} andre nye emner i disse kategorier siden %{last_seen_at} hvor du sidst besøgte os:"
       posts:
         one: "1 indlæg"
         other: "%{count} indlæg"
@@ -818,18 +844,11 @@ da:
     recent_topics: "Nye"
     see_more: "Flere"
     search_title: "Søg på denne side"
-  terms_of_service:
-    user_content_license: |
-      User contributions are licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License](http://creativecommons.org/licenses/by-nc-sa/3.0/deed.en_US). Without limiting any of those representations or warranties, %{company_short_name} has the right (though not the obligation) to, in %{company_short_name}’s sole discretion (i) refuse or remove any content that, in %{company_short_name}’s reasonable opinion, violates any %{company_short_name} policy or is in any way harmful or objectionable, or (ii) terminate or deny access to and use of the Website to any individual or entity for any reason, in %{company_short_name}’s sole discretion. %{company_short_name} will have no obligation to provide a refund of any amounts previously paid.
-    miscellaneous: "This Agreement constitutes the entire agreement between %{company_short_name} and you concerning the subject matter hereof, and they may only be modified by a written amendment signed by an authorized executive of %{company_short_name}, or by the posting by %{company_short_name} of a revised version. Except to the extent applicable law, if any, provides otherwise, this Agreement, any access to or use of the Website will be governed by the laws of the state of California, U.S.A., excluding its conflict of law provisions, and the proper venue for any disputes arising out of or relating to any of the same will be the state and federal courts located in San Francisco County, California. Except for claims for injunctive or equitable relief or claims regarding intellectual property rights (which may be brought in any competent court without the posting of a bond), any dispute arising under this Agreement shall be finally settled in accordance with the Comprehensive Arbitration Rules of the Judicial Arbitration and Mediation Service, Inc. (“JAMS”) by three arbitrators appointed in accordance with such Rules. The arbitration shall take place in San Francisco, California, in the English language and the arbitral decision may be enforced in any court. The prevailing party in any action or proceeding to enforce this Agreement shall be entitled to costs and attorneys’ fees. If any part of this Agreement is held invalid or unenforceable, that part will be construed to reflect the parties’ original intent, and the remaining portions will remain in full force and effect. A waiver by either party of any term or condition of this Agreement or any breach thereof, in any one instance, will not waive such term or condition or any subsequent breach thereof. You may assign your rights under this Agreement to any party that consents to, and agrees to be bound by, its terms and conditions; %{company_short_name} may assign its rights under this Agreement without condition. This Agreement will be binding upon and will inure to the benefit of the parties, their successors and permitted assigns."
   deleted: 'slettet'
   upload:
     unauthorized: "Beklager, filen, som du forsøger at uploade er ikke autoriseret (autoriserede filendelser: %{authorized_extensions})."
     pasted_image_filename: "Indsat billede"
-    attachments:
-      too_large: "Beklager, filen, som du forsøger at uploade, er for stor (maksimal størrelse %{max_size_kb}%kb)."
     images:
-      too_large: "Beklager, billedet, som du forsøger at uploade, er for stort (maksimal størrelse %{max_size_kb}%kb), please resize it and try again."
       fetch_failure: "Beklager, der opstod en fejl ved hentning af det eksterne billede."
       unknown_image_type: "Beklager, men filen, som du forsøgte at uploade, ser ikke ud til at være et billede."
       size_not_found: "Beklager, men vi kunne ikke fastslå billedets størrelse. Måske er dit billede ødelagt?"
@@ -837,3 +856,10 @@ da:
     sockpuppet: "En ny bruger oprettede et emne, og en anden ny bruger med den samme IP-adresse svarede på det. Se indstillingen af flag_sockpuppets."
   email_log:
     seen_recently: "Bruger har været logget på for nyligt"
+  guidelines: "Retningslinjer"
+  edit_this_page: "Rediger denne side"
+  csv_export:
+    boolean_yes: "Ja"
+    boolean_no: "Nej"
+  guidelines_topic:
+    title: "FAQ/Retningslinjer"

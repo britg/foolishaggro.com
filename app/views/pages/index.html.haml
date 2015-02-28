@@ -7,7 +7,15 @@
   #tagline
     %h2 Foolishly handcrafted games
 
+  .col-md-2
   .col-md-3
+    .tease.mazing
+      = image_tag "pages/mazing_logo.png", :class => "title"
+      %p.status
+        %span.label.label-warning Status
+        v1.0 Released
+
+      = link_to "Get it on the App Store", "https://itunes.apple.com/us/app/mazing-run/id965562416", :class => "btn btn-block btn-primary"
 
   .col-md-3
     .tease.pyroclasm

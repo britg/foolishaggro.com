@@ -6,27 +6,39 @@ class UserProfile < ActiveRecord::Base
   before_save :cook
   after_save :trigger_badges
 
+  belongs_to :card_image_badge, class_name: 'Badge'
+
   BAKED_VERSION = 1
 
-  def bio_excerpt
-    excerpt = PrettyText.excerpt(bio_cooked, 350)
-    return excerpt if excerpt.blank? || user.has_trust_level?(TrustLevel[1])
+  def bio_excerpt(length=350, opts={})
+    excerpt = PrettyText.excerpt(bio_cooked, length, opts)
+    return excerpt if excerpt.blank? || (user.has_trust_level?(TrustLevel[1]) && !user.suspended?)
     PrettyText.strip_links(excerpt)
   end
 
   def bio_processed
-    return bio_cooked if bio_cooked.blank? || user.has_trust_level?(TrustLevel[1])
+    return bio_cooked if bio_cooked.blank? || (user.has_trust_level?(TrustLevel[1]) && !user.suspended?)
     PrettyText.strip_links(bio_cooked)
   end
 
   def bio_summary
     return nil unless bio_cooked.present?
-    Summarize.new(bio_cooked).summary
+    bio_excerpt(500, strip_links: true, text_entities: true)
   end
 
   def recook_bio
     self.bio_raw_will_change!
     cook
+  end
+
+  def upload_card_background(upload)
+    self.card_background = upload.url
+    self.save!
+  end
+
+  def clear_card_background
+    self.card_background = ""
+    self.save!
   end
 
   def upload_profile_background(upload)
@@ -94,9 +106,12 @@ end
 #  website              :string(255)
 #  bio_raw              :text
 #  bio_cooked           :text
-#  dismissed_banner_key :integer
 #  profile_background   :string(255)
+#  dismissed_banner_key :integer
 #  bio_cooked_version   :integer
+#  badge_granted_title  :boolean          default(FALSE)
+#  card_background      :string(255)
+#  card_image_badge_id  :integer
 #
 # Indexes
 #

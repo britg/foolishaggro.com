@@ -3,7 +3,7 @@
   padding: 5px 15px;
   color: $primary;
   text-align: center;
-  margin: 0 10px;
+  margin: 10px 0;
 }
 
 .topic-post {
@@ -28,7 +28,7 @@ nav.post-controls {
 
 button {
   border: none;
-  font-size: 17px;
+  font-size: 1.214em;
   padding: 8px 10px;
   vertical-align: top;
   background: transparent;
@@ -77,12 +77,13 @@ button {
   border: 1px solid scale-color-diff();
   position: absolute;
   text-align: left;
-  bottom: -26px;
-  left: 0;
+  bottom: 0;
+  left: 135px;
   z-index: 1000;
   display: none;
 
   h3 {
+    margin-top: 0;
     color: $primary;
     font-size: 1em;
   }
@@ -110,14 +111,23 @@ button {
   }
 }
 
-
 .reply-new {
   display: none;
 }
 
 .post-actions {
-  margin-left: 10px;
-  margin-top: 2px;
+  display: inline-block;
+  width: 100%;
+}
+
+.post-action {
+  float: right;
+  margin-right: 10px;
+  clear: right;
+}
+
+.post-action .relative-date {
+  margin-left: 5px;
 }
 
 a.reply-to-tab {
@@ -132,23 +142,18 @@ a.star {
   display: inline-block;
   float: left;
   font-size: 1.3em;
-  margin-top: 4px;
-}
-
-#main a.star.starred {
-  text-shadow: none !important;
 }
 
 .topic-post .boxed .contents {
   float: none;
   padding-top: 5px;
-  padding-bottom: 0px;
   clear: both;
+  position: relative;
 }
 
 .topic-map {
 
-  margin: 30px 10px 10px 10px;
+  margin: 10px;
   background: scale-color(scale-color-diff(), $lightness: 40%);
 
   h3 {
@@ -161,13 +166,8 @@ a.star {
     margin: 0 0 3px 0;
     color: $primary;
     font-weight: normal;
-    font-size: 12px;
+    font-size: 0.857em;
     line-height: 15px;
-  }
-
-  p,
-  .participants {
-    margin: 0 0 7px;
   }
 
   .user {
@@ -196,10 +196,15 @@ a.star {
       line-height: 14px;
     }
 
-    /* limit to one line of avatars for now */
-    height:30px;
-    overflow:hidden !important; // otherwise parent mobile styles conflict
   }
+
+  /* in expanded avatar view, limit to one line for now */
+  .avatars.clearfix {
+    height:40px;
+    overflow:hidden;
+    margin-left: 10px;
+  }
+
 
   .avatar {
     float: left;
@@ -276,7 +281,7 @@ a.star {
       }
       .fa {
         margin: 0;
-        font-size: 18px;
+        font-size: 1.286em;
         line-height: 52px;
       }
     }
@@ -286,6 +291,7 @@ a.star {
 #topic-footer-buttons {
   border-top: 1px solid scale-color-diff();
   padding: 20px 10px 0 10px;
+  .fa-bookmark.bookmarked { color: $tertiary; }
 }
 
 /* this is to force the drop-down notification state description para below the button */
@@ -302,14 +308,9 @@ a.star {
     }
 
    a.badge-category, a.badge-category-parent {
-    font-size: 10px;
+    font-size: 0.714em;
     vertical-align: top;
     }
-
-   .title {
-    font-size: 14px; line-height: 8px;
-  }
-
 }
 
 
@@ -353,10 +354,6 @@ iframe {
   display: none;
 }
 
-.topic-meta-data {
-  margin-bottom: 10px;
-}
-
 .open>.dropdown-menu {
   display: block;
 }
@@ -380,24 +377,42 @@ iframe {
   position: relative;
 }
 
-.modal-body {
-  input[type=text] {
-    font-size: 16px;
-    display: block;
-    margin-top: 10px;
-  }
-}
-
 #share-link {
   width: 290px;
+  left: auto;
+  right: 4px;
 }
 
 #selected-posts {
-  padding-left: 20px;
+  float: left;
+  width: 97%;
+  padding-left: 3%;
+  background-color: dark-light-diff($tertiary, $secondary, 90%, -40%);
   .btn {
     margin-bottom: 10px;
+    color: $secondary;
+    background: scale-color($tertiary, $lightness: 50%);
+    clear: both;
+  }
+  p {
+    clear: both;
   }
 }
+
+// hide the full set of selection buttons on mobile
+.select-posts button { display: none; }
+
+// unhide the simple "select just this post" button
+button.select-post {
+  display: inline-block;
+  position: absolute;
+  z-index: 401; // 400 is the reply-to tab
+  left: 200px;
+  background-color: scale-color($tertiary, $lightness: 50%);
+  color: $secondary;
+  padding: 5px;
+}
+
 
 .post-select {
   float: right;
@@ -405,14 +420,7 @@ iframe {
   margin-top: -20px;
 }
 
-.post-action {
-  float:right;
-  margin-right: 10px;
-}
 
-.post-action .relative-date {
-  margin-left: 5px;
-}
 
 .deleted {
 background-color: scale-color($danger, $lightness: 75%);
@@ -424,17 +432,10 @@ background-color: scale-color($danger, $lightness: 75%);
   border-right: 0;
   padding-right: 4px;
   padding-left: 5px;
-  border-radius: 4px 0 0 4px;
 }
 
 .deleted-user-avatar {
-  font-size: 36px;
-}
-
-.staff a {
-  border-radius: 4px;
-  padding: 4px;
-  margin: -4px 0 0 -4px;
+  font-size: 2.571em;
 }
 
 span.btn-text {display: none;}
@@ -446,19 +447,9 @@ blockquote {
   margin-right: 0;
 }
 
-// we assume blockquotes have their own margins, so all blockquotes
-// will remove margins from first (top) and last (bottom) child elements
-blockquote > *:first-child {
-  margin-top: 0 !important;
-}
-blockquote > *:last-child {
-  margin-bottom: 0 !important;
-}
-
 .gutter { display: none; }
 
-.posts-wrapper {  position: relative;
-}
+.posts-wrapper {  position: relative; }
 
 .topic-body.highlighted {
   background-color: scale-color($tertiary, $lightness: 75%);
@@ -471,24 +462,25 @@ span.highlighted {
 .topic-avatar {
   float: left;
   position: relative;
-  z-index: 2;
+  z-index:999; /* must render on top of topic-body + topic-meta-data, otherwise not tappable */
 }
 
 .topic-meta-data {
   white-space: nowrap;
   position: absolute;
-  z-index: 1;
   width: 100%;
+  left: 0px;
   .names {
-    margin: 5px 0 0 65px;
+    margin: 5px 0 0 5px;
     line-height: 17px;
+    padding-left: 60px;
     span {
       display: block;
     }
   }
   .post-info {
     float: right;
-    font-size: 12px;
+    font-size: 0.929em;
     margin: 4px 10px 0 0;
     .edits { margin-right: 5px; }
   }
@@ -508,3 +500,4 @@ span.highlighted {
 .read-state {
   display: none;
 }
+

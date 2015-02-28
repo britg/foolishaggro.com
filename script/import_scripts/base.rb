@@ -11,12 +11,17 @@ if ARGV.include?('bbcode-to-md')
   require 'ruby-bbcode-to-md'
 end
 
+require_relative '../../config/environment'
+require_dependency 'url_helper'
+require_dependency 'file_helper'
+
 module ImportScripts; end
 
 class ImportScripts::Base
 
+  include ActionView::Helpers::NumberHelper
+
   def initialize
-    require File.expand_path(File.dirname(__FILE__) + "/../../config/environment")
     preload_i18n
 
     @bbcode_to_md = true if ARGV.include?('bbcode-to-md')
@@ -28,6 +33,7 @@ class ImportScripts::Base
     @existing_posts = {}
     @topic_lookup = {}
     @old_site_settings = {}
+    @start_time = Time.now
 
     puts "loading existing groups..."
     GroupCustomField.where(name: 'import_id').pluck(:group_id, :value).each do |group_id, import_id|
@@ -74,12 +80,14 @@ class ImportScripts::Base
 
     update_bumped_at
     update_last_posted_at
+    update_last_seen_at
     update_feature_topic_users
     update_category_featured_topics
     update_topic_count_replies
     reset_topic_counters
 
-    puts "", "Done"
+    elapsed = Time.now - @start_time
+    puts '', "Done (#{elapsed.to_s} seconds)"
 
   ensure
     reset_site_settings
@@ -93,7 +101,6 @@ class ImportScripts::Base
       min_private_message_post_length: 1,
       min_private_message_title_length: 1,
       allow_duplicate_topic_titles: true,
-      default_digest_email_frequency: '',
       disable_emails: true
     }
 
@@ -220,16 +227,14 @@ class ImportScripts::Base
   # user in the original datasource. The given id will not be used to
   # create the Discourse user record.
   def create_users(results, opts={})
-    num_users_before = User.count
     users_created = 0
     users_skipped = 0
-    progress = 0
     total = opts[:total] || results.size
 
     results.each do |result|
       u = yield(result)
 
-      # block returns nil to skip a post
+      # block returns nil to skip a user
       if u.nil?
         users_skipped += 1
       else
@@ -269,20 +274,21 @@ class ImportScripts::Base
 
     bio_raw = opts.delete(:bio_raw)
     website = opts.delete(:website)
+    location = opts.delete(:location)
     avatar_url = opts.delete(:avatar_url)
 
     opts[:name] = User.suggest_name(opts[:email]) unless opts[:name]
     if opts[:username].blank? ||
-        opts[:username].length < User.username_length.begin ||
-        opts[:username].length > User.username_length.end ||
-        opts[:username] =~ /[^A-Za-z0-9_]/ ||
-        opts[:username][0] =~ /[^A-Za-z0-9]/ ||
-        !User.username_available?(opts[:username])
+      opts[:username].length < User.username_length.begin ||
+      opts[:username].length > User.username_length.end ||
+      opts[:username] =~ /[^A-Za-z0-9_]/ ||
+      opts[:username][0] =~ /[^A-Za-z0-9]/ ||
+      !User.username_available?(opts[:username])
       opts[:username] = UserNameSuggester.suggest(opts[:username] || opts[:name] || opts[:email])
     end
     opts[:email] = opts[:email].downcase
     opts[:trust_level] = TrustLevel[1] unless opts[:trust_level]
-    opts[:active] = true
+    opts[:active] = opts.fetch(:active, true)
     opts[:import_mode] = true
 
     u = User.new(opts)
@@ -296,6 +302,7 @@ class ImportScripts::Base
         if bio_raw.present? || website.present?
           u.user_profile.bio_raw = bio_raw if bio_raw.present?
           u.user_profile.website = website if website.present?
+          u.user_profile.location = location if location.present?
           u.user_profile.save!
         end
       end
@@ -322,6 +329,8 @@ class ImportScripts::Base
   def create_categories(results)
     results.each do |c|
       params = yield(c)
+
+      next if params.nil? # block returns nil to skip
 
       # Basic massaging on the category name
       params[:name] = "Blank" if params[:name].blank?
@@ -364,6 +373,10 @@ class ImportScripts::Base
     new_category
   end
 
+  def created_post(post)
+    # override if needed
+  end
+
   # Iterates through a collection of posts to be imported.
   # It can create topics and replies.
   # Attributes will be passed to the PostCreator.
@@ -395,6 +408,8 @@ class ImportScripts::Base
                 topic_id: new_post.topic_id,
                 url: new_post.url,
               }
+
+              created_post(new_post)
 
               created += 1
             else
@@ -447,15 +462,15 @@ class ImportScripts::Base
     src.close
     tmp.rewind
 
-    Upload.create_for(user_id, tmp, source_filename, File.size(tmp))
+    Upload.create_for(user_id, tmp, source_filename, tmp.size)
   ensure
     tmp.close rescue nil
     tmp.unlink rescue nil
   end
 
   def close_inactive_topics(opts={})
-    puts "", "Closing topics that have been inactive for more than #{num_days} days."
     num_days = opts[:days] || 30
+    puts '', "Closing topics that have been inactive for more than #{num_days} days."
 
     query = Topic.where('last_posted_at < ?', num_days.days.ago).where(closed: false)
     total_count = query.count
@@ -470,7 +485,7 @@ class ImportScripts::Base
 
   def update_bumped_at
     puts "", "updating bumped_at on topics"
-    Post.exec_sql("update topics t set bumped_at = (select max(created_at) from posts where topic_id = t.id and post_type != #{Post.types[:moderator_action]})")
+    Post.exec_sql("update topics t set bumped_at = COALESCE((select max(created_at) from posts where topic_id = t.id and post_type != #{Post.types[:moderator_action]}), bumped_at)")
   end
 
   def update_last_posted_at
@@ -493,6 +508,14 @@ class ImportScripts::Base
     User.exec_sql(sql)
   end
 
+  # scripts that are able to import last_seen_at from the source data should override this method
+  def update_last_seen_at
+    puts "", "updating last seen at on users"
+
+    User.exec_sql("UPDATE users SET last_seen_at = created_at WHERE last_seen_at IS NULL")
+    User.exec_sql("UPDATE users SET last_seen_at = last_posted_at WHERE last_posted_at IS NOT NULL")
+  end
+
   def update_feature_topic_users
     puts "", "updating featured topic users"
 
@@ -507,7 +530,7 @@ class ImportScripts::Base
   end
 
   def reset_topic_counters
-    puts "", "reseting topic counters"
+    puts "", "resetting topic counters"
 
     total_count = Topic.count
     progress_count = 0
@@ -546,8 +569,30 @@ class ImportScripts::Base
     end
   end
 
+  def update_tl0
+    User.all.each do |user|
+      user.change_trust_level!(0) if Post.where(user_id: user.id).count == 0
+    end
+  end
+
+  def html_for_upload(upload, display_filename)
+    if FileHelper.is_image?(upload.url)
+      embedded_image_html(upload)
+    else
+      attachment_html(upload, display_filename)
+    end
+  end
+
+  def embedded_image_html(upload)
+    %Q[<img src="#{upload.url}" width="#{[upload.width, 640].compact.min}" height="#{[upload.height,480].compact.min}"><br/>]
+  end
+
+  def attachment_html(upload, display_filename)
+    "<a class='attachment' href='#{upload.url}'>#{display_filename}</a> (#{number_to_human_size(upload.filesize)})"
+  end
+
   def print_status(current, max)
-    print "\r%9d / %d (%5.1f%%)" % [current, max, ((current.to_f / max.to_f) * 100).round(1)]
+    print "\r%9d / %d (%5.1f%%)  " % [current, max, ((current.to_f / max.to_f) * 100).round(1)]
   end
 
   def batches(batch_size)

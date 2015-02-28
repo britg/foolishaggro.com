@@ -1,36 +1,37 @@
 require 'v8'
 require 'nokogiri'
+require_dependency 'url_helper'
 require_dependency 'excerpt_parser'
 require_dependency 'post'
 
 module PrettyText
 
   class Helpers
+    include UrlHelper
 
     def t(key, opts)
-      str = I18n.t("js." + key)
-      if opts
-        # TODO: server localisation has no parity with client should be fixed
-        str = str.dup
-        opts.each do |k,v|
-          str.gsub!("{{#{k}}}", v)
-        end
+      key = "js." + key
+      unless opts
+        return I18n.t(key)
+      else
+        str = I18n.t(key, Hash[opts.entries].symbolize_keys).dup
+        opts.each {|k,v| str.gsub!("{{#{k.to_s}}}", v.to_s) }
+        return str
       end
-      str
     end
 
     # function here are available to v8
     def avatar_template(username)
       return "" unless username
-
       user = User.find_by(username_lower: username.downcase)
-      user.avatar_template if user.present?
+      return "" unless user.present?
+      schemaless absolute user.avatar_template
     end
 
     def is_username_valid(username)
       return false unless username
       username = username.downcase
-      return User.exec_sql('SELECT 1 FROM users WHERE username_lower = ?', username).values.length == 1
+      User.exec_sql('SELECT 1 FROM users WHERE username_lower = ?', username).values.length == 1
     end
   end
 
@@ -76,11 +77,13 @@ module PrettyText
       "app/assets/javascripts/discourse/lib/markdown.js"
     )
 
-    Dir["#{Rails.root}/app/assets/javascripts/discourse/dialects/**.js"].sort.each do |dialect|
-      unless dialect =~ /\/dialect\.js$/
-        ctx.load(dialect)
-      end
+    Dir["#{app_root}/app/assets/javascripts/discourse/dialects/**.js"].sort.each do |dialect|
+      ctx.load(dialect) unless dialect =~ /\/dialect\.js$/
     end
+
+    # emojis
+    emoji = ERB.new(File.read("#{app_root}/app/assets/javascripts/discourse/lib/emoji/emoji.js.erb"))
+    ctx.eval(emoji.result)
 
     # Load server side javascripts
     if DiscoursePluginRegistry.server_side_javascripts.present?
@@ -95,8 +98,8 @@ module PrettyText
       end
     end
 
-    ctx['quoteTemplate'] = File.open(app_root + 'app/assets/javascripts/discourse/templates/quote.js.handlebars') {|f| f.read}
-    ctx['quoteEmailTemplate'] = File.open(app_root + 'lib/assets/quote_email.js.handlebars') {|f| f.read}
+    ctx['quoteTemplate'] = File.read("#{app_root}/app/assets/javascripts/discourse/templates/quote.hbs")
+    ctx['quoteEmailTemplate'] = File.read("#{app_root}/lib/assets/quote_email.hbs")
     ctx.eval("HANDLEBARS_TEMPLATES = {
       'quote': Handlebars.compile(quoteTemplate),
       'quote_email': Handlebars.compile(quoteEmailTemplate),
@@ -117,11 +120,19 @@ module PrettyText
     @ctx
   end
 
+  def self.reset_context
+    @ctx_init.synchronize do
+      @ctx = nil
+    end
+  end
+
   def self.decorate_context(context)
     context.eval("Discourse.SiteSettings = #{SiteSetting.client_settings_json};")
     context.eval("Discourse.CDN = '#{Rails.configuration.action_controller.asset_host}';")
     context.eval("Discourse.BaseUrl = 'http://#{RailsMultisite::ConnectionManagement.current_hostname}';")
-    context.eval("Discourse.getURL = function(url) {return '#{Discourse::base_uri}' + url};")
+
+    context.eval("Discourse.getURL = function(url) { return '#{Discourse::base_uri}' + url };")
+    context.eval("Discourse.getURLWithCDN = function(url) { url = Discourse.getURL(url); if (Discourse.CDN) { url = Discourse.CDN + url; } return url; };")
   end
 
   def self.markdown(text, opts=nil)
@@ -147,9 +158,27 @@ module PrettyText
         end
       end
 
+      # custom emojis
+      Emoji.custom.each do |emoji|
+        context.eval("Discourse.Dialect.registerEmoji('#{emoji.name}', '#{emoji.url}');")
+      end
+
       context.eval('opts["mentionLookup"] = function(u){return helpers.is_username_valid(u);}')
       context.eval('opts["lookupAvatar"] = function(p){return Discourse.Utilities.avatarImg({size: "tiny", avatarTemplate: helpers.avatar_template(p)});}')
       baked = context.eval('Discourse.Markdown.markdownConverter(opts).makeHtml(raw)')
+    end
+
+    if baked.blank? && !(opts || {})[:skip_blank_test]
+      # we may have a js engine issue
+      test = markdown("a", skip_blank_test: true)
+      if test.blank?
+        Rails.logger.warn("Markdown engine appears to have crashed, resetting context")
+        reset_context
+        opts ||= {}
+        opts = opts.dup
+        opts[:skip_blank_test] = true
+        baked = markdown(text, opts)
+      end
     end
 
     baked
@@ -242,6 +271,11 @@ module PrettyText
   end
 
   def self.excerpt(html, max_length, options={})
+    # TODO: properly fix this HACK in ExcerptParser without introducing XSS
+    doc = Nokogiri::HTML.fragment(html)
+    strip_image_wrapping(doc)
+    html = doc.to_html
+
     ExcerptParser.get_excerpt(html, max_length, options)
   end
 

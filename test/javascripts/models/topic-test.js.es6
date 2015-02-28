@@ -1,35 +1,39 @@
-module("Discourse.Topic");
+module("model:topic");
+
+import Topic from 'discourse/models/topic';
 
 test("defaults", function() {
-  var topic = Discourse.Topic.create({id: 1234});
+  var topic = Topic.create({id: 1234});
   blank(topic.get('deleted_at'), 'deleted_at defaults to blank');
   blank(topic.get('deleted_by'), 'deleted_by defaults to blank');
 });
 
 test('has details', function() {
-  var topic = Discourse.Topic.create({id: 1234});
+  var topic = Topic.create({id: 1234});
   var topicDetails = topic.get('details');
   present(topicDetails, "a topic has topicDetails after we create it");
   equal(topicDetails.get('topic'), topic, "the topicDetails has a reference back to the topic");
 });
 
 test('has a postStream', function() {
-  var topic = Discourse.Topic.create({id: 1234});
+  var topic = Topic.create({id: 1234});
   var postStream = topic.get('postStream');
   present(postStream, "a topic has a postStream after we create it");
   equal(postStream.get('topic'), topic, "the postStream has a reference back to the topic");
 });
 
-var category = _.first(Discourse.Category.list());
 
 test('category relationship', function() {
   // It finds the category by id
-  var topic = Discourse.Topic.create({id: 1111, category_id: category.get('id') });
+  var category = Discourse.Category.list()[0],
+      topic = Topic.create({id: 1111, category_id: category.get('id') });
+
   equal(topic.get('category'), category);
 });
 
 test("updateFromJson", function() {
-  var topic = Discourse.Topic.create({id: 1234});
+  var topic = Topic.create({id: 1234}),
+      category = Discourse.Category.list()[0];
 
   topic.updateFromJson({
     post_stream: [1,2,3],
@@ -46,7 +50,7 @@ test("updateFromJson", function() {
 
 test("destroy", function() {
   var user = Discourse.User.create({username: 'eviltrout'});
-  var topic = Discourse.Topic.create({id: 1234});
+  var topic = Topic.create({id: 1234});
 
   sandbox.stub(Discourse, 'ajax');
 
@@ -58,7 +62,7 @@ test("destroy", function() {
 
 test("recover", function() {
   var user = Discourse.User.create({username: 'eviltrout'});
-  var topic = Discourse.Topic.create({id: 1234, deleted_at: new Date(), deleted_by: user});
+  var topic = Topic.create({id: 1234, deleted_at: new Date(), deleted_by: user});
 
   sandbox.stub(Discourse, 'ajax');
 

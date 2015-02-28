@@ -34,7 +34,7 @@ describe Jobs::PollMailbox do
 
       Net::POP3.any_instance.expects(:start).raises(error)
 
-      Discourse.expects(:handle_exception)
+      Discourse.expects(:handle_job_exception)
 
       poller.poll_pop3
     end
@@ -116,13 +116,13 @@ describe Jobs::PollMailbox do
         poller.handle_mail(email)
 
         topic = Topic.where(category: category).where.not(id: category.topic_id).last
-        topic.should be_present
-        topic.title.should == "We should have a post-by-email-feature"
+        expect(topic).to be_present
+        expect(topic.title).to eq("We should have a post-by-email-feature")
 
         post = topic.posts.first
-        post.cooked.strip.should == expected_post.strip
+        expect(post.cooked.strip).to eq(expected_post.strip)
 
-        email.should be_deleted
+        expect(email).to be_deleted
       end
 
       describe "with insufficient trust" do
@@ -144,8 +144,8 @@ describe Jobs::PollMailbox do
             expect_success
             poller.handle_mail(email)
             topic = Topic.where(category: category).where.not(id: category.topic_id).last
-            topic.should be_present
-            topic.title.should == "We should have a post-by-email-feature"
+            expect(topic).to be_present
+            expect(topic.title).to eq("We should have a post-by-email-feature")
           ensure
             category.email_in_allow_strangers = false
             category.save
@@ -179,7 +179,7 @@ describe Jobs::PollMailbox do
         assert new_post.present?
         assert_equal expected_post.strip, new_post.cooked.strip
 
-        email.should be_deleted
+        expect(email).to be_deleted
       end
 
       it "works with multiple To addresses" do
@@ -192,7 +192,7 @@ describe Jobs::PollMailbox do
         assert new_post.present?
         assert_equal expected_post.strip, new_post.cooked.strip
 
-        email.should be_deleted
+        expect(email).to be_deleted
       end
 
       describe "with the wrong reply key" do
@@ -202,7 +202,57 @@ describe Jobs::PollMailbox do
           expect_exception Email::Receiver::EmailLogNotFound
 
           poller.handle_mail(email)
-          email.should be_deleted
+          expect(email).to be_deleted
+        end
+      end
+    end
+
+    describe "when topic is closed" do
+      let(:email) { MockPop3EmailObject.new fixture_file('emails/valid_reply.eml')}
+      let(:topic) { Fabricate(:topic, closed: true) }
+      let(:first_post) { Fabricate(:post, topic: topic, post_number: 1)}
+
+      before do
+        first_post.save
+        EmailLog.create(to_address: 'jake@email.example.com',
+                        email_type: 'user_posted',
+                        reply_key: '59d8df8370b7e95c5a49fbf86aeb2c93',
+                        user: user,
+                        post: first_post,
+                        topic: topic)
+      end
+
+      describe "should not create post" do
+        it "raises a TopicClosedError" do
+          expect_exception Email::Receiver::TopicClosedError
+
+          poller.handle_mail(email)
+          expect(email).to be_deleted
+        end
+      end
+    end
+
+    describe "when topic is deleted" do
+      let(:email) { MockPop3EmailObject.new fixture_file('emails/valid_reply.eml')}
+      let(:deleted_topic) { Fabricate(:deleted_topic) }
+      let(:first_post) { Fabricate(:post, topic: deleted_topic, post_number: 1)}
+
+      before do
+        first_post.save
+        EmailLog.create(to_address: 'jake@email.example.com',
+                        email_type: 'user_posted',
+                        reply_key: '59d8df8370b7e95c5a49fbf86aeb2c93',
+                        user: user,
+                        post: first_post,
+                        topic: deleted_topic)
+      end
+
+      describe "should not create post" do
+        it "raises a TopicNotFoundError" do
+          expect_exception Email::Receiver::TopicNotFoundError
+
+          poller.handle_mail(email)
+          expect(email).to be_deleted
         end
       end
     end
@@ -214,7 +264,7 @@ describe Jobs::PollMailbox do
         expect_exception Email::Receiver::EmailLogNotFound
 
         poller.handle_mail(email)
-        email.should be_deleted
+        expect(email).to be_deleted
       end
 
       it "a no content reply raises an EmptyEmailError" do
@@ -222,7 +272,7 @@ describe Jobs::PollMailbox do
         expect_exception Email::Receiver::EmptyEmailError
 
         poller.handle_mail(email)
-        email.should be_deleted
+        expect(email).to be_deleted
       end
 
       it "a fully empty email raises an EmptyEmailError" do
@@ -230,9 +280,8 @@ describe Jobs::PollMailbox do
         expect_exception Email::Receiver::EmptyEmailError
 
         poller.handle_mail(email)
-        email.should be_deleted
+        expect(email).to be_deleted
       end
-
 
     end
   end

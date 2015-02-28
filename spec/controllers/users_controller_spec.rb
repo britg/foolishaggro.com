@@ -7,28 +7,28 @@ describe UsersController do
 
     it 'returns success' do
       xhr :get, :show, username: user.username, format: :json
-      response.should be_success
+      expect(response).to be_success
       json = JSON.parse(response.body)
 
-      json["user"]["has_title_badges"].should == false
+      expect(json["user"]["has_title_badges"]).to eq(false)
 
     end
 
     it "returns not found when the username doesn't exist" do
       xhr :get, :show, username: 'madeuppity'
-      response.should_not be_success
+      expect(response).not_to be_success
     end
 
     it 'returns not found when the user is inactive' do
       inactive = Fabricate(:user, active: false)
       xhr :get, :show, username: inactive.username
-      response.should_not be_success
+      expect(response).not_to be_success
     end
 
     it "raises an error on invalid access" do
       Guardian.any_instance.expects(:can_see?).with(user).returns(false)
       xhr :get, :show, username: user.username
-      response.should be_forbidden
+      expect(response).to be_forbidden
     end
 
     context "fetching a user by external_id" do
@@ -36,33 +36,33 @@ describe UsersController do
 
       it "returns fetch for a matching external_id" do
         xhr :get, :show, external_id: '997'
-        response.should be_success
+        expect(response).to be_success
       end
 
       it "returns not found when external_id doesn't match" do
         xhr :get, :show, external_id: '99'
-        response.should_not be_success
+        expect(response).not_to be_success
       end
     end
   end
 
   describe '.user_preferences_redirect' do
     it 'requires the user to be logged in' do
-      lambda { get :user_preferences_redirect }.should raise_error(Discourse::NotLoggedIn)
+      expect { get :user_preferences_redirect }.to raise_error(Discourse::NotLoggedIn)
     end
 
     it "redirects to their profile when logged in" do
       user = log_in
       get :user_preferences_redirect
-      response.should redirect_to("/users/#{user.username_lower}/preferences")
+      expect(response).to redirect_to("/users/#{user.username_lower}/preferences")
     end
   end
 
   describe '.authorize_email' do
     it 'errors out for invalid tokens' do
       get :authorize_email, token: 'asdfasdf'
-      response.should be_success
-      flash[:error].should be_present
+      expect(response).to be_success
+      expect(flash[:error]).to be_present
     end
 
     context 'valid token' do
@@ -71,9 +71,9 @@ describe UsersController do
         email_token = user.email_tokens.create(email: user.email)
 
         get :authorize_email, token: email_token.token
-        response.should be_success
-        flash[:error].should be_blank
-        session[:current_user_id].should be_present
+        expect(response).to be_success
+        expect(flash[:error]).to be_blank
+        expect(session[:current_user_id]).to be_present
       end
     end
   end
@@ -84,17 +84,12 @@ describe UsersController do
     end
 
     context 'invalid token' do
-      before do
-        EmailToken.expects(:confirm).with('asdfasdf').returns(nil)
-        put :perform_account_activation, token: 'asdfasdf'
-      end
 
       it 'return success' do
-        response.should be_success
-      end
-
-      it 'sets a flash error' do
-        flash[:error].should be_present
+        EmailToken.expects(:confirm).with('asdfasdf').returns(nil)
+        put :perform_account_activation, token: 'asdfasdf'
+        expect(response).to be_success
+        expect(flash[:error]).to be_present
       end
     end
 
@@ -123,7 +118,7 @@ describe UsersController do
         it "raises an error if the honeypot is invalid" do
           UsersController.any_instance.stubs(:honeypot_or_challenge_fails?).returns(true)
           put :perform_account_activation, token: 'asdfasdf'
-          response.should_not be_success
+          expect(response).not_to be_success
         end
       end
 
@@ -135,19 +130,19 @@ describe UsersController do
         end
 
         it 'returns success' do
-          response.should be_success
+          expect(response).to be_success
         end
 
         it "doesn't set an error" do
-          flash[:error].should be_blank
+          expect(flash[:error]).to be_blank
         end
 
         it 'logs in as the user' do
-          session[:current_user_id].should be_present
+          expect(session[:current_user_id]).to be_present
         end
 
         it "doesn't set @needs_approval" do
-          assigns[:needs_approval].should be_blank
+          expect(assigns[:needs_approval]).to be_blank
         end
       end
 
@@ -159,19 +154,19 @@ describe UsersController do
         end
 
         it 'returns success' do
-          response.should be_success
+          expect(response).to be_success
         end
 
         it 'sets @needs_approval' do
-          assigns[:needs_approval].should be_present
+          expect(assigns[:needs_approval]).to be_present
         end
 
         it "doesn't set an error" do
-          flash[:error].should be_blank
+          expect(flash[:error]).to be_blank
         end
 
         it "doesn't log the user in" do
-          session[:current_user_id].should be_blank
+          expect(session[:current_user_id]).to be_blank
         end
       end
 
@@ -182,30 +177,30 @@ describe UsersController do
     let(:new_email) { 'bubblegum@adventuretime.ooo' }
 
     it "requires you to be logged in" do
-      lambda { xhr :put, :change_email, username: 'asdf', email: new_email }.should raise_error(Discourse::NotLoggedIn)
+      expect { xhr :put, :change_email, username: 'asdf', email: new_email }.to raise_error(Discourse::NotLoggedIn)
     end
 
     context 'when logged in' do
       let!(:user) { log_in }
 
       it 'raises an error without an email parameter' do
-        lambda { xhr :put, :change_email, username: user.username }.should raise_error(ActionController::ParameterMissing)
+        expect { xhr :put, :change_email, username: user.username }.to raise_error(ActionController::ParameterMissing)
       end
 
       it "raises an error if you can't edit the user's email" do
         Guardian.any_instance.expects(:can_edit_email?).with(user).returns(false)
         xhr :put, :change_email, username: user.username, email: new_email
-        response.should be_forbidden
+        expect(response).to be_forbidden
       end
 
       context 'when the new email address is taken' do
         let!(:other_user) { Fabricate(:coding_horror) }
         it 'raises an error' do
-          lambda { xhr :put, :change_email, username: user.username, email: other_user.email }.should raise_error(Discourse::InvalidParameters)
+          expect { xhr :put, :change_email, username: user.username, email: other_user.email }.to raise_error(Discourse::InvalidParameters)
         end
 
         it 'raises an error if there is whitespace too' do
-          lambda { xhr :put, :change_email, username: user.username, email: other_user.email + ' ' }.should raise_error(Discourse::InvalidParameters)
+          expect { xhr :put, :change_email, username: user.username, email: other_user.email + ' ' }.to raise_error(Discourse::InvalidParameters)
         end
       end
 
@@ -213,14 +208,14 @@ describe UsersController do
         let!(:other_user) { Fabricate(:user, email: 'case.insensitive@gmail.com')}
 
         it 'raises an error' do
-          lambda { xhr :put, :change_email, username: user.username, email: other_user.email.upcase }.should raise_error(Discourse::InvalidParameters)
+          expect { xhr :put, :change_email, username: user.username, email: other_user.email.upcase }.to raise_error(Discourse::InvalidParameters)
         end
       end
 
       context 'success' do
 
         it 'has an email token' do
-          lambda { xhr :put, :change_email, username: user.username, email: new_email }.should change(EmailToken, :count)
+          expect { xhr :put, :change_email, username: user.username, email: new_email }.to change(EmailToken, :count)
         end
 
         it 'enqueues an email authorization' do
@@ -239,7 +234,7 @@ describe UsersController do
       it "returns success" do
         SiteSetting.login_required = true
         get :password_reset, token: 'asdfasdf'
-        response.should be_success
+        expect(response).to be_success
       end
     end
 
@@ -249,10 +244,10 @@ describe UsersController do
       end
 
       it 'disallows login' do
-        flash[:error].should be_present
-        session[:current_user_id].should be_blank
-        assigns[:invalid_token].should be_nil
-        response.should be_success
+        expect(assigns[:error]).to be_present
+        expect(session[:current_user_id]).to be_blank
+        expect(assigns[:invalid_token]).to eq(nil)
+        expect(response).to be_success
       end
     end
 
@@ -262,10 +257,10 @@ describe UsersController do
       end
 
       it 'disallows login' do
-        flash[:error].should be_present
-        session[:current_user_id].should be_blank
-        assigns[:invalid_token].should be_true
-        response.should be_success
+        expect(assigns[:error]).to be_present
+        expect(session[:current_user_id]).to be_blank
+        expect(assigns[:invalid_token]).to eq(true)
+        expect(response).to be_success
       end
     end
 
@@ -276,8 +271,8 @@ describe UsersController do
 
         get :password_reset, token: token
         put :password_reset, token: token, password: 'newpassword'
-        response.should be_success
-        flash[:error].should be_blank
+        expect(response).to be_success
+        expect(assigns[:error]).to be_blank
       end
     end
 
@@ -289,27 +284,27 @@ describe UsersController do
 
       it "fails when the password is blank" do
         put :password_reset, token: token, password: ''
-        assigns(:user).errors.should be_present
-        session[:current_user_id].should be_blank
+        expect(assigns(:user).errors).to be_present
+        expect(session[:current_user_id]).to be_blank
       end
 
       it "fails when the password is too long" do
         put :password_reset, token: token, password: ('x' * (User.max_password_length + 1))
-        assigns(:user).errors.should be_present
-        session[:current_user_id].should be_blank
+        expect(assigns(:user).errors).to be_present
+        expect(session[:current_user_id]).to be_blank
       end
 
       it "logs in the user" do
         put :password_reset, token: token, password: 'newpassword'
-        assigns(:user).errors.should be_blank
-        session[:current_user_id].should be_present
+        expect(assigns(:user).errors).to be_blank
+        expect(session[:current_user_id]).to be_present
       end
 
       it "doesn't log in the user when not approved" do
         SiteSetting.expects(:must_approve_users?).returns(true)
         put :password_reset, token: token, password: 'newpassword'
-        assigns(:user).errors.should be_blank
-        session[:current_user_id].should be_blank
+        expect(assigns(:user).errors).to be_blank
+        expect(session[:current_user_id]).to be_blank
       end
     end
   end
@@ -345,8 +340,8 @@ describe UsersController do
         SiteSetting.stubs(:allow_new_registrations).returns(false)
         post_user
         json = JSON.parse(response.body)
-        json['success'].should be_false
-        json['message'].should be_present
+        expect(json['success']).to eq(false)
+        expect(json['message']).to be_present
       end
 
       it 'creates a user correctly' do
@@ -355,7 +350,10 @@ describe UsersController do
 
         post_user
 
-        expect(JSON.parse(response.body)['active']).to be_false
+        expect(JSON.parse(response.body)['active']).to be_falsey
+
+        # should save user_created_message in session
+        expect(session["user_created_message"]).to be_present
       end
 
       context "and 'must approve users' site setting is enabled" do
@@ -373,14 +371,12 @@ describe UsersController do
 
         it 'indicates the user is not active in the response' do
           post_user
-          expect(JSON.parse(response.body)['active']).to be_false
+          expect(JSON.parse(response.body)['active']).to be_falsey
         end
 
         it "shows the 'waiting approval' message" do
           post_user
-          expect(JSON.parse(response.body)['message']).to eq(
-            I18n.t 'login.wait_approval'
-          )
+          expect(JSON.parse(response.body)['message']).to eq(I18n.t 'login.wait_approval')
         end
       end
     end
@@ -391,6 +387,9 @@ describe UsersController do
       it 'enqueues a welcome email' do
         User.any_instance.expects(:enqueue_welcome_message).with('welcome_user')
         post_user
+
+        # should save user_created_message in session
+        expect(session["user_created_message"]).to be_present
       end
 
       it "shows the 'active' message" do
@@ -404,21 +403,21 @@ describe UsersController do
       it "should be logged in" do
         User.any_instance.expects(:enqueue_welcome_message)
         post_user
-        session[:current_user_id].should be_present
+        expect(session[:current_user_id]).to be_present
       end
 
       it 'indicates the user is active in the response' do
         User.any_instance.expects(:enqueue_welcome_message)
         post_user
-        expect(JSON.parse(response.body)['active']).to be_true
+        expect(JSON.parse(response.body)['active']).to be_truthy
       end
 
       it 'returns 500 status when new registrations are disabled' do
         SiteSetting.stubs(:allow_new_registrations).returns(false)
         post_user
         json = JSON.parse(response.body)
-        json['success'].should be_false
-        json['message'].should be_present
+        expect(json['success']).to eq(false)
+        expect(json['message']).to be_present
       end
 
       context 'authentication records for' do
@@ -444,16 +443,16 @@ describe UsersController do
       before { post_user }
 
       it 'should succeed' do
-        should respond_with(:success)
+        is_expected.to respond_with(:success)
       end
 
       it 'has the proper JSON' do
         json = JSON::parse(response.body)
-        json["success"].should be_true
+        expect(json["success"]).to eq(true)
       end
 
       it 'should not result in an active account' do
-        User.find_by(username: @user.username).active.should be_false
+        expect(User.find_by(username: @user.username).active).to eq(false)
       end
     end
 
@@ -472,7 +471,10 @@ describe UsersController do
       it 'should say it was successful' do
         xhr :post, :create, create_params
         json = JSON::parse(response.body)
-        json["success"].should be_true
+        expect(json["success"]).to eq(true)
+
+        # should not change the session
+        expect(session["user_created_message"]).to be_blank
       end
     end
 
@@ -513,7 +515,10 @@ describe UsersController do
       it 'should report failed' do
         xhr :post, :create, create_params
         json = JSON::parse(response.body)
-        json["success"].should_not be_true
+        expect(json["success"]).not_to eq(true)
+
+        # should not change the session
+        expect(session["user_created_message"]).to be_blank
       end
     end
 
@@ -533,7 +538,6 @@ describe UsersController do
     end
 
     context 'when an Exception is raised' do
-
       [ ActiveRecord::StatementInvalid,
         RestClient::Forbidden ].each do |exception|
         before { User.any_instance.stubs(:save).raises(exception) }
@@ -547,36 +551,151 @@ describe UsersController do
       end
     end
 
+    context "with custom fields" do
+      let!(:user_field) { Fabricate(:user_field) }
+      let!(:another_field) { Fabricate(:user_field) }
+      let!(:optional_field) { Fabricate(:user_field, required: false) }
+
+      context "without a value for the fields" do
+        let(:create_params) { {name: @user.name, password: 'watwatwat', username: @user.username, email: @user.email} }
+        include_examples 'failed signup'
+      end
+
+      context "with values for the fields" do
+        let(:create_params) { {
+          name: @user.name,
+          password: 'watwatwat',
+          username: @user.username,
+          email: @user.email,
+          user_fields: {
+            user_field.id.to_s => 'value1',
+            another_field.id.to_s => 'value2',
+          }
+        } }
+
+        it "should succeed without the optional field" do
+          xhr :post, :create, create_params
+          expect(response).to be_success
+          inserted = User.where(email: @user.email).first
+          expect(inserted).to be_present
+          expect(inserted.custom_fields).to be_present
+          expect(inserted.custom_fields["user_field_#{user_field.id}"]).to eq('value1')
+          expect(inserted.custom_fields["user_field_#{another_field.id}"]).to eq('value2')
+          expect(inserted.custom_fields["user_field_#{optional_field.id}"]).to be_blank
+        end
+
+        it "should succeed with the optional field" do
+          create_params[:user_fields][optional_field.id.to_s] = 'value3'
+          xhr :post, :create, create_params.merge(create_params)
+          expect(response).to be_success
+          inserted = User.where(email: @user.email).first
+          expect(inserted).to be_present
+          expect(inserted.custom_fields).to be_present
+          expect(inserted.custom_fields["user_field_#{user_field.id}"]).to eq('value1')
+          expect(inserted.custom_fields["user_field_#{another_field.id}"]).to eq('value2')
+          expect(inserted.custom_fields["user_field_#{optional_field.id}"]).to eq('value3')
+        end
+
+        it "trims excessively long fields" do
+          create_params[:user_fields][optional_field.id.to_s] = ('x' * 3000)
+          xhr :post, :create, create_params.merge(create_params)
+          expect(response).to be_success
+          inserted = User.where(email: @user.email).first
+
+          val = inserted.custom_fields["user_field_#{optional_field.id}"]
+          expect(val.length).to eq(UserField.max_length)
+        end
+      end
+    end
+
+    context "with only optional custom fields" do
+      let!(:user_field) { Fabricate(:user_field, required: false) }
+
+      context "without values for the fields" do
+        let(:create_params) { {
+          name: @user.name,
+          password: 'watwatwat',
+          username: @user.username,
+          email: @user.email,
+        } }
+
+        it "should succeed" do
+          xhr :post, :create, create_params
+          expect(response).to be_success
+          inserted = User.where(email: @user.email).first
+          expect(inserted).to be_present
+          expect(inserted.custom_fields).not_to be_present
+          expect(inserted.custom_fields["user_field_#{user_field.id}"]).to be_blank
+        end
+      end
+    end
+
   end
 
   context '.username' do
     it 'raises an error when not logged in' do
-      lambda { xhr :put, :username, username: 'somename' }.should raise_error(Discourse::NotLoggedIn)
+      expect { xhr :put, :username, username: 'somename' }.to raise_error(Discourse::NotLoggedIn)
     end
 
     context 'while logged in' do
-      let!(:user) { log_in }
-      let(:new_username) { "#{user.username}1234" }
+      let(:old_username) { "OrigUsrname" }
+      let(:new_username) { "#{old_username}1234" }
+      let(:user) { Fabricate(:user, username: old_username) }
+
+      before do
+        user.username = old_username
+        log_in_user(user)
+      end
 
       it 'raises an error without a new_username param' do
-        lambda { xhr :put, :username, username: user.username }.should raise_error(ActionController::ParameterMissing)
+        expect { xhr :put, :username, username: user.username }.to raise_error(ActionController::ParameterMissing)
+        user.reload.username.should == old_username
       end
 
       it 'raises an error when you don\'t have permission to change the username' do
         Guardian.any_instance.expects(:can_edit_username?).with(user).returns(false)
         xhr :put, :username, username: user.username, new_username: new_username
-        response.should be_forbidden
+        expect(response).to be_forbidden
+        user.reload.username.should == old_username
       end
 
+      # Bad behavior, this should give a real JSON error, not an InvalidParameters
       it 'raises an error when change_username fails' do
-        User.any_instance.expects(:change_username).with(new_username).returns(false)
-        lambda { xhr :put, :username, username: user.username, new_username: new_username }.should raise_error(Discourse::InvalidParameters)
+        User.any_instance.expects(:save).returns(false)
+        expect { xhr :put, :username, username: user.username, new_username: new_username }.to raise_error(Discourse::InvalidParameters)
+        user.reload.username.should == old_username
       end
 
-      it 'should succeed when the change_username returns true' do
-        User.any_instance.expects(:change_username).with(new_username).returns(true)
+      it 'should succeed in normal circumstances' do
         xhr :put, :username, username: user.username, new_username: new_username
         response.should be_success
+        user.reload.username.should == new_username
+      end
+
+      skip 'should fail if the user is old', 'ensure_can_edit_username! is not throwing' do
+        # Older than the change period and >1 post
+        user.created_at = Time.now - (SiteSetting.username_change_period + 1).days
+        user.stubs(:post_count).returns(200)
+        Guardian.new(user).can_edit_username?(user).should == false
+
+        xhr :put, :username, username: user.username, new_username: new_username
+
+        response.should be_forbidden
+        user.reload.username.should == old_username
+      end
+
+      it 'should create a staff action log when a staff member changes the username' do
+        acting_user = Fabricate(:admin)
+        log_in_user(acting_user)
+        xhr :put, :username, username: user.username, new_username: new_username
+        response.should be_success
+        UserHistory.where(action: UserHistory.actions[:change_username], target_user_id: user.id, acting_user_id: acting_user.id).should be_present
+        user.reload.username.should == new_username
+      end
+
+      it 'should return a JSON response with the updated username' do
+        xhr :put, :username, username: user.username, new_username: new_username
+        expect(::JSON.parse(response.body)['username']).to eq(new_username)
       end
 
     end
@@ -584,36 +703,36 @@ describe UsersController do
 
   context '.check_username' do
     it 'raises an error without any parameters' do
-      lambda { xhr :get, :check_username }.should raise_error(ActionController::ParameterMissing)
+      expect { xhr :get, :check_username }.to raise_error(ActionController::ParameterMissing)
     end
 
     shared_examples 'when username is unavailable' do
       it 'should return success' do
-        response.should be_success
+        expect(response).to be_success
       end
 
       it 'should return available as false in the JSON' do
-        ::JSON.parse(response.body)['available'].should be_false
+        expect(::JSON.parse(response.body)['available']).to eq(false)
       end
 
       it 'should return a suggested username' do
-        ::JSON.parse(response.body)['suggestion'].should be_present
+        expect(::JSON.parse(response.body)['suggestion']).to be_present
       end
     end
 
     shared_examples 'when username is available' do
       it 'should return success' do
-        response.should be_success
+        expect(response).to be_success
       end
 
       it 'should return available in the JSON' do
-        ::JSON.parse(response.body)['available'].should be_true
+        expect(::JSON.parse(response.body)['available']).to eq(true)
       end
     end
 
     it 'returns nothing when given an email param but no username' do
       xhr :get, :check_username, email: 'dood@example.com'
-      response.should be_success
+      expect(response).to be_success
     end
 
     context 'username is available' do
@@ -633,15 +752,15 @@ describe UsersController do
 
     shared_examples 'checking an invalid username' do
       it 'should return success' do
-        response.should be_success
+        expect(response).to be_success
       end
 
       it 'should not return an available key' do
-        ::JSON.parse(response.body)['available'].should be_nil
+        expect(::JSON.parse(response.body)['available']).to eq(nil)
       end
 
       it 'should return an error message' do
-        ::JSON.parse(response.body)['errors'].should_not be_empty
+        expect(::JSON.parse(response.body)['errors']).not_to be_empty
       end
     end
 
@@ -652,7 +771,7 @@ describe UsersController do
       include_examples 'checking an invalid username'
 
       it 'should return the invalid characters message' do
-        ::JSON.parse(response.body)['errors'].should include(I18n.t(:'user.username.characters'))
+        expect(::JSON.parse(response.body)['errors']).to include(I18n.t(:'user.username.characters'))
       end
     end
 
@@ -663,7 +782,7 @@ describe UsersController do
       include_examples 'checking an invalid username'
 
       it 'should return the "too long" message' do
-        ::JSON.parse(response.body)['errors'].should include(I18n.t(:'user.username.long', max: User.username_length.end))
+        expect(::JSON.parse(response.body)['errors']).to include(I18n.t(:'user.username.long', max: User.username_length.end))
       end
     end
 
@@ -725,7 +844,7 @@ describe UsersController do
       xhr :get, :invited, username: inviter.username, filter: 'billybob'
 
       invites = JSON.parse(response.body)['invites']
-      expect(invites).to have(1).item
+      expect(invites.size).to eq(1)
       expect(invites.first).to include('email' => 'billybob@example.com')
     end
 
@@ -747,7 +866,7 @@ describe UsersController do
       xhr :get, :invited, username: inviter.username, filter: 'billybob'
 
       invites = JSON.parse(response.body)['invites']
-      expect(invites).to have(1).item
+      expect(invites.size).to eq(1)
       expect(invites.first).to include('email' => 'billybob@example.com')
     end
 
@@ -773,7 +892,7 @@ describe UsersController do
           xhr :get, :invited, username: inviter.username
 
           invites = JSON.parse(response.body)['invites']
-          expect(invites).to have(1).item
+          expect(invites.size).to eq(1)
           expect(invites.first).to include('email' => invite.email)
         end
       end
@@ -794,7 +913,7 @@ describe UsersController do
             xhr :get, :invited, username: inviter.username
 
             invites = JSON.parse(response.body)['invites']
-            expect(invites).to have(1).item
+            expect(invites.size).to eq(1)
             expect(invites.first).to include("email" => invite.email)
           end
         end
@@ -828,7 +947,7 @@ describe UsersController do
           xhr :get, :invited, username: inviter.username
 
           invites = JSON.parse(response.body)['invites']
-          expect(invites).to have(1).item
+          expect(invites.size).to eq(1)
           expect(invites.first).to include('email' => invite.email)
         end
       end
@@ -846,12 +965,10 @@ describe UsersController do
 
     context 'with authenticated user' do
       context 'with permission to update' do
+        let!(:user) { log_in(:user) }
+
         it 'allows the update' do
-          user = Fabricate(:user, name: 'Billy Bob')
-          log_in_user(user)
-
           put :update, username: user.username, name: 'Jim Tom', custom_fields: {test: :it}
-
           expect(response).to be_success
 
           user.reload
@@ -860,14 +977,48 @@ describe UsersController do
           expect(user.custom_fields['test']).to eq 'it'
         end
 
-        it 'returns user JSON' do
-          user = log_in
+        context "with user fields" do
+          context "an editable field" do
+            let!(:user_field) { Fabricate(:user_field) }
+            let!(:optional_field) { Fabricate(:user_field, required: false ) }
 
+            it "should update the user field" do
+              put :update, username: user.username, name: 'Jim Tom', user_fields: { user_field.id.to_s => 'happy' }
+              expect(response).to be_success
+              expect(user.user_fields[user_field.id.to_s]).to eq 'happy'
+            end
+
+            it "cannot be updated to blank" do
+              put :update, username: user.username, name: 'Jim Tom', user_fields: { user_field.id.to_s => '' }
+              expect(response).not_to be_success
+              expect(user.user_fields[user_field.id.to_s]).not_to eq('happy')
+            end
+
+            it "trims excessively large fields" do
+              put :update, username: user.username, name: 'Jim Tom', user_fields: { user_field.id.to_s => ('x' * 3000) }
+              expect(user.user_fields[user_field.id.to_s].size).to eq(UserField.max_length)
+            end
+          end
+
+          context "uneditable field" do
+            let!(:user_field) { Fabricate(:user_field, editable: false) }
+
+            it "does not update the user field" do
+              put :update, username: user.username, name: 'Jim Tom', user_fields: { user_field.id.to_s => 'happy' }
+              expect(response).to be_success
+              expect(user.user_fields[user_field.id.to_s]).to be_blank
+            end
+          end
+
+        end
+
+        it 'returns user JSON' do
           put :update, username: user.username
 
           json = JSON.parse(response.body)
           expect(json['user']['id']).to eq user.id
         end
+
       end
 
       context 'without permission to update' do
@@ -887,6 +1038,26 @@ describe UsersController do
     end
   end
 
+  describe "badge_card" do
+    let(:user) { Fabricate(:user) }
+    let(:badge) { Fabricate(:badge) }
+    let(:user_badge) { BadgeGranter.grant(badge, user) }
+
+    it "sets the user's card image to the badge" do
+      log_in_user user
+      xhr :put, :update_card_badge, user_badge_id: user_badge.id, username: user.username
+      expect(user.user_profile.reload.card_image_badge_id).to be_blank
+      badge.update_attributes image: "wat.com/wat.jpg"
+
+      xhr :put, :update_card_badge, user_badge_id: user_badge.id, username: user.username
+      expect(user.user_profile.reload.card_image_badge_id).to eq(badge.id)
+
+      # Can set to nothing
+      xhr :put, :update_card_badge, username: user.username
+      expect(user.user_profile.reload.card_image_badge_id).to be_blank
+    end
+  end
+
   describe "badge_title" do
     let(:user) { Fabricate(:user) }
     let(:badge) { Fabricate(:badge) }
@@ -895,10 +1066,17 @@ describe UsersController do
     it "sets the user's title to the badge name if it is titleable" do
       log_in_user user
       xhr :put, :badge_title, user_badge_id: user_badge.id, username: user.username
-      user.reload.title.should_not == badge.name
+      expect(user.reload.title).not_to eq(badge.name)
       badge.update_attributes allow_title: true
       xhr :put, :badge_title, user_badge_id: user_badge.id, username: user.username
-      user.reload.title.should == badge.name
+      expect(user.reload.title).to eq(badge.name)
+      expect(user.user_profile.badge_granted_title).to eq(true)
+
+      user.title = "testing"
+      user.save
+      user.user_profile.reload
+      expect(user.user_profile.badge_granted_title).to eq(false)
+
     end
   end
 
@@ -914,23 +1092,23 @@ describe UsersController do
 
     it "searches when provided the term only" do
       xhr :post, :search_users, term: user.name.split(" ").last
-      response.should be_success
+      expect(response).to be_success
       json = JSON.parse(response.body)
-      json["users"].map { |u| u["username"] }.should include(user.username)
+      expect(json["users"].map { |u| u["username"] }).to include(user.username)
     end
 
     it "searches when provided the topic only" do
       xhr :post, :search_users, topic_id: topic.id
-      response.should be_success
+      expect(response).to be_success
       json = JSON.parse(response.body)
-      json["users"].map { |u| u["username"] }.should include(user.username)
+      expect(json["users"].map { |u| u["username"] }).to include(user.username)
     end
 
     it "searches when provided the term and topic" do
       xhr :post, :search_users, term: user.name.split(" ").last, topic_id: topic.id
-      response.should be_success
+      expect(response).to be_success
       json = JSON.parse(response.body)
-      json["users"].map { |u| u["username"] }.should include(user.username)
+      expect(json["users"].map { |u| u["username"] }).to include(user.username)
     end
 
     context "when `enable_names` is true" do
@@ -941,7 +1119,7 @@ describe UsersController do
       it "returns names" do
         xhr :post, :search_users, term: user.name
         json = JSON.parse(response.body)
-        json["users"].map { |u| u["name"] }.should include(user.name)
+        expect(json["users"].map { |u| u["name"] }).to include(user.name)
       end
     end
 
@@ -953,7 +1131,7 @@ describe UsersController do
       it "returns names" do
         xhr :post, :search_users, term: user.name
         json = JSON.parse(response.body)
-        json["users"].map { |u| u["name"] }.should_not include(user.name)
+        expect(json["users"].map { |u| u["name"] }).not_to include(user.name)
       end
     end
 
@@ -1000,7 +1178,7 @@ describe UsersController do
   describe '.upload_user_image' do
 
     it 'raises an error when not logged in' do
-      lambda { xhr :put, :upload_user_image, username: 'asdf' }.should raise_error(Discourse::NotLoggedIn)
+      expect { xhr :put, :upload_user_image, username: 'asdf' }.to raise_error(Discourse::NotLoggedIn)
     end
 
     context 'while logged in' do
@@ -1014,7 +1192,7 @@ describe UsersController do
       end
 
       it 'raises an error without a image_type param' do
-        lambda { xhr :put, :upload_user_image, username: user.username }.should raise_error(ActionController::ParameterMissing)
+        expect { xhr :put, :upload_user_image, username: user.username }.to raise_error(ActionController::ParameterMissing)
       end
 
       describe "with uploaded file" do
@@ -1022,19 +1200,19 @@ describe UsersController do
         it 'raises an error when you don\'t have permission to upload an user image' do
           Guardian.any_instance.expects(:can_edit?).with(user).returns(false)
           xhr :post, :upload_user_image, username: user.username, image_type: "avatar"
-          response.should be_forbidden
+          expect(response).to be_forbidden
         end
 
         it 'rejects large images' do
           SiteSetting.stubs(:max_image_size_kb).returns(1)
           xhr :post, :upload_user_image, username: user.username, file: user_image, image_type: "avatar"
-          response.status.should eq 422
+          expect(response.status).to eq 422
         end
 
         it 'rejects unauthorized images' do
           SiteSetting.stubs(:authorized_extensions).returns(".txt")
           xhr :post, :upload_user_image, username: user.username, file: user_image, image_type: "avatar"
-          response.status.should eq 422
+          expect(response.status).to eq 422
         end
 
         it 'is successful for avatars' do
@@ -1044,10 +1222,10 @@ describe UsersController do
           xhr :post, :upload_user_image, username: user.username, file: user_image, image_type: "avatar"
           # returns the url, width and height of the uploaded image
           json = JSON.parse(response.body)
-          json['url'].should == "/uploads/default/1/1234567890123456.png"
-          json['width'].should == 100
-          json['height'].should == 200
-          json['upload_id'].should == upload.id
+          expect(json['url']).to eq("/uploads/default/1/1234567890123456.png")
+          expect(json['width']).to eq(100)
+          expect(json['height']).to eq(200)
+          expect(json['upload_id']).to eq(upload.id)
         end
 
         it 'is successful for profile backgrounds' do
@@ -1056,13 +1234,28 @@ describe UsersController do
           xhr :post, :upload_user_image, username: user.username, file: user_image, image_type: "profile_background"
           user.reload
 
-          user.user_profile.profile_background.should == "/uploads/default/1/1234567890123456.png"
+          expect(user.user_profile.profile_background).to eq("/uploads/default/1/1234567890123456.png")
 
           # returns the url, width and height of the uploaded image
           json = JSON.parse(response.body)
-          json['url'].should == "/uploads/default/1/1234567890123456.png"
-          json['width'].should == 100
-          json['height'].should == 200
+          expect(json['url']).to eq("/uploads/default/1/1234567890123456.png")
+          expect(json['width']).to eq(100)
+          expect(json['height']).to eq(200)
+        end
+
+        it 'is successful for card backgrounds' do
+          upload = Fabricate(:upload)
+          Upload.expects(:create_for).returns(upload)
+          xhr :post, :upload_user_image, username: user.username, file: user_image, image_type: "card_background"
+          user.reload
+
+          expect(user.user_profile.card_background).to eq("/uploads/default/1/1234567890123456.png")
+
+          # returns the url, width and height of the uploaded image
+          json = JSON.parse(response.body)
+          expect(json['url']).to eq("/uploads/default/1/1234567890123456.png")
+          expect(json['width']).to eq(100)
+          expect(json['height']).to eq(200)
         end
 
       end
@@ -1079,25 +1272,25 @@ describe UsersController do
           it 'rejects large images' do
             SiteSetting.stubs(:max_image_size_kb).returns(1)
             xhr :post, :upload_user_image, username: user.username, file: user_image_url, image_type: "profile_background"
-            response.status.should eq 422
+            expect(response.status).to eq 422
           end
 
           it 'rejects unauthorized images' do
             SiteSetting.stubs(:authorized_extensions).returns(".txt")
             xhr :post, :upload_user_image, username: user.username, file: user_image_url, image_type: "profile_background"
-            response.status.should eq 422
+            expect(response.status).to eq 422
           end
 
           it 'is successful for avatars' do
             upload = Fabricate(:upload)
             Upload.expects(:create_for).returns(upload)
             # enqueues the user_image generator job
-            xhr :post, :upload_avatar, username: user.username, file: user_image_url, image_type: "avatar"
+            xhr :post, :upload_user_image, username: user.username, file: user_image_url, image_type: "avatar"
             json = JSON.parse(response.body)
-            json['url'].should == "/uploads/default/1/1234567890123456.png"
-            json['width'].should == 100
-            json['height'].should == 200
-            json['upload_id'].should == upload.id
+            expect(json['url']).to eq("/uploads/default/1/1234567890123456.png")
+            expect(json['width']).to eq(100)
+            expect(json['height']).to eq(200)
+            expect(json['upload_id']).to eq(upload.id)
           end
 
           it 'is successful for profile backgrounds' do
@@ -1105,19 +1298,33 @@ describe UsersController do
             Upload.expects(:create_for).returns(upload)
             xhr :post, :upload_user_image, username: user.username, file: user_image_url, image_type: "profile_background"
             user.reload
-            user.user_profile.profile_background.should == "/uploads/default/1/1234567890123456.png"
+            expect(user.user_profile.profile_background).to eq("/uploads/default/1/1234567890123456.png")
 
             # returns the url, width and height of the uploaded image
             json = JSON.parse(response.body)
-            json['url'].should == "/uploads/default/1/1234567890123456.png"
-            json['width'].should == 100
-            json['height'].should == 200
+            expect(json['url']).to eq("/uploads/default/1/1234567890123456.png")
+            expect(json['width']).to eq(100)
+            expect(json['height']).to eq(200)
+          end
+
+          it 'is successful for card backgrounds' do
+            upload = Fabricate(:upload)
+            Upload.expects(:create_for).returns(upload)
+            xhr :post, :upload_user_image, username: user.username, file: user_image_url, image_type: "card_background"
+            user.reload
+            expect(user.user_profile.card_background).to eq("/uploads/default/1/1234567890123456.png")
+
+            # returns the url, width and height of the uploaded image
+            json = JSON.parse(response.body)
+            expect(json['url']).to eq("/uploads/default/1/1234567890123456.png")
+            expect(json['width']).to eq(100)
+            expect(json['height']).to eq(200)
           end
         end
 
         it "should handle malformed urls" do
           xhr :post, :upload_user_image, username: user.username, file: "foobar", image_type: "profile_background"
-          response.status.should eq 422
+          expect(response.status).to eq 422
         end
 
       end
@@ -1129,7 +1336,7 @@ describe UsersController do
   describe '.pick_avatar' do
 
     it 'raises an error when not logged in' do
-      lambda { xhr :put, :pick_avatar, username: 'asdf', avatar_id: 1}.should raise_error(Discourse::NotLoggedIn)
+      expect { xhr :put, :pick_avatar, username: 'asdf', avatar_id: 1}.to raise_error(Discourse::NotLoggedIn)
     end
 
     context 'while logged in' do
@@ -1139,19 +1346,26 @@ describe UsersController do
       it 'raises an error when you don\'t have permission to toggle the avatar' do
         another_user = Fabricate(:user)
         xhr :put, :pick_avatar, username: another_user.username, upload_id: 1
-        response.should be_forbidden
+        expect(response).to be_forbidden
       end
 
       it 'it successful' do
         xhr :put, :pick_avatar, username: user.username, upload_id: 111
-        user.reload.uploaded_avatar_id.should == 111
-        response.should be_success
+        expect(user.reload.uploaded_avatar_id).to eq(111)
+        expect(response).to be_success
 
         xhr :put, :pick_avatar, username: user.username
-        user.reload.uploaded_avatar_id.should == nil
-        response.should be_success
+        expect(user.reload.uploaded_avatar_id).to eq(nil)
+        expect(response).to be_success
       end
 
+      it 'returns success' do
+        xhr :put, :pick_avatar, username: user.username, upload_id: 111
+        expect(user.reload.uploaded_avatar_id).to eq(111)
+        expect(response).to be_success
+        json = ::JSON.parse(response.body)
+        expect(json['success']).to eq("OK")
+      end
     end
 
   end
@@ -1159,7 +1373,7 @@ describe UsersController do
   describe '.destroy_user_image' do
 
     it 'raises an error when not logged in' do
-      lambda { xhr :delete, :destroy_user_image, type: 'profile_background', username: 'asdf' }.should raise_error(Discourse::NotLoggedIn)
+      expect { xhr :delete, :destroy_user_image, type: 'profile_background', username: 'asdf' }.to raise_error(Discourse::NotLoggedIn)
     end
 
     context 'while logged in' do
@@ -1169,21 +1383,21 @@ describe UsersController do
       it 'raises an error when you don\'t have permission to clear the profile background' do
         Guardian.any_instance.expects(:can_edit?).with(user).returns(false)
         xhr :delete, :destroy_user_image, username: user.username, image_type: 'profile_background'
-        response.should be_forbidden
+        expect(response).to be_forbidden
       end
 
       it "requires the `image_type` param" do
-        -> { xhr :delete, :destroy_user_image, username: user.username }.should raise_error(ActionController::ParameterMissing)
+        expect { xhr :delete, :destroy_user_image, username: user.username }.to raise_error(ActionController::ParameterMissing)
       end
 
       it "only allows certain `image_types`" do
-        -> { xhr :delete, :destroy_user_image, username: user.username, image_type: 'wat' }.should raise_error(Discourse::InvalidParameters)
+        expect { xhr :delete, :destroy_user_image, username: user.username, image_type: 'wat' }.to raise_error(Discourse::InvalidParameters)
       end
 
       it 'can clear the profile background' do
         xhr :delete, :destroy_user_image, image_type: 'profile_background', username: user.username
-        user.reload.user_profile.profile_background.should == ""
-        response.should be_success
+        expect(user.reload.user_profile.profile_background).to eq("")
+        expect(response).to be_success
       end
 
     end
@@ -1191,7 +1405,7 @@ describe UsersController do
 
   describe '.destroy' do
     it 'raises an error when not logged in' do
-      lambda { xhr :delete, :destroy, username: 'nobody' }.should raise_error(Discourse::NotLoggedIn)
+      expect { xhr :delete, :destroy, username: 'nobody' }.to raise_error(Discourse::NotLoggedIn)
     end
 
     context 'while logged in' do
@@ -1201,20 +1415,20 @@ describe UsersController do
         Guardian.any_instance.stubs(:can_delete_user?).returns(false)
         UserDestroyer.any_instance.expects(:destroy).never
         xhr :delete, :destroy, username: user.username
-        response.should be_forbidden
+        expect(response).to be_forbidden
       end
 
       it "raises an error when you try to delete someone else's account" do
         UserDestroyer.any_instance.expects(:destroy).never
         xhr :delete, :destroy, username: Fabricate(:user).username
-        response.should be_forbidden
+        expect(response).to be_forbidden
       end
 
       it "deletes your account when you're allowed to" do
         Guardian.any_instance.stubs(:can_delete_user?).returns(true)
         UserDestroyer.any_instance.expects(:destroy).with(user, anything).returns(user)
         xhr :delete, :destroy, username: user.username
-        response.should be_success
+        expect(response).to be_success
       end
     end
   end
@@ -1223,8 +1437,8 @@ describe UsersController do
 
     it "returns 404 if the user is not logged in" do
       get :my_redirect, path: "wat"
-      response.should_not be_success
-      response.should_not be_redirect
+      expect(response).not_to be_success
+      expect(response).not_to be_redirect
     end
 
     context "when the user is logged in" do
@@ -1232,19 +1446,57 @@ describe UsersController do
 
       it "will not redirect to an invalid path" do
         get :my_redirect, path: "wat/..password.txt"
-        response.should_not be_redirect
+        expect(response).not_to be_redirect
       end
 
       it "will redirect to an valid path" do
         get :my_redirect, path: "preferences"
-        response.should be_redirect
+        expect(response).to be_redirect
       end
 
       it "permits forward slashes" do
         get :my_redirect, path: "activity/posts"
-        response.should be_redirect
+        expect(response).to be_redirect
       end
     end
+  end
+
+  describe '.check_emails' do
+
+    it 'raises an error when not logged in' do
+      expect { xhr :put, :check_emails, username: 'zogstrip' }.to raise_error(Discourse::NotLoggedIn)
+    end
+
+    context 'while logged in' do
+      let!(:user) { log_in }
+
+      it "raises an error when you aren't allowed to check emails" do
+        Guardian.any_instance.expects(:can_check_emails?).returns(false)
+        xhr :put, :check_emails, username: Fabricate(:user).username
+        expect(response).to be_forbidden
+      end
+
+      it "returns both email and associated_accounts when you're allowed to see them" do
+        Guardian.any_instance.expects(:can_check_emails?).returns(true)
+        xhr :put, :check_emails, username: Fabricate(:user).username
+        expect(response).to be_success
+        json = JSON.parse(response.body)
+        expect(json["email"]).to be_present
+        expect(json["associated_accounts"]).to be_present
+      end
+
+      it "works on inactive users" do
+        inactive_user = Fabricate(:user, active: false)
+        Guardian.any_instance.expects(:can_check_emails?).returns(true)
+        xhr :put, :check_emails, username: inactive_user.username
+        expect(response).to be_success
+        json = JSON.parse(response.body)
+        expect(json["email"]).to be_present
+        expect(json["associated_accounts"]).to be_present
+      end
+
+    end
+
   end
 
 end

@@ -1,35 +1,56 @@
-var ApplicationRoute = Em.Route.extend({
+const ApplicationRoute = Discourse.Route.extend({
+
+  siteTitle: Discourse.computed.setting('title'),
 
   actions: {
-    showTopicEntrance: function(data) {
+    _collectTitleTokens(tokens) {
+      tokens.push(this.get('siteTitle'));
+      Discourse.set('_docTitle', tokens.join(' - '));
+    },
+
+    // Ember doesn't provider a router `willTransition` event so let's make one
+    willTransition() {
+      var router = this.container.lookup('router:main');
+      Ember.run.once(router, router.trigger, 'willTransition');
+      return this._super();
+    },
+
+    // This is here as a bugfix for when an Ember Cloaked view triggers
+    // a scroll after a controller has been torn down. The real fix
+    // should be to fix ember cloaking to not do that, but this catches
+    // it safely just in case.
+    postChangedRoute: Ember.K,
+
+    showTopicEntrance(data) {
       this.controllerFor('topic-entrance').send('show', data);
     },
 
-    composePrivateMessage: function(user) {
-      var self = this;
+    composePrivateMessage(user, post) {
+      const self = this;
       this.transitionTo('userActivity', user).then(function () {
-        self.controllerFor('user-activity').send('composePrivateMessage');
+        self.controllerFor('user-activity').send('composePrivateMessage', user, post);
       });
     },
 
-    expandUser: function(user) {
-      this.controllerFor('user-expansion').show(user.get('username'), user.get('uploaded_avatar_id'));
-      return true;
-    },
-
-    error: function(err, transition) {
+    error(err, transition) {
       if (err.status === 404) {
         // 404
         this.intermediateTransitionTo('unknown');
         return;
       }
 
-      var exceptionController = this.controllerFor('exception'),
-          errorString = err.toString();
-      if (err.statusText) {
-        errorString = err.statusText;
-      }
-      var c = window.console;
+      const exceptionController = this.controllerFor('exception'),
+            stack = err.stack;
+
+      // If we have a stack call `toString` on it. It gives us a better
+      // stack trace since `console.error` uses the stack track of this
+      // error callback rather than the original error.
+      let errorString = err.toString();
+      if (stack) { errorString = stack.toString(); }
+
+      if (err.statusText) { errorString = err.statusText; }
+
+      const c = window.console;
       if (c && c.error) {
         c.error(errorString);
       }
@@ -38,34 +59,24 @@ var ApplicationRoute = Em.Route.extend({
       this.intermediateTransitionTo('exception');
     },
 
-    showLogin: function() {
-      var self = this;
-
+    showLogin() {
       if (this.site.get("isReadOnly")) {
         bootbox.alert(I18n.t("read_only_mode.login_disabled"));
       } else {
-        if(Discourse.SiteSettings.enable_sso) {
-          var returnPath = encodeURIComponent(window.location.pathname);
-          window.location = Discourse.getURL('/session/sso?return_path=' + returnPath);
-        } else {
-          this.send('autoLogin', 'login', function(){
-            Discourse.Route.showModal(self, 'login');
-            self.controllerFor('login').resetForm();
-          });
-        }
+        this.handleShowLogin();
       }
     },
 
-    showCreateAccount: function() {
-      var self = this;
-
-      self.send('autoLogin', 'createAccount', function(){
-        Discourse.Route.showModal(self, 'createAccount');
-      });
+    showCreateAccount() {
+      if (this.site.get("isReadOnly")) {
+        bootbox.alert(I18n.t("read_only_mode.login_disabled"));
+      } else {
+        this.handleShowCreateAccount();
+      }
     },
 
-    autoLogin: function(modal, onFail){
-      var methods = Em.get('Discourse.LoginMethod.all');
+    autoLogin(modal, onFail){
+      const methods = Em.get('Discourse.LoginMethod.all');
       if (!Discourse.SiteSettings.enable_local_logins &&
           methods.length === 1) {
             Discourse.Route.showModal(this, modal);
@@ -75,22 +86,32 @@ var ApplicationRoute = Em.Route.extend({
       }
     },
 
-    showForgotPassword: function() {
+    showForgotPassword() {
       Discourse.Route.showModal(this, 'forgotPassword');
     },
 
-    showNotActivated: function(props) {
+    showNotActivated(props) {
       Discourse.Route.showModal(this, 'notActivated');
       this.controllerFor('notActivated').setProperties(props);
     },
 
-    showUploadSelector: function(composerView) {
+    showUploadSelector(composerView) {
       Discourse.Route.showModal(this, 'uploadSelector');
       this.controllerFor('upload-selector').setProperties({ composerView: composerView });
     },
 
-    showKeyboardShortcutsHelp: function() {
+    showKeyboardShortcutsHelp() {
       Discourse.Route.showModal(this, 'keyboardShortcutsHelp');
+    },
+
+    showSearchHelp() {
+      const self = this;
+
+      // TODO: @EvitTrout how do we get a loading indicator here?
+      Discourse.ajax("/static/search_help.html", { dataType: 'html' }).then(function(html){
+        Discourse.Route.showModal(self, 'searchHelp', html);
+      });
+
     },
 
 
@@ -99,7 +120,7 @@ var ApplicationRoute = Em.Route.extend({
 
       @method closeModal
     **/
-    closeModal: function() {
+    closeModal() {
       this.render('hide-modal', {into: 'modal', outlet: 'modalBody'});
     },
 
@@ -110,7 +131,7 @@ var ApplicationRoute = Em.Route.extend({
 
       @method hideModal
     **/
-    hideModal: function() {
+    hideModal() {
       $('#discourse-modal').modal('hide');
     },
 
@@ -119,23 +140,17 @@ var ApplicationRoute = Em.Route.extend({
 
       @method showModal
     **/
-    showModal: function() {
+    showModal() {
       $('#discourse-modal').modal('show');
     },
 
-    editCategory: function(category) {
-      var router = this;
-
-      if (category.get('isUncategorizedCategory')) {
-        Discourse.Route.showModal(router, 'editCategory', category);
-        router.controllerFor('editCategory').set('selectedTab', 'general');
-      } else {
-        Discourse.Category.reloadById(category.get('id')).then(function (c) {
-          Discourse.Site.current().updateCategory(c);
-          Discourse.Route.showModal(router, 'editCategory', c);
-          router.controllerFor('editCategory').set('selectedTab', 'general');
-        });
-      }
+    editCategory(category) {
+      const self = this;
+      Discourse.Category.reloadById(category.get('id')).then(function (c) {
+        self.site.updateCategory(c);
+        Discourse.Route.showModal(self, 'editCategory', c);
+        self.controllerFor('editCategory').set('selectedTab', 'general');
+      });
     },
 
     /**
@@ -146,17 +161,42 @@ var ApplicationRoute = Em.Route.extend({
     deleteSpammer: function (user) {
       this.send('closeModal');
       user.deleteAsSpammer(function() { window.location.reload(); });
+    },
+
+    checkEmail: function (user) {
+      user.checkEmail();
     }
   },
 
-  activate: function() {
+  activate() {
     this._super();
     Em.run.next(function() {
       // Support for callbacks once the application has activated
       ApplicationRoute.trigger('activate');
     });
-  }
+  },
 
+  handleShowLogin() {
+    const self = this;
+
+    if(Discourse.SiteSettings.enable_sso) {
+      const returnPath = encodeURIComponent(window.location.pathname);
+      window.location = Discourse.getURL('/session/sso?return_path=' + returnPath);
+    } else {
+      this.send('autoLogin', 'login', function(){
+        Discourse.Route.showModal(self, 'login');
+        self.controllerFor('login').resetForm();
+      });
+    }
+  },
+
+  handleShowCreateAccount() {
+    const self = this;
+
+    self.send('autoLogin', 'createAccount', function(){
+      Discourse.Route.showModal(self, 'createAccount');
+    });
+  }
 });
 
 RSVP.EventTarget.mixin(ApplicationRoute);

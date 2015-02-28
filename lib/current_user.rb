@@ -27,8 +27,7 @@ module CurrentUser
   end
 
   def current_user
-    c = current_user_provider.current_user
-    ScreenedIpAddress.block_login?(c, request.remote_ip) ? nil : c
+    current_user_provider.current_user
   end
 
   private
