@@ -135,6 +135,20 @@ header {
 
   }
 
+  &.mazing {
+    background: url(image_path("pages/mazing_tease.jpg")) top left no-repeat;
+    background-size: cover;
+    text-align: center;
+
+    .title {
+      width: 100%;
+      position: relative;
+      top: -37px;
+      margin-bottom: 2px;
+    }
+
+  }
+
   &.forgecraft {
     background: url(image_path("pages/forgecraft_tease.jpg")) top left no-repeat;
     background-size: cover;
