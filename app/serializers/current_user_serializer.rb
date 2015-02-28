@@ -1,6 +1,7 @@
 class CurrentUserSerializer < BasicUserSerializer
 
   attributes :name,
+             :total_unread_notifications,
              :unread_notifications,
              :unread_private_messages,
              :admin?,
@@ -8,6 +9,7 @@ class CurrentUserSerializer < BasicUserSerializer
              :site_flagged_posts_count,
              :moderator?,
              :staff?,
+             :title,
              :reply_count,
              :topic_count,
              :enable_quoting,

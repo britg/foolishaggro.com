@@ -1,11 +1,15 @@
 import DiscoveryController from 'discourse/controllers/discovery';
 import { queryParams } from 'discourse/controllers/discovery-sortable';
+import NotificationLevels from 'discourse/lib/notification-levels';
 
 var controllerOpts = {
   needs: ['discovery'],
   bulkSelectEnabled: false,
   selected: [],
   period: null,
+
+  canStar: Em.computed.alias('controllers.discovery/topics.currentUser.id'),
+  showTopicPostBadges: Em.computed.not('controllers.discovery/topics.new'),
 
   redirectedReason: Em.computed.alias('currentUser.redirected_to_top_reason'),
 
@@ -37,11 +41,18 @@ var controllerOpts = {
       var filter = this.get('model.filter'),
           self = this;
 
+      this.setProperties({ order: 'default', ascending: false });
+
       // Don't refresh if we're still loading
       if (this.get('controllers.discovery.loading')) { return; }
 
-      this.send('loading');
+      // If we `send('loading')` here, due to returning true it bubbles up to the
+      // router and ember throws an error due to missing `handlerInfos`.
+      // Lesson learned: Don't call `loading` yourself.
+      this.set('controllers.discovery.loading', true);
       Discourse.TopicList.find(filter).then(function(list) {
+        Discourse.TopicList.hideUniformCategory(list, self.get('category'));
+
         self.setProperties({ model: list, selected: [] });
 
         var tracking = Discourse.TopicTrackingState.current();
@@ -76,14 +87,14 @@ var controllerOpts = {
         operation = { type: 'dismiss_posts' };
       } else {
         operation = { type: 'change_notification_level',
-                        notification_level_id: Discourse.Topic.NotificationLevel.REGULAR };
+                        notification_level_id: NotificationLevels.REGULAR };
       }
 
       var promise;
       if (selected.length > 0) {
         promise = Discourse.Topic.bulkOperation(selected, operation);
       } else {
-        promise = Discourse.Topic.bulkOperationByFilter(this.get('filter'), operation);
+        promise = Discourse.Topic.bulkOperationByFilter('unread', operation, this.get('category.id'));
       }
       promise.then(function(result) {
         if (result && result.topic_ids) {
@@ -103,8 +114,12 @@ var controllerOpts = {
     return Discourse.TopicTrackingState.current();
   }.property(),
 
+  isFilterPage: function(filter, filterType) {
+    return filter.match(new RegExp(filterType + '$', 'gi')) ? true : false;
+  },
+
   showDismissRead: function() {
-    return this.get('filter') === 'unread' && this.get('topics.length') > 0;
+    return this.isFilterPage(this.get('filter'), 'unread') && this.get('topics.length') > 0;
   }.property('filter', 'topics.length'),
 
   showResetNew: function() {
@@ -112,14 +127,13 @@ var controllerOpts = {
   }.property('filter', 'topics.length'),
 
   showDismissAtTop: function() {
-    return (this.get('filter') === 'new' ||
-           this.get('filter') === 'unread') &&
+    return (this.isFilterPage(this.get('filter'), 'new') ||
+           this.isFilterPage(this.get('filter'), 'unread')) &&
            this.get('topics.length') >= 30;
   }.property('filter', 'topics.length'),
 
   canBulkSelect: Em.computed.alias('currentUser.staff'),
   hasTopics: Em.computed.gt('topics.length', 0),
-  showTable: Em.computed.or('hasTopics', 'topicTrackingState.hasIncoming'),
   allLoaded: Em.computed.empty('more_topics_url'),
   latest: Discourse.computed.endWith('filter', 'latest'),
   new: Discourse.computed.endWith('filter', 'new'),
@@ -154,14 +168,14 @@ var controllerOpts = {
 
     var split = this.get('filter').split('/');
 
-    if (split[0] !== 'new' && split[0] !== 'unread' && split[0] !== 'starred') { return; }
+    if (split[0] !== 'new' && split[0] !== 'unread') { return; }
 
     return I18n.t("topics.none.educate." + split[0], {
       userPrefsUrl: Discourse.getURL("/users/") + (Discourse.User.currentProp("username_lower")) + "/preferences"
     });
   }.property('allLoaded', 'topics.length'),
 
-  loadMoreTopics: function() {
+  loadMoreTopics() {
     return this.get('model').loadMore();
   }
 };

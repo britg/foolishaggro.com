@@ -1,6 +1,7 @@
 import ObjectController from 'discourse/controllers/object';
+import CanCheckEmails from 'discourse/mixins/can-check-emails';
 
-export default ObjectController.extend({
+export default ObjectController.extend(CanCheckEmails, {
 
   allowAvatarUpload: Discourse.computed.setting('allow_uploaded_avatars'),
   allowUserLocale: Discourse.computed.setting('allow_user_locale'),
@@ -17,11 +18,16 @@ export default ObjectController.extend({
 
   newNameInput: null,
 
-  saveDisabled: function() {
-    if (this.get('saving')) return true;
-    if (this.blank('email')) return true;
-    return false;
-  }.property('saving', 'email'),
+  userFields: function() {
+    var siteUserFields = this.site.get('user_fields');
+    if (!Ember.isEmpty(siteUserFields)) {
+      var userFields = this.get('user_fields');
+      return siteUserFields.filterProperty('editable', true).sortBy('field_type').map(function(uf) {
+        var val = userFields ? userFields[uf.get('id').toString()] : null;
+        return Ember.Object.create({value: val, field: uf});
+      });
+    }
+  }.property('user_fields.@each.value'),
 
   cannotDeleteAccount: Em.computed.not('can_delete_account'),
   deleteDisabled: Em.computed.or('saving', 'deleting', 'cannotDeleteAccount'),
@@ -29,15 +35,19 @@ export default ObjectController.extend({
   canEditName: Discourse.computed.setting('enable_names'),
 
   canSelectTitle: function() {
-    return Discourse.SiteSettings.enable_badges && this.get('model.has_title_badges');
+    return this.siteSettings.enable_badges && this.get('model.has_title_badges');
   }.property('model.badge_count'),
 
   canChangePassword: function() {
-    return !Discourse.SiteSettings.enable_sso && Discourse.SiteSettings.enable_local_logins;
+    return !this.siteSettings.enable_sso && this.siteSettings.enable_local_logins;
+  }.property(),
+
+  canReceiveDigest: function() {
+    return !this.siteSettings.disable_digest_emails;
   }.property(),
 
   availableLocales: function() {
-    return Discourse.SiteSettings.available_locales.split('|').map( function(s) {
+    return this.siteSettings.available_locales.split('|').map( function(s) {
       return {name: s, value: s};
     });
   }.property(),
@@ -75,8 +85,20 @@ export default ObjectController.extend({
       var self = this;
       this.setProperties({ saving: true, saved: false });
 
+      var model = this.get('model'),
+          userFields = this.get('userFields');
+
+      // Update the user fields
+      if (!Ember.isEmpty(userFields)) {
+        var modelFields = model.get('user_fields');
+        if (!Ember.isEmpty(modelFields)) {
+          userFields.forEach(function(uf) {
+            modelFields[uf.get('field.id').toString()] = uf.get('value');
+          });
+        }
+      }
+
       // Cook the bio for preview
-      var model = this.get('model');
       model.set('name', this.get('newNameInput'));
       return model.save().then(function() {
         // model was saved
@@ -148,5 +170,3 @@ export default ObjectController.extend({
   }
 
 });
-
-

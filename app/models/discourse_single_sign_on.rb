@@ -14,6 +14,7 @@ class DiscourseSingleSignOn < SingleSignOn
     sso = new
     sso.nonce = SecureRandom.hex
     sso.register_nonce(return_path)
+    sso.return_sso_url = Discourse.base_url + "/session/sso_login"
     sso.to_url
   end
 
@@ -41,13 +42,13 @@ class DiscourseSingleSignOn < SingleSignOn
     "SSO_NONCE_#{nonce}"
   end
 
-  def lookup_or_create_user
+  def lookup_or_create_user(ip_address=nil)
     sso_record = SingleSignOnRecord.find_by(external_id: external_id)
 
     if sso_record && user = sso_record.user
       sso_record.last_payload = unsigned_payload
     else
-      user = match_email_or_create_user
+      user = match_email_or_create_user(ip_address)
       sso_record = user.single_sign_on_record
     end
 
@@ -66,6 +67,10 @@ class DiscourseSingleSignOn < SingleSignOn
       user.custom_fields[k] = v
     end
 
+    user.ip_address = ip_address
+    user.admin = admin unless admin.nil?
+    user.moderator = moderator unless moderator.nil?
+
     # optionally save the user and sso_record if they have changed
     user.save!
     sso_record.save!
@@ -75,16 +80,17 @@ class DiscourseSingleSignOn < SingleSignOn
 
   private
 
-  def match_email_or_create_user
+  def match_email_or_create_user(ip_address)
     user = User.find_by_email(email)
 
     try_name = name.blank? ? nil : name
     try_username = username.blank? ? nil : username
 
     user_params = {
-        email: email,
-        name:  User.suggest_name(try_name || try_username || email),
-        username: UserNameSuggester.suggest(try_username || try_name || email),
+      email: email,
+      name:  User.suggest_name(try_name || try_username || email),
+      username: UserNameSuggester.suggest(try_username || try_name || email),
+      ip_address: ip_address
     }
 
     if user || user = User.create!(user_params)
@@ -121,18 +127,22 @@ class DiscourseSingleSignOn < SingleSignOn
       user.name = User.suggest_name(name || username || email)
     end
 
-    if SiteSetting.sso_overrides_avatar && (
-      avatar_force_update == "true" ||
-      avatar_force_update.to_i != 0 ||
+    if SiteSetting.sso_overrides_avatar && avatar_url.present? && (
+      avatar_force_update ||
       sso_record.external_avatar_url != avatar_url)
+
       begin
-        tempfile = FileHelper.download(avatar_url, 1.megabyte, "sso-avatar", true)
+        tempfile = FileHelper.download(avatar_url, SiteSetting.max_image_size_kb.kilobytes, "sso-avatar", true)
 
         ext = FastImage.type(tempfile).to_s
         tempfile.rewind
 
-        upload = Upload.create_for(user.id, tempfile, "external-avatar." + ext, File.size(tempfile.path), { origin: avatar_url })
+        upload = Upload.create_for(user.id, tempfile, "external-avatar." + ext, tempfile.size, { origin: avatar_url })
         user.uploaded_avatar_id = upload.id
+
+        unless user.user_avatar
+          user.build_user_avatar
+        end
 
         if !user.user_avatar.contains_upload?(upload.id)
           user.user_avatar.custom_upload_id = upload.id

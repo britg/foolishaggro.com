@@ -15,10 +15,9 @@ export default {
         if (!$(self).data('orig')) {
           $(self).data('orig', self.href);
         }
-        var orig = $(self).data('orig'),
-            sp = orig.split(".css?");
+        var orig = $(self).data('orig');
 
-        self.href = sp[0] + ".css?" + data;
+        self.href = orig.replace(/v=.*/, "v=" + data);
       });
     });
 
@@ -38,10 +37,10 @@ export default {
         if (me === "refresh") {
           // Refresh if necessary
           document.location.reload(true);
-        } else if (me.name.substr(-10) === "handlebars") {
+        } else if (me.name.substr(-10) === "hbs") {
 
           // Reload handlebars
-          var js = me.name.replace(".handlebars", "").replace("app/assets/javascripts", "/assets");
+          var js = me.name.replace(".hbs", "").replace("app/assets/javascripts", "/assets");
           $LAB.script(js + "?hash=" + me.hash).wait(function() {
             var templateName;
             templateName = js.replace(".js", "").replace("/assets/", "");

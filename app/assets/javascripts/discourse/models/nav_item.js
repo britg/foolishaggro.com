@@ -37,13 +37,13 @@ Discourse.NavItem = Discourse.Model.extend({
     var name = this.get('name');
 
     if( name.split('/')[0] === 'category' ) {
-      return 'category/' + this.get('categorySlug');
+      return 'c/' + this.get('categorySlug');
     } else {
       var mode = "",
       category = this.get("category");
 
       if(category){
-        mode += "category/";
+        mode += "c/";
         mode += Discourse.Category.slugFor(this.get('category'));
         if (this.get('noSubcategories')) { mode += '/none'; }
         mode += "/l/";
@@ -74,7 +74,7 @@ Discourse.NavItem.reopenClass({
     if (!Discourse.Category.list() && testName === "categories") return null;
     if (!Discourse.Site.currentProp('top_menu_items').contains(testName)) return null;
 
-    var args = { name: name, hasIcon: name === "unread" || name === "starred" };
+    var args = { name: name, hasIcon: name === "unread" };
     if (opts.category) { args.category = opts.category; }
     if (opts.noSubcategories) { args.noSubcategories = true; }
     return Discourse.NavItem.create(args);

@@ -93,28 +93,59 @@ div.ac-wrap {
   display: none;
 }
 
-
 .auto-close-fields {
+  div:not(:first-child) {
+    margin-top: 10px;
+  }
+  label {
+    font-size: 1em;
+  }
   input {
     width: 150px;
   }
   .examples {
-    margin: 10px 0 0 0;
-    color: $primary;
+    color: lighten($primary, 40%);
   }
 }
 
 .edit-auto-close-modal {
+  .btn.pull-right {
+    margin-right: 10px;
+  }
   form {
     margin: 0;
   }
   .auto-close-fields {
     i.fa-clock-o {
-      font-size: 16px;
-      line-height: 8px;
+      font-size: 1.143em;
     }
     input {
       margin: 0;
     }
   }
+}
+
+.edit-category-modal {
+  .auto-close-fields {
+    input[type=text] {
+      width: 50px;
+    }
+  }
+}
+
+#reply-control {
+  .composer-loading {
+    position: absolute;
+    left: 48%;
+    top: 20%;
+  }
+}
+
+// this removes the topmost margin from the first element in the topic post
+// if we don't do this, all posts would have extra space at the top
+#wmd-preview > *:first-child {
+  margin-top: 0;
+}
+.cooked > *:first-child {
+  margin-top: 0;
 }

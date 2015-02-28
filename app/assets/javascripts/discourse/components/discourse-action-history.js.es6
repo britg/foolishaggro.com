@@ -1,23 +1,16 @@
-/**
-  This component handles rendering of what actions have been taken on a post. It uses
-  buffer rendering for performance rather than a template.
+import StringBuffer from 'discourse/mixins/string-buffer';
 
-  @class ActionsHistoryComponent
-  @extends Em.Component
-  @namespace Discourse
-  @module Discourse
-**/
-export default Em.Component.extend({
+export default Em.Component.extend(StringBuffer, {
   tagName: 'section',
   classNameBindings: [':post-actions', 'hidden'],
   actionsHistory: Em.computed.alias('post.actionsHistory'),
   emptyHistory: Em.computed.empty('actionsHistory'),
   hidden: Em.computed.and('emptyHistory', 'post.notDeleted'),
-  shouldRerender: Discourse.View.renderIfChanged('actionsHistory.@each', 'actionsHistory.users.length', 'post.deleted'),
+
+  rerenderTriggers: ['actionsHistory.@each', 'actionsHistory.users.length', 'post.deleted'],
 
   // This was creating way too many bound ifs and subviews in the handlebars version.
-  render: function(buffer) {
-
+  renderString: function(buffer) {
     if (!this.get('emptyHistory')) {
       this.get('actionsHistory').forEach(function(c) {
         buffer.push("<div class='post-action'>");
@@ -32,7 +25,7 @@ export default Em.Component.extend({
         if (c.get('usersExpanded')) {
           var postUrl;
           c.get('users').forEach(function(u) {
-            iconsHtml += "<a href=\"" + Discourse.getURL("/users/") + u.get('username_lower') + "\" data-user-expand=\"" + u.get('username_lower') + "\">";
+            iconsHtml += "<a href=\"" + Discourse.getURL("/users/") + u.get('username_lower') + "\" data-user-card=\"" + u.get('username_lower') + "\">";
             if (u.post_url) {
               postUrl = postUrl || u.post_url;
             }

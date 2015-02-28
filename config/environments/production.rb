@@ -12,7 +12,8 @@ Discourse::Application.configure do
   # Disable Rails's static asset server (Apache or nginx will already do this)
   config.serve_static_assets = GlobalSetting.serve_static_assets
 
-  config.assets.js_compressor  = :uglifier
+  config.assets.js_compressor = :uglifier
+
   config.assets.css_compressor = :sass
 
   # stuff should be pre-compiled
@@ -20,6 +21,8 @@ Discourse::Application.configure do
 
   # Generate digests for assets URLs
   config.assets.digest = true
+
+  config.log_level = :info
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation can not be found)

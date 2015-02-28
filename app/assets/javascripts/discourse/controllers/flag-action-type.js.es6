@@ -1,13 +1,6 @@
 import ObjectController from 'discourse/controllers/object';
 
-/**
-  Supports logic for flags in the modal
-
-  @class FlagActionTypeController
-  @extends ObjectController
-  @namespace Discourse
-  @module Discourse
-**/
+// Supports logic for flags in the modal
 export default ObjectController.extend({
   needs: ['flag'],
 
@@ -18,8 +11,12 @@ export default ObjectController.extend({
   }.property('name_key'),
 
   formattedName: function(){
-    return this.get('name').replace("{{username}}", this.get('controllers.flag.username'));
-  }.property('name'),
+    if (this.get("is_custom_flag")) {
+      return this.get('name').replace("{{username}}", this.get('controllers.flag.username'));
+    } else {
+      return I18n.t("flagging.formatted_name." + this.get('name_key'));
+    }
+  }.property('name', 'name_key', 'is_custom_flag'),
 
   selected: function() {
     return this.get('model') === this.get('controllers.flag.selected');

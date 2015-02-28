@@ -5,6 +5,36 @@ describe BadgeGranter do
   let(:badge) { Fabricate(:badge) }
   let(:user) { Fabricate(:user) }
 
+  describe 'revoke_titles' do
+    it 'can correctly revoke titles' do
+      badge = Fabricate(:badge, allow_title: true)
+      user = Fabricate(:user, title: badge.name)
+      user.reload
+
+      user.user_profile.update_column(:badge_granted_title, true)
+
+      BadgeGranter.grant(badge, user)
+      BadgeGranter.revoke_ungranted_titles!
+
+      user.reload
+      user.title.should == badge.name
+
+      badge.update_column(:allow_title, false)
+      BadgeGranter.revoke_ungranted_titles!
+
+      user.reload
+      user.title.should == ''
+
+      user.title = "CEO"
+      user.save
+
+      BadgeGranter.revoke_ungranted_titles!
+
+      user.reload
+      user.title.should == "CEO"
+    end
+  end
+
   describe 'preview' do
     it 'can correctly preview' do
       Fabricate(:user, email: 'sam@gmail.com')
@@ -162,7 +192,7 @@ describe BadgeGranter do
 
       UserBadge.where(user_id: user.id, badge_id: Badge::Editor).count.should eq(0)
 
-      PostRevisor.new(post).revise!(user, "This is my new test 1235 123")
+      PostRevisor.new(post).revise!(user, { raw: "This is my new test 1235 123" })
       BadgeGranter.process_queue!
 
       UserBadge.where(user_id: user.id, badge_id: Badge::Editor).count.should eq(1)
@@ -176,8 +206,8 @@ describe BadgeGranter do
       user.change_trust_level!(TrustLevel[1])
       BadgeGranter.backfill(Badge.find(1))
       BadgeGranter.backfill(Badge.find(2))
-      UserBadge.where(user_id: user.id, badge_id: 1).first.should_not be_nil
-      UserBadge.where(user_id: user.id, badge_id: 2).first.should be_nil
+      UserBadge.where(user_id: user.id, badge_id: 1).first.should_not == nil
+      UserBadge.where(user_id: user.id, badge_id: 2).first.should == nil
     end
 
     it "grants system like badges" do
@@ -185,7 +215,7 @@ describe BadgeGranter do
       # Welcome badge
       action = PostAction.act(liker, post, PostActionType.types[:like])
       BadgeGranter.process_queue!
-      UserBadge.find_by(user_id: user.id, badge_id: 5).should_not be_nil
+      UserBadge.find_by(user_id: user.id, badge_id: 5).should_not == nil
 
       post = create_post(topic: post.topic, user: user)
       action = PostAction.act(liker, post, PostActionType.types[:like])
@@ -196,25 +226,25 @@ describe BadgeGranter do
       BadgeGranter.queue_badge_grant(Badge::Trigger::PostAction, post_action: action)
       BadgeGranter.process_queue!
 
-      UserBadge.find_by(user_id: user.id, badge_id: Badge::NicePost).should_not be_nil
+      UserBadge.find_by(user_id: user.id, badge_id: Badge::NicePost).should_not == nil
       UserBadge.where(user_id: user.id, badge_id: Badge::NicePost).count.should == 1
 
       # Good post badge
       post.update_attributes like_count: 25
       BadgeGranter.queue_badge_grant(Badge::Trigger::PostAction, post_action: action)
       BadgeGranter.process_queue!
-      UserBadge.find_by(user_id: user.id, badge_id: Badge::GoodPost).should_not be_nil
+      UserBadge.find_by(user_id: user.id, badge_id: Badge::GoodPost).should_not == nil
 
       # Great post badge
       post.update_attributes like_count: 50
       BadgeGranter.queue_badge_grant(Badge::Trigger::PostAction, post_action: action)
       BadgeGranter.process_queue!
-      UserBadge.find_by(user_id: user.id, badge_id: Badge::GreatPost).should_not be_nil
+      UserBadge.find_by(user_id: user.id, badge_id: Badge::GreatPost).should_not == nil
 
       # Revoke badges on unlike
       post.update_attributes like_count: 49
       BadgeGranter.backfill(Badge.find(Badge::GreatPost))
-      UserBadge.find_by(user_id: user.id, badge_id: Badge::GreatPost).should be_nil
+      UserBadge.find_by(user_id: user.id, badge_id: Badge::GreatPost).should == nil
     end
   end
 

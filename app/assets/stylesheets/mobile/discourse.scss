@@ -10,44 +10,14 @@ body {
 
   .boxed {
     height: 100%;
-    @include border-radius-all(5px);
     .contents {
-      padding: 10px 10px 10px 10px;
+      padding: 10px;
     }
     &.white {
       background-color: $secondary;
     }
   }
   #main {
-    .fa-star.starred {
-      color: $danger;
-    }
-    a.star {
-      display: inline-block;
-      font-size: 20px;
-      color: scale-color($primary, $lightness: 75%);
-      margin-right: 8px;
-      &:before {
-        font-family: "FontAwesome";
-        content: "\f005";
-      }
-      &.starred {
-        color: $danger;
-        @include hover {
-          opacity: 1;
-          &:before {
-            content: "\f005";
-          }
-        }
-      }
-      @include hover {
-        opacity: 0.6;
-      }
-
-      &:active {
-        opacity: 1;
-      }
-    }
     img.avatar {
       &.header {
         width: 45px;
@@ -87,17 +57,16 @@ blockquote {
 
 .topic-statuses {
   display: inline-block;
-  margin: 0;
-  padding: 0;
   vertical-align: middle;
   .topic-status {
-    margin: 0;
-    display: inline-block;
     i {
-      font-size: 20px;
-      color: darken($secondary, 60%);
+      font-size: 1.429em;
+      color: dark-light-diff($secondary, $primary, 40%, -20%);
     }
   }
+}
+.topic-statuses:empty {
+  display: none;
 }
 
 // Styles used before the user is logged into discourse. For example, activating their
@@ -105,4 +74,12 @@ blockquote {
 
 #simple-container {
   width: 90%;
+}
+
+// somehow the image logo assumption inherits margins from earlier in the CSS stack
+// we must remove margins for text site titles
+h2#site-text-logo
+{
+  margin: 0;
+  margin-left: 10px;
 }

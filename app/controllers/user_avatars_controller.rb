@@ -13,7 +13,7 @@ class UserAvatarsController < ApplicationController
       user.create_user_avatar(user_id: user.id) unless user.user_avatar
       user.user_avatar.update_gravatar!
 
-      render json: {upload_id: user.user_avatar.gravatar_upload_id}
+      render json: { upload_id: user.user_avatar.gravatar_upload_id }
     else
       raise Discourse::NotFound
     end
@@ -24,12 +24,12 @@ class UserAvatarsController < ApplicationController
     params.require(:version)
     params.require(:size)
 
-    if params[:version].to_i > LetterAvatar::VERSION
-      return render_dot
-    end
+    return render_dot if params[:version].to_i > LetterAvatar::VERSION
 
     image = LetterAvatar.generate(params[:username].to_s, params[:size].to_i)
+
     response.headers["Last-Modified"] = File.ctime(image).httpdate
+    response.headers["Content-Length"] = File.size(image).to_s
     expires_in 1.year, public: true
     send_file image, disposition: nil
   end
@@ -77,13 +77,13 @@ class UserAvatarsController < ApplicationController
 
     if image
       response.headers["Last-Modified"] = File.ctime(image).httpdate
+      response.headers["Content-Length"] = File.size(image).to_s
       expires_in 1.year, public: true
       send_file image, disposition: nil
     else
       render_dot
     end
   end
-
 
   # this protects us from a DoS
   def render_dot

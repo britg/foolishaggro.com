@@ -1,3 +1,6 @@
+require_dependency 'distributed_cache'
+require_dependency 'sass/discourse_stylesheets'
+
 class Category < ActiveRecord::Base
 
   include Positionable
@@ -29,7 +32,7 @@ class Category < ActiveRecord::Base
                    length: { in: 1..50 }
   validate :parent_category_validator
 
-  before_validation :ensure_slug
+  validate :ensure_slug
   before_save :apply_permissions
   before_save :downcase_email
   before_save :downcase_name
@@ -37,6 +40,8 @@ class Category < ActiveRecord::Base
   after_create :publish_categories_list
   after_destroy :publish_categories_list
   after_update :rename_category_definition, if: :name_changed?
+
+  after_save :publish_discourse_stylesheet
 
   has_one :category_search_data
   belongs_to :parent_category, class_name: 'Category'
@@ -170,7 +175,8 @@ SQL
   def create_category_definition
     t = Topic.new(title: I18n.t("category.topic_prefix", category: name), user: user, pinned_at: Time.now, category_id: id)
     t.skip_callbacks = true
-    t.auto_close_hours = nil
+    t.ignore_category_auto_close = true
+    t.set_auto_close(nil)
     t.save!(validate: false)
     update_column(:topic_id, t.id)
     t.posts.create(raw: post_template, user: user)
@@ -180,18 +186,34 @@ SQL
     topic_only_relative_url.try(:relative_url)
   end
 
+  def description_text
+    return nil unless description
+
+    @@cache ||= LruRedux::ThreadSafeCache.new(100)
+    @@cache.getset(self.description) do
+      Nokogiri::HTML(self.description).text
+    end
+
+  end
+
+  def duplicate_slug?
+    Category.where(slug: self.slug, parent_category_id: parent_category_id).where.not(id: id).any?
+  end
+
   def ensure_slug
-    if name.present?
-      self.name.strip!
+    return unless name.present?
+
+    self.name.strip!
+
+    if slug.present?
+      # santized custom slug
+      self.slug = Slug.for(slug)
+      errors.add(:slug, 'is already in use') if duplicate_slug?
+    else
+      # auto slug
       self.slug = Slug.for(name)
-
       return if self.slug.blank?
-
-      # If a category with that slug already exists, set the slug to nil so the category can be found
-      # another way.
-      category = Category.where(slug: self.slug, parent_category_id: parent_category_id)
-      category = category.where("id != ?", id) if id.present?
-      self.slug = '' if category.exists?
+      self.slug = '' if duplicate_slug?
     end
   end
 
@@ -319,9 +341,9 @@ SQL
     self.where(id: parent_slug.to_i).pluck(:id).first
   end
 
-  def self.query_category(slug, parent_category_id)
-    self.where(slug: slug, parent_category_id: parent_category_id).includes(:featured_users).first ||
-    self.where(id: slug.to_i, parent_category_id: parent_category_id).includes(:featured_users).first
+  def self.query_category(slug_or_id, parent_category_id)
+    self.where(slug: slug_or_id, parent_category_id: parent_category_id).includes(:featured_users).first ||
+    self.where(id: slug_or_id.to_i, parent_category_id: parent_category_id).includes(:featured_users).first
   end
 
   def self.find_by_email(email)
@@ -336,10 +358,30 @@ SQL
     id == SiteSetting.uncategorized_category_id
   end
 
+  @@url_cache = DistributedCache.new('category_url')
+
+  after_save do
+    # parent takes part in url calculation
+    # any change could invalidate multiples
+    @@url_cache.clear
+  end
+
+  def full_slug
+    url[3..-1].gsub("/", "-")
+  end
+
   def url
-    url = "/category"
-    url << "/#{parent_category.slug}" if parent_category_id
-    url << "/#{slug}"
+    url = @@url_cache[self.id]
+    unless url
+      url = "/c"
+      url << "/#{parent_category.slug}" if parent_category_id
+      url << "/#{slug}"
+      url.freeze
+
+      @@url_cache[self.id] = url
+    end
+
+    url
   end
 
   # If the name changes, try and update the category definition topic too if it's
@@ -351,44 +393,49 @@ SQL
       topic.update_column(:title, I18n.t("category.topic_prefix", category: name))
     end
   end
+
+  def publish_discourse_stylesheet
+    DiscourseStylesheets.cache.clear
+  end
 end
 
 # == Schema Information
 #
 # Table name: categories
 #
-#  id                       :integer          not null, primary key
-#  name                     :string(50)       not null
-#  color                    :string(6)        default("AB9364"), not null
-#  topic_id                 :integer
-#  topic_count              :integer          default(0), not null
-#  created_at               :datetime         not null
-#  updated_at               :datetime         not null
-#  user_id                  :integer          not null
-#  topics_year              :integer          default(0)
-#  topics_month             :integer          default(0)
-#  topics_week              :integer          default(0)
-#  slug                     :string(255)      not null
-#  description              :text
-#  text_color               :string(6)        default("FFFFFF"), not null
-#  read_restricted          :boolean          default(FALSE), not null
-#  auto_close_hours         :float
-#  post_count               :integer          default(0), not null
-#  latest_post_id           :integer
-#  latest_topic_id          :integer
-#  position                 :integer
-#  parent_category_id       :integer
-#  posts_year               :integer          default(0)
-#  posts_month              :integer          default(0)
-#  posts_week               :integer          default(0)
-#  email_in                 :string(255)
-#  email_in_allow_strangers :boolean          default(FALSE)
-#  topics_day               :integer          default(0)
-#  posts_day                :integer          default(0)
-#  logo_url                 :string(255)
-#  background_url           :string(255)
-#  allow_badges             :boolean          default(TRUE), not null
-#  name_lower               :string(50)       not null
+#  id                            :integer          not null, primary key
+#  name                          :string(50)       not null
+#  color                         :string(6)        default("AB9364"), not null
+#  topic_id                      :integer
+#  topic_count                   :integer          default(0), not null
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#  user_id                       :integer          not null
+#  topics_year                   :integer          default(0)
+#  topics_month                  :integer          default(0)
+#  topics_week                   :integer          default(0)
+#  slug                          :string(255)      not null
+#  description                   :text
+#  text_color                    :string(6)        default("FFFFFF"), not null
+#  read_restricted               :boolean          default(FALSE), not null
+#  auto_close_hours              :float
+#  post_count                    :integer          default(0), not null
+#  latest_post_id                :integer
+#  latest_topic_id               :integer
+#  position                      :integer
+#  parent_category_id            :integer
+#  posts_year                    :integer          default(0)
+#  posts_month                   :integer          default(0)
+#  posts_week                    :integer          default(0)
+#  email_in                      :string(255)
+#  email_in_allow_strangers      :boolean          default(FALSE)
+#  topics_day                    :integer          default(0)
+#  posts_day                     :integer          default(0)
+#  logo_url                      :string(255)
+#  background_url                :string(255)
+#  allow_badges                  :boolean          default(TRUE), not null
+#  name_lower                    :string(50)       not null
+#  auto_close_based_on_last_post :boolean          default(FALSE)
 #
 # Indexes
 #

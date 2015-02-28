@@ -1,11 +1,14 @@
+.show-more {
+  position: absolute;
+  top: 4px;
+  width: 100%;
+}
+
 .list-controls {
   #navigation-bar {
     .has-icon span:before {
       margin-right: 4px;
-      font: 15px/0.9 "FontAwesome";
-    }
-    .has-icon .starred:before {
-      content: "\f005";
+      font: 1.071em/0.9 "FontAwesome";
     }
   }
 }
@@ -38,26 +41,24 @@
   th {
     color: scale-color($primary, $lightness: 50%);
     font-weight: normal;
-    font-size: 14px;
+    font-size: 1em;
     button i.fa {color: scale-color($primary, $lightness: 50%);}
 
   }
   td {
     color: scale-color($primary, $lightness: 50%);
-    font-size: 14px;
+    font-size: 1em;
   }
 
   .main-link {
-    font-size: 16px;
-
-    i.score {
-      color: $success;
-      cursor: pointer;
+    font-size: 1.143em;
+    a.title {
+      padding: 15px 0;
     }
   }
 
   .topic-excerpt {
-    font-size: 13px;
+    font-size: 0.929em;
     margin-top: 8px;
     color: scale-color($primary, $lightness: 50%);
     word-wrap: break-word;
@@ -70,7 +71,7 @@
   .topic-status {
     margin-right: 4px;
     padding: 0;
-    font-size: 15px;
+    font-size: 1.071em;
     &:last-of-type {
       margin-right: 0;
     }
@@ -84,6 +85,22 @@
     a.badge-posts {
       font-weight: bold;
     }
+  }
+
+  .num.posts {
+    a {
+      padding: 15px 5px;
+    }
+  }
+
+  .num.activity {
+    a {
+      padding: 15px 5px;
+    }
+  }
+
+  td.category a {
+    max-width:150px;
   }
 
 }
@@ -118,7 +135,7 @@
         padding: 2px;
         vertical-align: bottom;
         line-height: 24px;
-        &.value { text-align: right; font-size: 20px; }
+        &.value { text-align: right; font-size: 1.429em; }
         &.unit  { text-align: left; }
       }
     }
@@ -127,44 +144,29 @@
 
 .loading .topic-list {
   border: 0;
-  @include box-shadow(none);
+  box-shadow: none;
   tr {
     background-color: transparent;
   }
 }
 
-
-.topics-loading {
-  width: 200px;
-  margin: 0 auto;
-  padding: 10px 0 10px 43px;
-  color: $secondary;
-  font-size: 18px;
-  line-height: 25px;
-  background: {
-    color: #000;
-    image: image-url("spinner_96_w.gif");
-    repeat: no-repeat;
-    position: 10px 50%;
-    size: 25px;
-  };
-  @include border-radius-all(12px);
-}
-
 .list-controls {
-  .home {
-    background-color: scale-color-diff();
+  .category-dropdown-menu .home {
     color: $primary;
+    margin-left: 8px;
   }
+
   .badge-category {
     padding: 4px 10px;
     display: inline-block;
-    line-height: 24px;
-    float: left;
+    margin-bottom: 10px;
+  }
+
+  .category-dropdown-menu .badge-category {
+    width: 100%;
   }
   .category-dropdown-button {
-    border-left: 1px solid rgba(0,0,0,0.15);
-    font-size: 16px;
+    font-size: 1.143em;
     width: 10px;
     text-align: center;
 
@@ -172,11 +174,11 @@
       opacity: 0.8;
     }
   }
-clear: both;
+  clear: both;
 }
 
 #list-area {
-  margin-bottom: 300px;
+  margin-bottom: 100px;
   .empty-topic-list {
     padding: 10px;
   }
@@ -185,7 +187,7 @@ clear: both;
     padding: 0;
     border: 0;
     color: scale-color($danger, $lightness: 20%);
-    font-size: 13px;
+    font-size: 0.929em;
     cursor: default;
   }
 }
@@ -193,20 +195,10 @@ clear: both;
 .topic-list {
   .alert {
     margin-bottom: 0;
-    font-size: 14px;
+    font-size: 1em;
   }
   .spinner {
     margin-top: 40px;
-  }
-}
-
-span.posted {
-  display: inline-block;
-  text-indent: -9999em;
-  width: 15px;
-  height: 15px;
-  background: {
-    image: image-url("posted.png");
   }
 }
 
@@ -231,18 +223,22 @@ ol.category-breadcrumb {
   background-color: $secondary;
   z-index: 100;
 
-  a.badge-category {
-    font-size: 13px;
-    font-weight: bold;
-    padding: 4px 0;
-    float: none;
-    line-height: 19px;
-    text-transform: none;
-    width: 100%;
-    min-width: 102px;
-    text-align: center;
+  .cat {
     margin-right: 20px;
-    margin-bottom: 7px;
+  }
+
+  a.badge-category, a.badge-category-parent {
+    line-height: 19px;
+    overflow:hidden;
+    margin-bottom: 0;
+  }
+  a.badge-category {
+    font-size: 0.929em;
+    font-weight: bold;
+    float: none;
+    text-transform: none;
+    max-width:200px;
+    text-overflow:ellipsis;
   }
 }
 
@@ -267,7 +263,7 @@ ol.category-breadcrumb {
     outline: 0;
     background: transparent;
     border: 0;
-    font-size: 20px;
+    font-size: 1.429em;
     padding: 5px 10px 0 10px;
   }
 
@@ -280,7 +276,7 @@ ol.category-breadcrumb {
     background: $secondary;
     position: absolute;
     z-index: 1110;
-    @include box-shadow(0 2px 2px rgba(0,0,0, .4));
+    box-shadow: 0 2px 2px rgba(0,0,0, .4);
 
     ul {
       list-style: none;

@@ -87,6 +87,75 @@ describe Search do
     end
   end
 
+  context 'inactive users' do
+    let!(:inactive_user) { Fabricate(:inactive_user, active: false) }
+    let(:result) { Search.execute('bruce') }
+
+    it 'does not return a result' do
+      result.users.length.should == 0
+    end
+  end
+
+  context 'private messages' do
+
+    let(:topic) {
+      Fabricate(:topic,
+                  category_id: nil,
+                  archetype: 'private_message')
+    }
+
+    let(:post) { Fabricate(:post, topic: topic) }
+    let(:reply) { Fabricate(:post, topic: topic,
+                                   raw: 'hello from mars, we just landed') }
+
+
+
+    it 'searches correctly' do
+
+       expect do
+         Search.execute('mars', type_filter: 'private_messages')
+       end.to raise_error(Discourse::InvalidAccess)
+
+       TopicAllowedUser.create!(user_id: reply.user_id, topic_id: topic.id)
+       TopicAllowedUser.create!(user_id: post.user_id, topic_id: topic.id)
+
+
+       results = Search.execute('mars',
+                                type_filter: 'private_messages',
+                                guardian: Guardian.new(reply.user))
+
+       results.posts.length.should == 1
+
+
+       results = Search.execute('mars',
+                                search_context: topic,
+                                guardian: Guardian.new(reply.user))
+
+       results.posts.length.should == 1
+
+       # does not leak out
+       results = Search.execute('mars',
+                                type_filter: 'private_messages',
+                                guardian: Guardian.new(Fabricate(:user)))
+
+       results.posts.length.should == 0
+
+       Fabricate(:topic, category_id: nil, archetype: 'private_message')
+       Fabricate(:post, topic: topic, raw: 'another secret pm from mars, testing')
+
+
+       # admin can search everything with correct context
+       results = Search.execute('mars',
+                                type_filter: 'private_messages',
+                                search_context: post.user,
+                                guardian: Guardian.new(Fabricate(:admin)))
+
+       results.posts.length.should == 1
+
+    end
+
+  end
+
   context 'topics' do
     let(:post) { Fabricate(:post) }
     let(:topic) { post.topic}
@@ -170,7 +239,7 @@ describe Search do
     context 'security' do
 
       def result(current_user)
-        Search.execute('hello', guardian: current_user)
+        Search.execute('hello', guardian: Guardian.new(current_user))
       end
 
       it 'secures results correctly' do
@@ -293,10 +362,10 @@ describe Search do
 
     it 'finds chinese topic based on title' do
       SiteSetting.default_locale = 'zh_TW'
-      topic = Fabricate(:topic, title: 'My Title Discourse社区指南')
+      topic = Fabricate(:topic, title: 'My Title Discourse社區指南')
       post = Fabricate(:post, topic: topic)
 
-      Search.execute('社区指南').posts.first.id.should == post.id
+      Search.execute('社區指南').posts.first.id.should == post.id
       Search.execute('指南').posts.first.id.should == post.id
     end
   end
@@ -319,8 +388,19 @@ describe Search do
       topic.closed = false
       topic.save
 
-      Search.execute('test status:closed').posts.length.should == 1
+      Search.execute('test status:archived').posts.length.should == 1
       Search.execute('test status:open').posts.length.should == 0
+
+      Search.execute('test status:noreplies').posts.length.should == 1
+
+      Search.execute('test in:likes', guardian: Guardian.new(topic.user)).posts.length.should == 0
+
+      Search.execute('test in:posted', guardian: Guardian.new(topic.user)).posts.length.should == 1
+
+      TopicUser.change(topic.user.id, topic.id, notification_level: TopicUser.notification_levels[:tracking])
+      Search.execute('test in:watching', guardian: Guardian.new(topic.user)).posts.length.should == 0
+      Search.execute('test in:tracking', guardian: Guardian.new(topic.user)).posts.length.should == 1
+
     end
 
     it 'can find by latest' do

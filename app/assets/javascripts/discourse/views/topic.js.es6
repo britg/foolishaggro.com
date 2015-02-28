@@ -1,6 +1,8 @@
 import AddCategoryClass from 'discourse/mixins/add-category-class';
+import { listenForViewEvent } from 'discourse/lib/app-events';
+import { categoryBadgeHTML } from 'discourse/helpers/category-link';
 
-export default Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
+var TopicView = Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
   templateName: 'topic',
   topicBinding: 'controller.model',
   userFiltersBinding: 'controller.userFilters',
@@ -13,14 +15,9 @@ export default Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
   menuVisible: true,
   SHORT_POST: 1200,
 
-  categoryId: Em.computed.alias('topic.category.id'),
+  categoryFullSlug: Em.computed.alias('topic.category.fullSlug'),
 
   postStream: Em.computed.alias('controller.postStream'),
-
-  _updateTitle: function() {
-    var title = this.get('topic.title');
-    if (title) return Discourse.set('title', _.unescape(title));
-  }.observes('topic.loaded', 'topic.title'),
 
   _composeChanged: function() {
     var composerController = Discourse.get('router.composerController');
@@ -43,13 +40,18 @@ export default Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
     this.bindScrolling({name: 'topic-view'});
 
     var self = this;
-    $(window).resize('resize.discourse-on-scroll', function() {
+    $(window).on('resize.discourse-on-scroll', function() {
       self.scrolled();
     });
 
     this.$().on('mouseup.discourse-redirect', '.cooked a, a.track-link', function(e) {
+      var selection = window.getSelection && window.getSelection();
+      // bypass if we are selecting stuff
+      if (selection.type === "Range" || selection.rangeCount > 0) { return true; }
+
       var $target = $(e.target);
       if ($target.hasClass('mention') || $target.parents('.expanded-embed').length) { return false; }
+
       return Discourse.ClickTrack.trackClick(e);
     });
 
@@ -69,35 +71,6 @@ export default Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
     this.set('controller.controllers.header.showExtraInfo', false);
 
   }.on('willDestroyElement'),
-
-  debounceLoadSuggested: Discourse.debounce(function(){
-    if (this.get('isDestroyed') || this.get('isDestroying')) { return; }
-
-    var incoming = this.get('topicTrackingState.newIncoming'),
-        suggested = this.get('topic.details.suggested_topics'),
-        topicId = this.get('topic.id');
-
-    if(suggested) {
-      var existing = _.invoke(suggested, 'get', 'id'),
-          lookup = _.chain(incoming)
-                    .last(Discourse.SiteSettings.suggested_topics)
-                    .reverse()
-                    .union(existing)
-                    .uniq()
-                    .without(topicId)
-                    .first(Discourse.SiteSettings.suggested_topics)
-                    .value();
-
-      Discourse.TopicList.loadTopics(lookup, "").then(function(topics){
-        suggested.clear();
-        suggested.pushObjects(topics);
-      });
-    }
-  }, 1000),
-
-  hasNewSuggested: function(){
-    this.debounceLoadSuggested();
-  }.observes('topicTrackingState.incomingCount'),
 
   gotFocus: function(){
     if (Discourse.get('hasFocus')){
@@ -153,12 +126,12 @@ export default Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
     var opts = { latestLink: "<a href=\"" + Discourse.getURL("/latest") + "\">" + I18n.t("topic.view_latest_topics") + "</a>" },
         category = this.get('controller.content.category');
 
-    if(Em.get(category, 'id') === Discourse.Site.currentProp("uncategorized_category_id")) {
+    if(category && Em.get(category, 'id') === Discourse.Site.currentProp("uncategorized_category_id")) {
       category = null;
     }
 
     if (category) {
-      opts.catLink = Discourse.HTML.categoryBadge(category, {showParent: true});
+      opts.catLink = categoryBadgeHTML(category);
     } else {
       opts.catLink = "<a href=\"" + Discourse.getURL("/categories") + "\">" + I18n.t("topic.browse_all_categories") + "</a>";
     }
@@ -186,3 +159,22 @@ export default Discourse.View.extend(AddCategoryClass, Discourse.Scrolling, {
     }
   }.property('topicTrackingState.messageCount')
 });
+
+function highlight(postNumber) {
+  var $contents = $('#post_' + postNumber +' .topic-body'),
+      origColor = $contents.data('orig-color') || $contents.css('backgroundColor');
+
+  $contents.data("orig-color", origColor)
+    .addClass('highlighted')
+    .stop()
+    .animate({ backgroundColor: origColor }, 2500, 'swing', function(){
+      $contents.removeClass('highlighted');
+      $contents.css({'background-color': ''});
+    });
+}
+
+listenForViewEvent(TopicView, 'post:highlight', function(postNumber) {
+  Ember.run.scheduleOnce('afterRender', null, highlight, postNumber);
+});
+
+export default TopicView;
