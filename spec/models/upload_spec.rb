@@ -2,12 +2,12 @@ require 'spec_helper'
 require 'digest/sha1'
 
 describe Upload do
-  it { should belong_to :user }
+  it { is_expected.to belong_to :user }
 
-  it { should have_many :post_uploads }
-  it { should have_many :posts }
+  it { is_expected.to have_many :post_uploads }
+  it { is_expected.to have_many :posts }
 
-  it { should have_many :optimized_images }
+  it { is_expected.to have_many :optimized_images }
 
   let(:upload) { build(:upload) }
   let(:thumbnail) { build(:optimized_image, upload: upload) }
@@ -15,10 +15,14 @@ describe Upload do
   let(:user_id) { 1 }
   let(:url) { "http://domain.com" }
 
-  let(:image) { file_from_fixtures("logo.png") }
   let(:image_filename) { "logo.png" }
+  let(:image) { file_from_fixtures(image_filename) }
   let(:image_filesize) { File.size(image) }
   let(:image_sha1) { Digest::SHA1.file(image).hexdigest }
+
+  let(:image_svg_filename) { "image.svg" }
+  let(:image_svg) { file_from_fixtures(image_svg_filename) }
+  let(:image_svg_filesize) { File.size(image_svg) }
 
   let(:attachment_path) { __FILE__ }
   let(:attachment) { File.new(attachment_path) }
@@ -40,7 +44,7 @@ describe Upload do
       OptimizedImage.expects(:create_for).returns(thumbnail)
       upload.create_thumbnail!(100, 100)
       upload.reload
-      upload.optimized_images.count.should == 1
+      expect(upload.optimized_images.count).to eq(1)
     end
 
   end
@@ -52,7 +56,7 @@ describe Upload do
     it "does not create another upload if it already exists" do
       Upload.expects(:find_by).with(sha1: image_sha1).returns(upload)
       Upload.expects(:save).never
-      Upload.create_for(user_id, image, image_filename, image_filesize).should == upload
+      expect(Upload.create_for(user_id, image, image_filename, image_filesize)).to eq(upload)
     end
 
     it "fix image orientation" do
@@ -71,13 +75,25 @@ describe Upload do
       FileHelper.expects(:is_image?).returns(true)
       Upload.expects(:save).never
       upload = Upload.create_for(user_id, attachment, attachment_filename, attachment_filesize)
-      upload.errors.size.should > 0
+      expect(upload.errors.size).to be > 0
     end
 
     it "does not compute width & height for non-image" do
       FastImage.any_instance.expects(:size).never
       upload = Upload.create_for(user_id, attachment, attachment_filename, attachment_filesize)
-      upload.errors.size.should > 0
+      expect(upload.errors.size).to be > 0
+    end
+
+    it "generates an error when the image is too large" do
+      SiteSetting.stubs(:max_image_size_kb).returns(1)
+      upload = Upload.create_for(user_id, image, image_filename, image_filesize)
+      expect(upload.errors.size).to be > 0
+    end
+
+    it "generates an error when the attachment is too large" do
+      SiteSetting.stubs(:max_attachment_size_kb).returns(1)
+      upload = Upload.create_for(user_id, attachment, attachment_filename, attachment_filesize)
+      expect(upload.errors.size).to be > 0
     end
 
     it "saves proper information" do
@@ -87,13 +103,34 @@ describe Upload do
 
       upload = Upload.create_for(user_id, image, image_filename, image_filesize)
 
-      upload.user_id.should == user_id
-      upload.original_filename.should == image_filename
-      upload.filesize.should == image_filesize
-      upload.sha1.should == image_sha1
-      upload.width.should == 244
-      upload.height.should == 66
-      upload.url.should == url
+      expect(upload.user_id).to eq(user_id)
+      expect(upload.original_filename).to eq(image_filename)
+      expect(upload.filesize).to eq(image_filesize)
+      expect(upload.sha1).to eq(image_sha1)
+      expect(upload.width).to eq(244)
+      expect(upload.height).to eq(66)
+      expect(upload.url).to eq(url)
+    end
+
+    context "when svg is authorized" do
+
+      before { SiteSetting.stubs(:authorized_extensions).returns("svg") }
+
+      it "consider SVG as an image" do
+        store = {}
+        Discourse.expects(:store).returns(store)
+        store.expects(:store_upload).returns(url)
+
+        upload = Upload.create_for(user_id, image_svg, image_svg_filename, image_svg_filesize)
+
+        expect(upload.user_id).to eq(user_id)
+        expect(upload.original_filename).to eq(image_svg_filename)
+        expect(upload.filesize).to eq(image_svg_filesize)
+        expect(upload.width).to eq(100)
+        expect(upload.height).to eq(50)
+        expect(upload.url).to eq(url)
+      end
+
     end
 
   end

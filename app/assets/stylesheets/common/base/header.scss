@@ -4,25 +4,25 @@
     top: 0;
     z-index: 1001;
     background-color: $header_background;
-    box-shadow: 0 2px 4px -2px rgba(0,0,0, .25);
+    box-shadow: 0 2px 4px -1px rgba(0,0,0, .25);
 
     .docked & {
       position: fixed;
-
+      backface-visibility: hidden;  /** do magic for scrolling performance **/
     }
 
     .contents {
-      margin: 10px 0;
+      margin: 8px 0;
     }
 
     .title {
-      display: table;
       float: left;
-      height: 40px;
-      > a {
-        display: table-cell;
-        vertical-align: middle;
-      }
+    }
+
+    .valign-helper {
+      display: inline-block;
+      height: 100%;
+      vertical-align: middle;
     }
 
     #site-logo {
@@ -30,7 +30,7 @@
     }
 
     .fa-home {
-      font-size: 23px;
+      font-size: 1.643em;
     }
 
     .panel {
@@ -54,6 +54,7 @@
       text-align: center;
       margin: 0 0 0 5px;
       list-style: none;
+
       > li {
         float: left;
       }
@@ -66,6 +67,7 @@
         border-top: 1px solid transparent;
         border-left: 1px solid transparent;
         border-right: 1px solid transparent;
+        transition: all linear .15s;
 
 
         &:hover {
@@ -106,7 +108,7 @@
       [class^="fa fa-"] {
         width: 32px;
         height: 32px;
-        font-size: 20px;
+        font-size: 1.714em;
         line-height: 32px;
         display: inline-block;
       }
@@ -144,7 +146,7 @@
     border: 1px solid scale-color-diff();
     padding: 5px;
 
-    @include box-shadow(0 2px 2px rgba(0,0,0, .4));
+    box-shadow: 0 2px 2px rgba(0,0,0, .4);
 
   // note these topic counts only appear for anons in the category hamburger drop down
   b.topics-count {
@@ -159,7 +161,7 @@
   }
 
   li:not(.category):not(.heading) {
-    font-size: 13px;
+    font-size: 0.929em;
     line-height: 16px;
 
       .fa {
@@ -169,6 +171,7 @@
       a {
         display: block;
         padding: 5px;
+        transition: all linear .15s;
       }
 
       &:hover a:not(.badge-notification) {
@@ -220,12 +223,11 @@
     .none {
       padding: 5px;
     }
-    .loading {
-      padding: 10px;
-      display: block;
-      color: scale-color($primary, $lightness: 50%);
-      font-size: 24px;
-      text-align: center;
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border-width: 2px;
+      margin: 0 auto;
     }
     /* as a big ol' click target, don't let text inside be selected */
     @include unselectable;
@@ -257,7 +259,7 @@
   }
 
   input[type='text'] {
-    width: 93%;
+    width: 518px;
     height: 22px;
     margin: 5px;
     padding: 5px;
@@ -265,30 +267,26 @@
 
   .search-context {
     padding: 0 5px;
+    label { margin-bottom: 0; }
   }
 
   .searching {
-    display: block;
     position: absolute;
-    top: 17px;
-    right: 15px;
-    width: 22px;
-    height: 22px;
-    background: {
-      image: image-url("spinner_96.gif");
-      repeat: no-repeat;
-      position: 0px 50%;
-      size: 18px;
-    };
+    top: 0;
+    right: 0;
+    .spinner {
+      width: 10px;
+      height: 10px;
+      border-width: 2px;
+      margin: 20px 0 0 0;
+      }
   }
   // I am ghetto using this to display "Show More".. be warned
   .no-results {
     padding: 5px;
-    height: 12px;
-    width:60%;
+    text-align: center;
   }
   .filter {
-    float: right;
     padding: 0;
     &:hover {background: transparent;}
   }
@@ -299,6 +297,7 @@
     float: left;
     background-color: transparent;
     line-height: 20px;
+    width: 45%;
     margin: 5px 5px 0 5px;
     .badge-notification {
       color: scale-color($primary, $lightness: 50%);
@@ -319,19 +318,23 @@
   }
 }
 
-.search-link .topic-statuses {
-  float: none;
-  display: inline-block;
-  color: scale-color($primary, $lightness: 50%);
-  margin: 0;
-  .fa {
-    margin: 0;
+.search-link {
+  .badge-category-parent {
+    line-height: 0.8em;
   }
-}
+  .topic-title {
+    margin-right: 6px;
+  }
 
-.search-link .badge-category {
-  padding: 4px 6px;
-  margin-left: 6px;
+  .topic-statuses {
+    float: none;
+    display: inline-block;
+    color: scale-color($primary, $lightness: 50%);
+    margin: 0;
+    .fa {
+      margin: 0;
+    }
+  }
 }
 
 .highlight-strong {
@@ -340,4 +343,34 @@
 
 .search-highlight {
   font-weight: bold;
+}
+
+.search-context .show-help {
+  position: absolute;
+  right: 10px;
+  top: 0;
+}
+
+.search-context {
+  min-height: 30px;
+  position: relative;
+}
+
+.d-dropdown#search-dropdown {
+  max-height: none;
+  overflow: inherit;
+}
+
+#search-dropdown .results {
+  max-height: 300px;
+  overflow: auto;
+}
+
+#search-help table td {
+  padding-right: 10px;
+}
+
+// we don't need this X to clear field
+#search-term::-ms-clear {
+  display: none;
 }

@@ -1,6 +1,7 @@
 module("Discourse.Markdown", {
   setup: function() {
     Discourse.SiteSettings.traditional_markdown_linebreaks = false;
+    Discourse.SiteSettings.default_code_lang = "auto";
   }
 });
 
@@ -26,7 +27,7 @@ test("basic cooking", function() {
   cooked("common/_special_font_face.html.erb", "<p>common/_special_font_face.html.erb</p>", "it doesn't intraword with a slash");
   cooked("hello \\*evil\\*", "<p>hello *evil*</p>", "it supports escaping of asterisks");
   cooked("hello \\_evil\\_", "<p>hello _evil_</p>", "it supports escaping of italics");
-  cooked("brussel sproutes are *awful*.", "<p>brussel sproutes are <em>awful</em>.</p>", "it doesn't swallow periods.");
+  cooked("brussels sprouts are *awful*.", "<p>brussels sprouts are <em>awful</em>.</p>", "it doesn't swallow periods.");
 });
 
 test("Nested bold and italics", function() {
@@ -149,11 +150,15 @@ test("Links", function() {
   cooked("[Link](http://www.example.com) (with an outer \"description\")",
          "<p><a href=\"http://www.example.com\">Link</a> (with an outer \"description\")</p>",
          "it doesn't consume closing parens as part of the url");
+
+  cooked("[ul][1]\n\n[1]: http://eviltrout.com",
+         "<p><a href=\"http://eviltrout.com\">ul</a></p>",
+         "it can use `ul` as a link name");
 });
 
 test("simple quotes", function() {
   cooked("> nice!", "<blockquote><p>nice!</p></blockquote>", "it supports simple quotes");
-  cooked(" > nice!", "<blockquote><p>nice!</p></blockquote>", "it allows quotes with preceeding spaces");
+  cooked(" > nice!", "<blockquote><p>nice!</p></blockquote>", "it allows quotes with preceding spaces");
   cooked("> level 1\n> > level 2",
          "<blockquote><p>level 1</p><blockquote><p>level 2</p></blockquote></blockquote>",
          "it allows nesting of blockquotes");
@@ -337,37 +342,37 @@ test("Code Blocks", function() {
          "it supports basic code blocks");
 
   cooked("```json\n{hello: 'world'}\n```\ntrailing",
-         "<p><pre><code class=\"json\">{hello: &#x27;world&#x27;}</code></pre></p>\n\n<p>trailing</p>",
+         "<p><pre><code class=\"lang-json\">{hello: &#x27;world&#x27;}</code></pre></p>\n\n<p>trailing</p>",
          "It does not truncate text after a code block.");
 
   cooked("```json\nline 1\n\nline 2\n\n\nline3\n```",
-         "<p><pre><code class=\"json\">line 1\n\nline 2\n\n\nline3</code></pre></p>",
+         "<p><pre><code class=\"lang-json\">line 1\n\nline 2\n\n\nline3</code></pre></p>",
          "it maintains new lines inside a code block.");
 
   cooked("hello\nworld\n```json\nline 1\n\nline 2\n\n\nline3\n```",
-         "<p>hello<br/>world<br/></p>\n\n<p><pre><code class=\"json\">line 1\n\nline 2\n\n\nline3</code></pre></p>",
+         "<p>hello<br/>world<br/></p>\n\n<p><pre><code class=\"lang-json\">line 1\n\nline 2\n\n\nline3</code></pre></p>",
          "it maintains new lines inside a code block with leading content.");
 
   cooked("```ruby\n<header>hello</header>\n```",
-         "<p><pre><code class=\"ruby\">&lt;header&gt;hello&lt;/header&gt;</code></pre></p>",
+         "<p><pre><code class=\"lang-ruby\">&lt;header&gt;hello&lt;/header&gt;</code></pre></p>",
          "it escapes code in the code block");
 
-  cooked("```text\ntext\n```", "<p><pre><code>text</code></pre></p>", "handles text without adding class");
+  cooked("```text\ntext\n```", "<p><pre><code class=\"lang-nohighlight\">text</code></pre></p>", "handles text by adding nohighlight");
 
   cooked("```ruby\n# cool\n```",
-         "<p><pre><code class=\"ruby\"># cool</code></pre></p>",
+         "<p><pre><code class=\"lang-ruby\"># cool</code></pre></p>",
          "it supports changing the language");
 
   cooked("    ```\n    hello\n    ```",
          "<pre><code>&#x60;&#x60;&#x60;\nhello\n&#x60;&#x60;&#x60;</code></pre>",
-         "only detect ``` at the begining of lines");
+         "only detect ``` at the beginning of lines");
 
   cooked("```ruby\ndef self.parse(text)\n\n  text\nend\n```",
-         "<p><pre><code class=\"ruby\">def self.parse(text)\n\n  text\nend</code></pre></p>",
+         "<p><pre><code class=\"lang-ruby\">def self.parse(text)\n\n  text\nend</code></pre></p>",
          "it allows leading spaces on lines in a code block.");
 
   cooked("```ruby\nhello `eviltrout`\n```",
-         "<p><pre><code class=\"ruby\">hello &#x60;eviltrout&#x60;</code></pre></p>",
+         "<p><pre><code class=\"lang-ruby\">hello &#x60;eviltrout&#x60;</code></pre></p>",
          "it allows code with backticks in it");
 
   cooked("```eviltrout\nhello\n```",
@@ -397,6 +402,8 @@ test("Code Blocks", function() {
   cooked("    [quote]test[/quote]",
          "<pre><code>[quote]test[/quote]</code></pre>",
          "it does not parse other block types in markdown code blocks");
+
+  cooked("## a\nb\n```\nc\n```", "<h2>a</h2>\n\n<p><pre><code class=\"lang-auto\">c</code></pre></p>", "it handles headings with code blocks after them.");
 });
 
 test("sanitize", function() {
@@ -422,6 +429,11 @@ test("sanitize", function() {
   cooked("<iframe src=\"https://www.google.com/maps/embed?pb=!1m10!1m8!1m3!1d2624.9983685732213!2d2.29432085!3d48.85824149999999!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2s!4v1385737436368\" width=\"100\" height=\"42\"></iframe>",
          "<iframe src=\"https://www.google.com/maps/embed?pb=!1m10!1m8!1m3!1d2624.9983685732213!2d2.29432085!3d48.85824149999999!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2s!4v1385737436368\" width=\"100\" height=\"42\"></iframe>",
          "it allows iframe to google maps");
+
+  cooked("<iframe width=\"425\" height=\"350\" frameborder=\"0\" marginheight=\"0\" marginwidth=\"0\" src=\"http://www.openstreetmap.org/export/embed.html?bbox=22.49454975128174%2C51.220338322410775%2C22.523088455200195%2C51.23345342732931&amp;layer=mapnik\"></iframe>",
+         "<iframe width=\"425\" height=\"350\" frameborder=\"0\" marginheight=\"0\" marginwidth=\"0\" src=\"http://www.openstreetmap.org/export/embed.html?bbox=22.49454975128174%2C51.220338322410775%2C22.523088455200195%2C51.23345342732931&amp;layer=mapnik\"></iframe>",
+         "it allows iframe to OpenStreetMap");
+
   equal(sanitize("<textarea>hullo</textarea>"), "hullo");
   equal(sanitize("<button>press me!</button>"), "press me!");
   equal(sanitize("<canvas>draw me!</canvas>"), "draw me!");
@@ -471,7 +483,6 @@ test("urlAllowed", function() {
 });
 
 test("images", function() {
-
   cooked("[![folksy logo](http://folksy.com/images/folksy-colour.png)](http://folksy.com/)",
          "<p><a href=\"http://folksy.com/\"><img src=\"http://folksy.com/images/folksy-colour.png\" alt=\"folksy logo\"/></a></p>",
          "It allows images with links around them");
@@ -479,4 +490,17 @@ test("images", function() {
   cooked("<img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==\" alt=\"Red dot\">",
          "<p><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==\" alt=\"Red dot\"></p>",
          "It allows data images");
+});
+
+test("censoring", function() {
+  Discourse.SiteSettings.censored_words = "shucks|whiz|whizzer";
+  cooked("aw shucks, golly gee whiz.",
+         "<p>aw &#9632;&#9632;&#9632;&#9632;&#9632;&#9632;, golly gee &#9632;&#9632;&#9632;&#9632;.</p>",
+         "it censors words in the Site Settings");
+  cooked("you are a whizzard! I love cheesewhiz. Whiz.",
+         "<p>you are a whizzard! I love cheesewhiz. &#9632;&#9632;&#9632;&#9632;.</p>",
+         "it doesn't censor words unless they have boundaries.");
+  cooked("you are a whizzer! I love cheesewhiz. Whiz.",
+         "<p>you are a &#9632;&#9632;&#9632;&#9632;&#9632;&#9632;&#9632;! I love cheesewhiz. &#9632;&#9632;&#9632;&#9632;.</p>",
+         "it censors words even if previous partial matches exist.");
 });

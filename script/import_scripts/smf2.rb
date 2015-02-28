@@ -7,6 +7,7 @@ require 'tsort'
 require 'set'
 require 'optparse'
 require 'etc'
+require 'open3'
 
 class ImportScripts::Smf2 < ImportScripts::Base
 
@@ -28,19 +29,21 @@ class ImportScripts::Smf2 < ImportScripts::Base
   attr_reader :options
 
   def initialize(options)
+    if options.timezone.nil?
+      $stderr.puts "No source timezone given and autodetection from PHP failed."
+      $stderr.puts "Use -t option to specify correct source timezone:"
+      $stderr.puts options.usage
+      exit 1
+    end
+
     super()
     @options = options
 
     begin
-      timezone = `php -i`.lines.each do |line|
-        key, *vals = line.split(' => ').map(&:strip)
-        break vals[0] if key == 'Default timezone'
-      end
-      Time.zone = timezone
-    rescue Errno::ENOENT
-      $stderr.puts "Cannot autodetect PHP timezone setting, php not found in $PATH"
+      Time.zone = options.timezone
     rescue ArgumentError
-      $stderr.puts "Cannot set timezone '#{timezone}' (from PHP)"
+      $stderr.puts "Timezone name '#{options.timezone}' is invalid."
+      exit 1
     end
 
     if options.database.blank?
@@ -421,7 +424,7 @@ class ImportScripts::Smf2 < ImportScripts::Base
         quote = "[quote=\"#{params['author']}"
         if QuoteParamsPattern =~ params['link']
           tl = topic_lookup_from_imported_post_id($~[:msg].to_i)
-          quote << ", post:#{tl[:post_number]}, topic:#{tl[:topic_id]}"
+          quote << ", post:#{tl[:post_number]}, topic:#{tl[:topic_id]}" if tl
         end
         quote << "\"]#{inner}[/quote]"
       else
@@ -445,7 +448,8 @@ class ImportScripts::Smf2 < ImportScripts::Base
   # param1=value1=still1 value1 param2=value2 ...
   # => {'param1' => 'value1=still1 value1', 'param2' => 'value2 ...'}
   def parse_tag_params(params)
-    params.to_s.strip.scan(/(?<param>\w+)=(?<value>(?:(?>\S+)|\s+(?!\w+=))*)/).to_h
+    params.to_s.strip.scan(/(?<param>\w+)=(?<value>(?:(?>\S+)|\s+(?!\w+=))*)/).
+      inject({}) {|h,e| h[e[0]] = e[1]; h }
   end
 
   class << self
@@ -514,6 +518,7 @@ class ImportScripts::Smf2 < ImportScripts::Base
       self.host ||= 'localhost'
       self.username ||= Etc.getlogin
       self.prefix ||= 'smf_'
+      self.timezone ||= get_php_timezone
     end
 
     def usage
@@ -526,8 +531,19 @@ class ImportScripts::Smf2 < ImportScripts::Base
     attr_accessor :database
     attr_accessor :prefix
     attr_accessor :smfroot
+    attr_accessor :timezone
 
     private
+
+    def get_php_timezone
+      phpinfo, status = Open3.capture2('phpnope', '-i')
+      phpinfo.lines.each do |line|
+        key, *vals = line.split(' => ').map(&:strip)
+        break vals[0] if key == 'Default timezone'
+      end
+    rescue Errno::ENOENT
+      $stderr.puts "Error: PHP CLI executable not found"
+    end
 
     def read_smf_settings
       settings = File.join(self.smfroot, 'Settings.php')
@@ -554,6 +570,7 @@ class ImportScripts::Smf2 < ImportScripts::Base
         o.on('-p [PASS]', :OPTIONAL, 'MySQL password. Without argument, reads password from STDIN.') {|s| self.password = s || :ask }
         o.on('-d DBNAME', :REQUIRED, 'Name of SMF database') {|s| self.database = s }
         o.on('-f PREFIX', :REQUIRED, "Table names prefix [\"#{self.prefix}\"]") {|s| self.prefix = s }
+        o.on('-t TIMEZONE', :REQUIRED, 'Timezone used by SMF2 [auto-detected from PHP]') {|s| self.timezone = s }
       end
     end
 
@@ -605,7 +622,7 @@ class ImportScripts::Smf2 < ImportScripts::Base
       end
 
       def quoted
-        @quoted.map {|id| @graph[id] }
+        @quoted.map {|id| @graph[id] }.reject(&:nil?)
       end
 
       def ignore_quotes?
@@ -633,7 +650,13 @@ class ImportScripts::Smf2 < ImportScripts::Base
       end
 
       def inspect
-        "#<#{self.class.name}: id=#{id.inspect}, prev=#{prev.try(:id).inspect}, quoted=#{quoted.map{|e|e.id}.inspect}>"
+        "#<#{self.class.name}: id=#{id.inspect}, prev=#{safe_id(@prev)}, quoted=[#{@quoted.map(&method(:safe_id)).join(', ')}]>"
+      end
+
+      private
+
+      def safe_id(id)
+        @graph[id].present? ? @graph[id].id.inspect : "(#{id})"
       end
     end #Node
 

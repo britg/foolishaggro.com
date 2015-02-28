@@ -1,12 +1,3 @@
-/**
-  A data model representing a list of topics
-
-  @class TopicList
-  @extends Discourse.Model
-  @namespace Discourse
-  @module Discourse
-**/
-
 function finderFor(filter, params) {
   return function() {
     var url = Discourse.getURL("/") + filter + ".json";
@@ -31,6 +22,8 @@ function finderFor(filter, params) {
 }
 
 Discourse.TopicList = Discourse.Model.extend({
+  canLoadMore: Em.computed.notEmpty("more_topics_url"),
+
   forEachNew: function(topics, callback) {
     var topicIds = [];
     _.each(this.get('topics'),function(topic) {
@@ -68,7 +61,6 @@ Discourse.TopicList = Discourse.Model.extend({
 
     var moreUrl = this.get('more_topics_url');
     if (moreUrl) {
-
       var self = this;
       this.set('loadingMore', true);
 
@@ -84,7 +76,11 @@ Discourse.TopicList = Discourse.Model.extend({
             topics.pushObject(t);
           });
 
-          self.setProperties({ loadingMore: false, more_topics_url: result.topic_list.more_topics_url });
+          self.setProperties({
+            loadingMore: false,
+            more_topics_url: result.topic_list.more_topics_url
+          });
+
           Discourse.Session.currentProp('topicList', self);
           return self.get('more_topics_url');
         }
@@ -166,7 +162,7 @@ Discourse.TopicList.reopenClass({
 
   from: function(result, filter, params) {
     var topicList = Discourse.TopicList.create({
-      inserted: Em.A(),
+      inserted: [],
       filter: filter,
       params: params || {},
       topics: Discourse.TopicList.topicsFrom(result),
@@ -176,7 +172,8 @@ Discourse.TopicList.reopenClass({
       draft_sequence: result.topic_list.draft_sequence,
       draft: result.topic_list.draft,
       for_period: result.topic_list.for_period,
-      loaded: true
+      loaded: true,
+      per_page: result.topic_list.per_page
     });
 
     if (result.topic_list.filtered_category) {
@@ -207,7 +204,7 @@ Discourse.TopicList.reopenClass({
 
         // Try to use the cached version if it exists and is greater than the topics per page
         if (cachedList && (cachedList.get('filter') === filter) &&
-            (cachedList.get('topics.length') || 0) > Discourse.SiteSettings.topics_per_page &&
+            (cachedList.get('topics.length') || 0) > cachedList.get('per_page') &&
             _.isEqual(cachedList.get('listParams'), filterParams)) {
           cachedList.set('loaded', true);
 
@@ -258,6 +255,12 @@ Discourse.TopicList.reopenClass({
     return PreloadStore.getAndRemove("topic_list_" + filter, finderFor(filter, params)).then(function(result) {
       return Discourse.TopicList.from(result, filter, params);
     });
+  },
+
+  // Sets `hideCategory` if all topics in the last have a particular category
+  hideUniformCategory: function(list, category) {
+    var hideCategory = !list.get('topics').any(function (t) { return t.get('category') !== category; });
+    list.set('hideCategory', hideCategory);
   }
 
 });

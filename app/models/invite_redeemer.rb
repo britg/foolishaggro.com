@@ -48,6 +48,7 @@ InviteRedeemer = Struct.new(:invite, :username, :name) do
     send_welcome_message
     approve_account_if_needed
     notify_invitee
+    send_password_instructions
   end
 
   def invite_was_redeemed?
@@ -87,8 +88,9 @@ InviteRedeemer = Struct.new(:invite, :username, :name) do
   end
 
   def add_user_to_groups
-    invite.groups.each do |g|
-      invited_user.group_users.create(group_id: g.id)
+    new_group_ids = invite.groups.pluck(:id) - invited_user.group_users.pluck(:group_id)
+    new_group_ids.each do |id|
+      invited_user.group_users.create(group_id: id)
     end
   end
 
@@ -100,6 +102,12 @@ InviteRedeemer = Struct.new(:invite, :username, :name) do
 
   def approve_account_if_needed
     invited_user.approve(invite.invited_by_id, false)
+  end
+
+  def send_password_instructions
+    if !SiteSetting.enable_sso && SiteSetting.enable_local_logins && !invited_user.has_password?
+      Jobs.enqueue(:invite_password_instructions_email, username: invited_user.username)
+    end
   end
 
   def notify_invitee

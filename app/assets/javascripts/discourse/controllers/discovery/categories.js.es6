@@ -7,14 +7,23 @@ export default DiscoveryController.extend({
   showPostsColumn: Em.computed.empty('withLogo'),
 
   actions: {
-    refresh: function() {
-      var self = this;
+
+    refresh() {
 
       // Don't refresh if we're still loading
       if (this.get('controllers.discovery.loading')) { return; }
 
-      this.send('loading');
-      Discourse.CategoryList.list('categories').then(function(list) {
+      // If we `send('loading')` here, due to returning true it bubbles up to the
+      // router and ember throws an error due to missing `handlerInfos`.
+      // Lesson learned: Don't call `loading` yourself.
+      this.set('controllers.discovery.loading', true);
+
+      const parentCategory = this.get('model.parentCategory');
+      const promise = parentCategory ? Discourse.CategoryList.listForParent(parentCategory) :
+                                       Discourse.CategoryList.list();
+
+      const self = this;
+      promise.then(function(list) {
         self.set('model', list);
         self.send('loadingComplete');
       });

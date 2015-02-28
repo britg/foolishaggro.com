@@ -1,21 +1,26 @@
+import registerUnbound from 'discourse/helpers/register-unbound';
+
 /**
   Display logic for dates. It is unbound in Ember but will use jQuery to
   update the dates on a regular interval.
 **/
-Handlebars.registerHelper('format-date', function(property, options) {
-  var leaveAgo;
-  if (property.hash) {
-    if (property.hash.leaveAgo) {
-      leaveAgo = property.hash.leaveAgo === "true";
-    }
-    if (property.hash.path) {
-      property = property.hash.path;
-    }
+registerUnbound('format-date', function(val, params) {
+  var leaveAgo,
+      format = 'medium',
+      title = true;
+
+  if (params.leaveAgo) {
+    leaveAgo = params.leaveAgo === "true";
+  }
+  if (params.format) {
+    format = params.format;
+  }
+  if (params.noTitle) {
+    title = false;
   }
 
-  var val = Ember.Handlebars.get(this, property, options);
   if (val) {
     var date = new Date(val);
-    return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(date, {format: 'medium', title: true, leaveAgo: leaveAgo}));
+    return new Handlebars.SafeString(Discourse.Formatter.autoUpdatingRelativeAge(date, {format: format, title: title, leaveAgo: leaveAgo}));
   }
 });

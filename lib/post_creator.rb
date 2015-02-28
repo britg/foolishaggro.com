@@ -20,6 +20,14 @@ class PostCreator
   #   created_at              - Post creation time (optional)
   #   auto_track              - Automatically track this topic if needed (default true)
   #   custom_fields           - Custom fields to be added to the post, Hash (default nil)
+  #   post_type               - Whether this is a regular post or moderator post.
+  #   no_bump                 - Do not cause this post to bump the topic.
+  #   cooking_options         - Options for rendering the text
+  #   cook_method             - Method of cooking the post.
+  #                               :regular - Pass through Markdown parser and strip bad HTML
+  #                               :raw_html - Perform no processing
+  #   via_email               - Mark this post as arriving via email
+  #   raw_email               - Full text of arriving email (to store)
   #
   #   When replying to a topic:
   #     topic_id              - topic we're replying to
@@ -33,7 +41,8 @@ class PostCreator
   #     target_usernames      - comma delimited list of usernames for membership (private message)
   #     target_group_names    - comma delimited list of groups for membership (private message)
   #     meta_data             - Topic meta data hash
-  #     cooking_options       - Options for rendering the text
+  #     created_at            - Topic creation time (optional)
+  #     pinned_at             - Topic pinned time (optional)
   #
   def initialize(user, opts)
     # TODO: we should reload user in case it is tainted, should take in a user_id as opposed to user
@@ -76,6 +85,7 @@ class PostCreator
       store_unique_post_key
       track_topic
       update_topic_stats
+      update_topic_auto_close
       update_user_counts
       create_embedded_topic
 
@@ -208,6 +218,12 @@ class PostCreator
     @topic.update_attributes(attrs)
   end
 
+  def update_topic_auto_close
+    if @topic.auto_close_based_on_last_post && @topic.auto_close_hours
+      @topic.set_auto_close(@topic.auto_close_hours).save
+    end
+  end
+
   def setup_post
     @opts[:raw] = TextCleaner.normalize_whitespaces(@opts[:raw]).gsub(/\s+\z/, "")
 
@@ -216,7 +232,7 @@ class PostCreator
                             reply_to_post_number: @opts[:reply_to_post_number])
 
     # Attributes we pass through to the post instance if present
-    [:post_type, :no_bump, :cooking_options, :image_sizes, :acting_user, :invalidate_oneboxes, :cook_method, :via_email].each do |a|
+    [:post_type, :no_bump, :cooking_options, :image_sizes, :acting_user, :invalidate_oneboxes, :cook_method, :via_email, :raw_email].each do |a|
       post.send("#{a}=", @opts[a]) if @opts[a].present?
     end
 
@@ -291,7 +307,7 @@ class PostCreator
                      @topic.id,
                      posted: true,
                      last_read_post_number: @post.post_number,
-                     seen_post_count: @post.post_number)
+                     highest_seen_post_number: @post.post_number)
 
 
     # assume it took us 5 seconds of reading time to make a post

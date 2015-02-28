@@ -1,4 +1,5 @@
 import PollController from "discourse/plugins/poll/controllers/poll";
+import PostView from "discourse/views/post";
 
 var Poll = Discourse.Model.extend({
   post: null,
@@ -9,9 +10,12 @@ var Poll = Discourse.Model.extend({
     this.updateFromJson(this.get('post.poll_details'));
   }.observes('post.poll_details'),
 
-  fetchNewPostDetails: function() {
-    this.get('post.topic.postStream').triggerChangedPost(this.get('post.id'), this.get('post.topic.updated_at'));
-  }.observes('post.topic.title'),
+  fetchNewPostDetails: Discourse.debounce(function() {
+    var self = this;
+    Discourse.debounce(function() {
+      self.get('post.topic.postStream').triggerChangedPost(self.get('post.id'), self.get('post.topic.updated_at'));
+    }, 500);
+  }).observes('post.topic.title'),
 
   updateFromJson: function(json) {
     var selectedOption = json["selected"];
@@ -24,8 +28,8 @@ var Poll = Discourse.Model.extend({
         checked: (option === selectedOption)
       }));
     });
-    this.set('options', options);
 
+    this.set('options', options);
     this.set('closed', json.closed);
   },
 
@@ -46,12 +50,6 @@ var Poll = Discourse.Model.extend({
 var PollView = Ember.View.extend({
   templateName: "poll",
   classNames: ['poll-ui'],
-
-  replaceElement: function(target) {
-    this._insertElementLater(function() {
-      target.replaceWith(this.$());
-    });
-  }
 });
 
 function initializePollView(self) {
@@ -67,18 +65,14 @@ function initializePollView(self) {
     postController: self.get('controller')
   });
 
-  var pollView = self.createChildView(PollView, {
-    controller: pollController
-  });
-  return pollView;
+  return self.createChildView(PollView, { controller: pollController });
 }
-
 
 export default {
   name: 'poll',
 
   initialize: function() {
-    Discourse.PostView.reopen({
+    PostView.reopen({
       createPollUI: function($post) {
         var post = this.get('post');
 
@@ -87,13 +81,14 @@ export default {
         }
 
         var view = initializePollView(this);
-
         var pollContainer = $post.find(".poll-ui:first");
         if (pollContainer.length === 0) {
           pollContainer = $post.find("ul:first");
         }
 
-        view.replaceElement(pollContainer);
+        var $div = $('<div>');
+        pollContainer.replaceWith($div);
+        view.constructor.renderer.appendTo(view, $div[0]);
         this.set('pollView', view);
 
       }.on('postViewInserted'),
@@ -105,4 +100,4 @@ export default {
       }.on('willClearRender')
     });
   }
-}
+};

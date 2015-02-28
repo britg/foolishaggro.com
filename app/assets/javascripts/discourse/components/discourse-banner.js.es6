@@ -1,4 +1,6 @@
-export default Ember.Component.extend({
+import VisibleComponent from "discourse/components/visible";
+
+export default VisibleComponent.extend({
 
   visible: function () {
     var bannerKey = this.get("banner.key"),
@@ -8,8 +10,8 @@ export default Ember.Component.extend({
     if (bannerKey) { bannerKey = parseInt(bannerKey, 10); }
     if (dismissedBannerKey) { dismissedBannerKey = parseInt(dismissedBannerKey, 10); }
 
-    return bannerKey && dismissedBannerKey !== bannerKey;
-  }.property("user.dismissed_banner_key", "banner.key"),
+    return !this.get("hide") && bannerKey && dismissedBannerKey !== bannerKey;
+  }.property("user.dismissed_banner_key", "banner.key", "hide"),
 
   actions: {
     dismiss: function () {
@@ -20,6 +22,7 @@ export default Ember.Component.extend({
         Discourse.KeyValueStore.set({ key: "dismissed_banner_key", value: this.get("banner.key") });
       }
     }
-  }
+  },
+
 
 });

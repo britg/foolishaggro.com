@@ -2,7 +2,7 @@
 # Sprockets::SassImporter implementation provided in sass-rails since that is used
 # during asset precompilation.
 class DiscourseSassImporter < Sass::Importers::Filesystem
-  GLOB = /\*|\[.+\]/
+  GLOB = /\*|\[.+\]/ unless defined? GLOB
 
   # Depending upon where this is passed we might either be passed a string as the
   # first argument or a sprockets context. If the first argument is a sprockets
@@ -50,7 +50,7 @@ class DiscourseSassImporter < Sass::Importers::Filesystem
       contents = ""
       Category.where('background_url IS NOT NULL').each do |c|
         if c.background_url.present?
-          contents << "body.category-#{c.id} { background-image: url(#{c.background_url}) }\n"
+          contents << "body.category-#{c.full_slug} { background-image: url(#{c.background_url}) }\n"
         end
       end
       return Sass::Engine.new(contents, options.merge(

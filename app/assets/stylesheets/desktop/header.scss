@@ -8,8 +8,8 @@
   padding-top: 3px;
   height: 60px;
   .fa-home {
-    padding-right: 3px;
-    padding-top: 3px;
+    padding:8px;
+    font-size: 2.1em;
   }
 }
 
@@ -65,9 +65,13 @@ and (max-width : 570px) {
 
 .d-dropdown#search-dropdown {
   width: 540px;
-  max-height: 600px;
 }
 
 .d-dropdown .searching {
   right: 30px;
+}
+
+
+#search-dropdown .results {
+  max-height: 500px;
 }

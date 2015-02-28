@@ -98,7 +98,21 @@ Discourse.AdminUser = Discourse.User.extend({
     this.set('admin', true);
     this.set('can_grant_admin', false);
     this.set('can_revoke_admin', true);
-    Discourse.ajax("/admin/users/" + (this.get('id')) + "/grant_admin", {type: 'PUT'});
+    var self = this;
+
+    Discourse.ajax("/admin/users/" + (this.get('id')) + "/grant_admin", {type: 'PUT'})
+      .then(null, function(e) {
+        self.set('admin', false);
+        self.set('can_grant_admin', true);
+        self.set('can_revoke_admin', false);
+
+        var error;
+        if (e.responseJSON && e.responseJSON.error) {
+          error = e.responseJSON.error;
+        }
+        error = error || I18n.t('admin.user.grant_admin_failed', { error: "http: " + e.status + " - " + e.body });
+        bootbox.alert(error);
+      });
   },
 
   // Revoke the user's moderation access
@@ -113,7 +127,20 @@ Discourse.AdminUser = Discourse.User.extend({
     this.set('moderator', true);
     this.set('can_grant_moderation', false);
     this.set('can_revoke_moderation', true);
-    Discourse.ajax("/admin/users/" + (this.get('id')) + "/grant_moderation", {type: 'PUT'});
+    var self = this;
+    Discourse.ajax("/admin/users/" + (this.get('id')) + "/grant_moderation", {type: 'PUT'})
+      .then(null, function(e) {
+        self.set('moderator', false);
+        self.set('can_grant_moderation', true);
+        self.set('can_revoke_moderation', false);
+
+        var error;
+        if (e.responseJSON && e.responseJSON.error) {
+          error = e.responseJSON.error;
+        }
+        error = error || I18n.t('admin.user.grant_moderation_failed', { error: "http: " + e.status + " - " + e.body });
+        bootbox.alert(error);
+       });
   },
 
   refreshBrowsers: function() {
@@ -163,6 +190,28 @@ Discourse.AdminUser = Discourse.User.extend({
   restoreTrustLevel: function() {
     this.set('trustLevel.id', this.get('originalTrustLevel'));
   },
+
+  lockTrustLevel: function(locked) {
+    Discourse.ajax("/admin/users/" + this.id + "/trust_level_lock", {
+      type: 'PUT',
+      data: { locked: !!locked }
+    }).then(function() {
+      // succeeded
+      window.location.reload();
+    }, function(e) {
+      // failure
+      var error;
+      if (e.responseJSON && e.responseJSON.errors) {
+        error = e.responseJSON.errors[0];
+      }
+      error = error || I18n.t('admin.user.trust_level_change_failed', { error: "http: " + e.status + " - " + e.body });
+      bootbox.alert(error);
+    });
+  },
+
+  canLockTrustLevel: function(){
+    return this.get('trust_level') < 4;
+  }.property('trust_level'),
 
   isSuspended: Em.computed.equal('suspended', true),
   canSuspend: Em.computed.not('staff'),
@@ -276,9 +325,7 @@ Discourse.AdminUser = Discourse.User.extend({
     });
   },
 
-  deleteForbidden: function() {
-    return (!this.get('can_be_deleted') || this.get('post_count') > 0);
-  }.property('post_count'),
+  deleteForbidden: Em.computed.not("canBeDeleted"),
 
   deleteExplanation: function() {
     if (this.get('deleteForbidden')) {
@@ -292,22 +339,30 @@ Discourse.AdminUser = Discourse.User.extend({
     }
   }.property('deleteForbidden'),
 
-  destroy: function() {
+  destroy: function(opts) {
     var user = this;
+    var location = document.location.pathname;
 
     var performDestroy = function(block) {
-      var formData = { context: window.location.pathname };
+      var formData = { context: location };
       if (block) {
         formData["block_email"] = true;
         formData["block_urls"] = true;
         formData["block_ip"] = true;
+      }
+      if (opts && opts.deletePosts) {
+        formData["delete_posts"] = true;
       }
       Discourse.ajax("/admin/users/" + user.get('id') + '.json', {
         type: 'DELETE',
         data: formData
       }).then(function(data) {
         if (data.deleted) {
-          document.location = "/admin/users/list/active";
+          if (/^\/admin\/users\/list\//.test(location)) {
+            document.location = location;
+          } else {
+            document.location = "/admin/users/list/active";
+          }
         } else {
           bootbox.alert(I18n.t("admin.user.delete_failed"));
           if (data.user) {
@@ -345,30 +400,47 @@ Discourse.AdminUser = Discourse.User.extend({
 
   deleteAsSpammer: function(successCallback) {
     var user = this;
-    var message = I18n.t('flagging.delete_confirm', {posts: user.get('post_count'), topics: user.get('topic_count'), email: user.get('email'), ip_address: user.get('ip_address')});
-    var buttons = [{
-      "label": I18n.t("composer.cancel"),
-      "class": "cancel-inline",
-      "link":  true
-    }, {
-      "label": '<i class="fa fa-exclamation-triangle"></i> ' + I18n.t("flagging.yes_delete_spammer"),
-      "class": "btn btn-danger",
-      "callback": function() {
-        Discourse.ajax("/admin/users/" + user.get('id') + '.json', {
-          type: 'DELETE',
-          data: {delete_posts: true, block_email: true, block_urls: true, block_ip: true, context: window.location.pathname}
-        }).then(function(data) {
-          if (data.deleted) {
-            if (successCallback) successCallback();
-          } else {
+
+    user.checkEmail().then(function() {
+      var data = {
+        posts: user.get('post_count'),
+        topics: user.get('topic_count'),
+        email: user.get('email') || I18n.t("flagging.hidden_email_address"),
+        ip_address: user.get('ip_address') || I18n.t("flagging.ip_address_missing")
+      };
+      var message = I18n.t('flagging.delete_confirm', data);
+      var buttons = [{
+        "label": I18n.t("composer.cancel"),
+        "class": "cancel-inline",
+        "link":  true
+      }, {
+        "label": '<i class="fa fa-exclamation-triangle"></i> ' + I18n.t("flagging.yes_delete_spammer"),
+        "class": "btn btn-danger",
+        "callback": function() {
+          Discourse.ajax("/admin/users/" + user.get('id') + '.json', {
+            type: 'DELETE',
+            data: {
+              delete_posts: true,
+              block_email: true,
+              block_urls: true,
+              block_ip: true,
+              delete_as_spammer: true,
+              context: window.location.pathname
+            }
+          }).then(function(result) {
+            if (result.deleted) {
+              if (successCallback) successCallback();
+            } else {
+              bootbox.alert(I18n.t("admin.user.delete_failed"));
+            }
+          }, function() {
             bootbox.alert(I18n.t("admin.user.delete_failed"));
-          }
-        }, function() {
-          bootbox.alert(I18n.t("admin.user.delete_failed"));
-        });
-      }
-    }];
-    bootbox.dialog(message, buttons, {"classes": "flagging-delete-spammer"});
+          });
+        }
+      }];
+      bootbox.dialog(message, buttons, {"classes": "flagging-delete-spammer"});
+    });
+
   },
 
   loadDetails: function() {
@@ -381,11 +453,11 @@ Discourse.AdminUser = Discourse.User.extend({
     });
   },
 
-  leaderRequirements: function() {
-    if (this.get('leader_requirements')) {
-      return Discourse.LeaderRequirements.create(this.get('leader_requirements'));
+  tl3Requirements: function() {
+    if (this.get('tl3_requirements')) {
+      return Discourse.TL3Requirements.create(this.get('tl3_requirements'));
     }
-  }.property('leader_requirements'),
+  }.property('tl3_requirements'),
 
   suspendedBy: function() {
     if (this.get('suspended_by')) {

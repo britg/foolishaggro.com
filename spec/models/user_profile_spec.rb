@@ -3,7 +3,7 @@ require 'spec_helper'
 describe UserProfile do
   it 'is created automatically when a user is created' do
     user = Fabricate(:evil_trout)
-    user.user_profile.should be_present
+    expect(user.user_profile).to be_present
   end
 
   describe 'rebaking' do
@@ -12,11 +12,11 @@ describe UserProfile do
       user_profile.update_columns(bio_raw: "test", bio_cooked: "broken", bio_cooked_version: nil)
 
       problems = UserProfile.rebake_old(10)
-      problems.length.should == 0
+      expect(problems.length).to eq(0)
 
       user_profile.reload
-      user_profile.bio_cooked.should == "<p>test</p>"
-      user_profile.bio_cooked_version.should == UserProfile::BAKED_VERSION
+      expect(user_profile.bio_cooked).to eq("<p>test</p>")
+      expect(user_profile.bio_cooked_version).to eq(UserProfile::BAKED_VERSION)
     end
   end
 
@@ -24,17 +24,17 @@ describe UserProfile do
     let(:user_profile) { Fabricate.build(:user_profile) }
 
     it 'is not valid without user' do
-      expect(user_profile.valid?).to be_false
+      expect(user_profile.valid?).to be false
     end
 
     it 'is is valid with user' do
       user_profile.user = Fabricate.build(:user)
-      expect(user_profile.valid?).to be_true
+      expect(user_profile.valid?).to be true
     end
 
     it "doesn't support really long bios" do
       user_profile = Fabricate.build(:user_profile_long)
-      user_profile.should_not be_valid
+      expect(user_profile).not_to be_valid
     end
 
     describe 'after save' do
@@ -65,7 +65,7 @@ describe UserProfile do
     end
 
     it 'should markdown the raw_bio and put it in cooked_bio' do
-      user.user_profile.bio_cooked.should == "<p><strong>turtle power!</strong></p>"
+      expect(user.user_profile.bio_cooked).to eq("<p><strong>turtle power!</strong></p>")
     end
   end
 
@@ -103,6 +103,13 @@ describe UserProfile do
         expect(user_profile.bio_processed).to eq("<p>I love http://discourse.org</p>")
       end
 
+      it 'removes the link if the user is suspended' do
+        user.suspended_till = 1.month.from_now
+        user_profile.send(:cook)
+        expect(user_profile.bio_excerpt).to match_html("I love http://discourse.org")
+        expect(user_profile.bio_processed).to eq("<p>I love http://discourse.org</p>")
+      end
+
       context 'tl3_links_no_follow is false' do
         before { SiteSetting.stubs(:tl3_links_no_follow).returns(false) }
 
@@ -122,6 +129,7 @@ describe UserProfile do
         it 'adds nofollow to links in bio when trust level is decreased' do
           created_user.trust_level = TrustLevel[3]
           created_user.save
+          created_user.reload
           created_user.change_trust_level!(TrustLevel[2])
           expect(created_user.user_profile.bio_excerpt).to match_html("I love <a href='http://discourse.org' rel='nofollow'>http://discourse.org</a>")
           expect(created_user.user_profile.bio_processed).to match_html("<p>I love <a href=\"http://discourse.org\" rel=\"nofollow\">http://discourse.org</a></p>")

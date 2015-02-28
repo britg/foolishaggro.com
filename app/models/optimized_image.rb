@@ -15,51 +15,60 @@ class OptimizedImage < ActiveRecord::Base
       thumbnail = nil
     end
 
+    # return the previous thumbnail if any
+    return thumbnail unless thumbnail.nil?
+
     # create the thumbnail otherwise
-    unless thumbnail
-      external_copy = Discourse.store.download(upload) if Discourse.store.external?
-      original_path = if Discourse.store.external?
-        external_copy.try(:path)
+    external_copy = Discourse.store.download(upload) if Discourse.store.external?
+    original_path = if Discourse.store.external?
+      external_copy.try(:path)
+    else
+      Discourse.store.path_for(upload)
+    end
+
+    if original_path.blank?
+      Rails.logger.error("Could not find file in the store located at url: #{upload.url}")
+    else
+      # create a temp file with the same extension as the original
+      extension = File.extname(original_path)
+      temp_file = Tempfile.new(["discourse-thumbnail", extension])
+      temp_path = temp_file.path
+
+      if extension =~ /\.svg$/i
+        FileUtils.cp(original_path, temp_path)
+        resized = true
       else
-        Discourse.store.path_for(upload)
+        resized = resize(original_path, temp_path, width, height, opts)
       end
 
-      if original_path.blank?
-        Rails.logger.error("Could not find file in the store located at url: #{upload.url}")
-      else
-        # create a temp file with the same extension as the original
-        extension = File.extname(original_path)
-        temp_file = Tempfile.new(["discourse-thumbnail", extension])
-        temp_path = temp_file.path
-        original_path += "[0]" unless opts[:allow_animation]
-
-        if resize(original_path, temp_path, width, height)
-          thumbnail = OptimizedImage.create!(
-            upload_id: upload.id,
-            sha1: Digest::SHA1.file(temp_path).hexdigest,
-            extension: File.extname(temp_path),
-            width: width,
-            height: height,
-            url: "",
-          )
-          # store the optimized image and update its url
-          url = Discourse.store.store_optimized_image(temp_file, thumbnail)
-          if url.present?
-            thumbnail.url = url
-            thumbnail.save
-          else
-            Rails.logger.error("Failed to store avatar #{size} for #{upload.url} from #{source}")
-          end
+      if resized
+        thumbnail = OptimizedImage.create!(
+          upload_id: upload.id,
+          sha1: Digest::SHA1.file(temp_path).hexdigest,
+          extension: extension,
+          width: width,
+          height: height,
+          url: "",
+        )
+        # store the optimized image and update its url
+        url = Discourse.store.store_optimized_image(temp_file, thumbnail)
+        if url.present?
+          thumbnail.url = url
+          thumbnail.save
         else
-          Rails.logger.error("Failed to create optimized image #{width}x#{height} for #{upload.url}")
+          Rails.logger.error("Failed to store avatar #{size} for #{upload.url} from #{source}")
         end
-
-        # close && remove temp file
-        temp_file.close!
+      else
+        Rails.logger.error("Failed to create optimized image #{width}x#{height} for #{upload.url}")
       end
 
-      # make sure we remove the cached copy from external stores
-      external_copy.close! if Discourse.store.external?
+      # close && remove temp file
+      temp_file.close!
+    end
+
+    # make sure we remove the cached copy from external stores
+    if Discourse.store.external?
+      external_copy.try(:close!) rescue nil
     end
 
     thumbnail
@@ -72,28 +81,80 @@ class OptimizedImage < ActiveRecord::Base
     end
   end
 
-  def self.resize(from, to, width, height)
+  def self.resize_instructions(from, to, dimensions, opts={})
     # NOTE: ORDER is important!
-    instructions = %W{
-      #{from}
-      -background transparent
+    %W{
+      #{from}[0]
       -gravity center
-      -thumbnail #{width}x#{height}^
-      -extent #{width}x#{height}
+      -background transparent
+      -thumbnail #{dimensions}^
+      -extent #{dimensions}
       -interpolate bicubic
       -unsharp 2x0.5+0.7+0
       -quality 98
       #{to}
-    }.join(" ")
+    }
+  end
 
-    `convert #{instructions}`
+  def self.resize_instructions_animated(from, to, dimensions, opts={})
+    %W{
+      #{from}
+      -coalesce
+      -gravity center
+      -thumbnail #{dimensions}^
+      -extent #{dimensions}
+      #{to}
+    }
+  end
 
-    if $?.exitstatus == 0
-      ImageOptim.new.optimize_image(to) rescue nil
-      true
-    else
-      false
-    end
+  def self.downsize_instructions(from, to, dimensions, opts={})
+    %W{
+      #{from}[0]
+      -gravity center
+      -background transparent
+      -thumbnail #{dimensions}#{!!opts[:force_aspect_ratio] ? "\\!" : "\\>"}
+      #{to}
+    }
+  end
+
+  def self.downsize_instructions_animated(from, to, dimensions, opts={})
+    %W{
+      #{from}
+      -coalesce
+      -gravity center
+      -background transparent
+      -thumbnail #{dimensions}#{!!opts[:force_aspect_ratio] ? "\\!" : "\\>"}
+      #{to}
+    }
+  end
+
+  def self.resize(from, to, width, height, opts={})
+    optimize("resize", from, to, width, height, opts)
+  end
+
+  def self.downsize(from, to, max_width, max_height, opts={})
+    optimize("downsize", from, to, max_width, max_height, opts)
+  end
+
+  def self.optimize(operation, from, to, width, height, opts={})
+    dim = dimensions(width, height)
+    method_name = "#{operation}_instructions"
+    method_name += "_animated" if !!opts[:allow_animation] && from =~ /\.GIF$/i
+    instructions = self.send(method_name.to_sym, from, to, dim, opts)
+    convert_with(instructions)
+  end
+
+  def self.dimensions(width, height)
+    "#{width}x#{height}"
+  end
+
+  def self.convert_with(instructions)
+    `convert #{instructions.join(" ")}`
+
+    return false if $?.exitstatus != 0
+
+    ImageOptim.new.optimize_image(to) rescue nil
+    true
   end
 
 end

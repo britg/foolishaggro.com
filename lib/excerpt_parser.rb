@@ -17,23 +17,26 @@ class ExcerptParser < Nokogiri::XML::SAX::Document
 
   def self.get_excerpt(html, length, options)
     html ||= ''
-    if (html.include? 'excerpt') && (SPAN_REGEX === html)
-      length = html.length
-    end
+    length = html.length if html.include?('excerpt') && SPAN_REGEX === html
     me = self.new(length, options)
     parser = Nokogiri::HTML::SAX::Parser.new(me)
     catch(:done) do
       parser.parse(html)
     end
-    me.excerpt.strip!
-    me.excerpt
+    excerpt = me.excerpt.strip
+    excerpt = CGI.unescapeHTML(excerpt) if options[:text_entities] == true
+    excerpt
   end
 
   def escape_attribute(v)
-    v.gsub("&", "&amp;")
-     .gsub("\"", "&#34;")
-     .gsub("<", "&lt;")
-     .gsub(">", "&gt;")
+    return "" unless v
+
+    v = v.dup
+    v.gsub!("&", "&amp;")
+    v.gsub!("\"", "&#34;")
+    v.gsub!("<", "&lt;")
+    v.gsub!(">", "&gt;")
+    v
   end
 
   def include_tag(name, attributes)
@@ -53,7 +56,7 @@ class ExcerptParser < Nokogiri::XML::SAX::Document
         elsif attributes["title"]
           characters("[#{attributes["title"]}]")
         else
-          characters("[image]")
+          characters("[#{I18n.t 'excerpt_image'}]")
         end
 
         characters("(#{attributes['src']})") if @markdown_images

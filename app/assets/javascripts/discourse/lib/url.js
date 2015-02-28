@@ -1,15 +1,8 @@
 /*global LockOn:true*/
-/**
-  URL related functions.
+var jumpScheduled = false,
+    rewrites = [];
 
-  @class URL
-  @namespace Discourse
-  @module Discourse
-**/
-
-var jumpScheduled = false;
-
-Discourse.URL = Em.Object.createWithMixins({
+Discourse.URL = Ember.Object.createWithMixins({
 
   // Used for matching a topic
   TOPIC_REGEXP: /\/t\/([^\/]+)\/(\d+)\/?(\d+)?/,
@@ -60,11 +53,6 @@ Discourse.URL = Em.Object.createWithMixins({
         Em.run.next(function() {
           var location = Discourse.URL.get('router.location');
           if (location && location.replaceURL) {
-
-            if (Ember.FEATURES.isEnabled("query-params-new")) {
-              var search = Discourse.__container__.lookup('router:main').get('location.location.search') || '';
-              path += search;
-            }
             location.replaceURL(path);
           }
         });
@@ -102,7 +90,7 @@ Discourse.URL = Em.Object.createWithMixins({
 
     if (Em.isEmpty(path)) { return; }
 
-    if(Discourse.get("requiresRefresh")){
+    if (Discourse.get('requiresRefresh')) {
       document.location.href = path;
       return;
     }
@@ -129,7 +117,6 @@ Discourse.URL = Em.Object.createWithMixins({
       path = path.replace(rootURL, '');
     }
 
-
     // Rewrite /my/* urls
     if (path.indexOf('/my/') === 0) {
       var currentUser = Discourse.User.current();
@@ -140,6 +127,10 @@ Discourse.URL = Em.Object.createWithMixins({
         return;
       }
     }
+
+    rewrites.forEach(function(rw) {
+      path = path.replace(rw.regexp, rw.replacement);
+    });
 
     if (this.navigatedToPost(oldPath, path)) { return; }
     // Schedule a DOM cleanup event
@@ -157,12 +148,10 @@ Discourse.URL = Em.Object.createWithMixins({
     return this.handleURL(path);
   },
 
-  /**
-    Redirect to a URL.
-    This has been extracted so it can be tested.
+  rewrite: function(regexp, replacement) {
+    rewrites.push({ regexp: regexp, replacement: replacement });
+  },
 
-    @method redirectTo
-  **/
   redirectTo: function(url) {
     window.location = Discourse.getURL(url);
   },
@@ -209,7 +198,6 @@ Discourse.URL = Em.Object.createWithMixins({
 
         var container = Discourse.__container__,
             topicController = container.lookup('controller:topic'),
-            topicProgressController = container.lookup('controller:topic-progress'),
             opts = {},
             postStream = topicController.get('postStream');
 
@@ -217,16 +205,18 @@ Discourse.URL = Em.Object.createWithMixins({
         if (path.match(/last$/)) { opts.nearPost = topicController.get('highest_post_number'); }
         var closest = opts.nearPost || 1;
 
+        var self = this;
         postStream.refresh(opts).then(function() {
           topicController.setProperties({
             currentPost: closest,
-            highlightOnInsert: closest,
             enteredAt: new Date().getTime().toString()
           });
           var closestPost = postStream.closestPostForPostNumber(closest),
-              progress = postStream.progressIndexOfPost(closestPost);
-          topicProgressController.set('progressPosition', progress);
-          Discourse.PostView.considerHighlighting(topicController, closest);
+              progress = postStream.progressIndexOfPost(closestPost),
+              progressController = container.lookup('controller:topic-progress');
+
+          progressController.set('progressPosition', progress);
+          self.appEvents.trigger('post:highlight', closest);
         }).then(function() {
           Discourse.URL.jumpToPost(closest);
         });
@@ -250,7 +240,10 @@ Discourse.URL = Em.Object.createWithMixins({
   navigatedToHome: function(oldPath, path) {
     var homepage = Discourse.Utilities.defaultHomepage();
 
-    if (window.history && window.history.pushState && path === "/" && (oldPath === "/" || oldPath === "/" + homepage)) {
+    if (window.history &&
+        window.history.pushState &&
+        (path === "/" || path === "/" + homepage) &&
+        (oldPath === "/" || oldPath === "/" + homepage)) {
       this.appEvents.trigger('url:refresh');
       return true;
     }

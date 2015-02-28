@@ -5,7 +5,7 @@ var INVITED_TYPE= 8;
 export default ObjectController.extend({
 
   scope: function () {
-    return "notifications." + Discourse.Site.currentProp("notificationLookup")[this.get("notification_type")];
+    return "notifications." + this.site.get("notificationLookup")[this.get("notification_type")];
   }.property("notification_type"),
 
   username: Em.computed.alias("data.display_username"),
@@ -31,12 +31,12 @@ export default ObjectController.extend({
     if (this.get('notification_type') === INVITED_TYPE) {
       return '/my/invited';
     }
-  }.property("data.{badge_id, badge_name}", "slug", "topic_id", "post_number"),
+  }.property("data.{badge_id,badge_name}", "slug", "topic_id", "post_number"),
 
   description: function () {
     var badgeName = this.safe("data.badge_name");
     if (badgeName) { return badgeName; }
     return this.blank("data.topic_title") ? "" : this.safe("data.topic_title");
-  }.property("data.{badge_name, topic_title}")
+  }.property("data.{badge_name,topic_title}")
 
 });

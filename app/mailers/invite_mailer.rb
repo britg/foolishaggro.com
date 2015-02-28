@@ -9,7 +9,7 @@ class InviteMailer < ActionMailer::Base
 
     # get invitee name (based on site setting)
     invitee_name = invite.invited_by.username
-    if (SiteSetting.enable_names)
+    if SiteSetting.enable_names && invite.invited_by.name.present?
       invitee_name = "#{invite.invited_by.name} (#{invite.invited_by.username})"
     end
 
@@ -40,6 +40,15 @@ class InviteMailer < ActionMailer::Base
                   site_title: SiteSetting.title)
     end
 
+  end
+
+  def send_password_instructions(user)
+    if user.present?
+      email_token = user.email_tokens.create(email: user.email)
+      build_email(user.email,
+                  template: 'invite_password_instructions',
+                  email_token: email_token.token)
+    end
   end
 
 end

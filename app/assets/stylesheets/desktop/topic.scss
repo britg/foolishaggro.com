@@ -17,16 +17,16 @@
 
 #topic-title {
   z-index: 1000;
-  padding: 14px 0 8px 0;
-  margin-bottom: 20px;
+  padding-top: 14px;
+  margin-bottom: 10px;
   .star {
-    font-size: 20px;
+    font-size: 1.429em;
     margin-top: 6px;
     margin-right: 6px;
   }
   #edit-title { width: 500px; }
   .category-combobox {
-    width: 250px;
+    width: 350px;
     .select2-drop {
       left: -9000px;
       width: 248px;
@@ -41,17 +41,12 @@
     line-height: 1.2em;
     overflow: hidden;
     a {color: $primary;}
-    a.badge-category {
-      float: left;
-      vertical-align: top;
-      margin-top: 2px;
-      margin-right: 5px;
-      }
-    a.edit-topic { font-size: 15px; position: absolute; margin-left: 8px; }
+    margin-bottom: 5px;
   }
+
+
   .topic-statuses {
     margin-top: -2px;
-
   }
   .select2-container {
     vertical-align: middle;
@@ -59,6 +54,8 @@
     margin-bottom: 2px;
   }
   .private-message-glyph { display: none; }
+
+
 }
 
 .private-message-glyph {
@@ -76,8 +73,7 @@ a.reply-new {
     background: $secondary;
     padding: 1.5px 3px;
     border-radius: 20px;
-    transition: linear 0.15s;
-    -webkit-transition: linear 0.15s;
+    transition: all linear .15s;
     margin-left: -20px;
   }
 }
@@ -94,7 +90,7 @@ a:hover.reply-new {
   width: 60%;
   margin-left: auto;
   margin-right: auto;
-  font-size: 24px;
+  font-size: 1.714em;
   text-align: center;
   line-height: 1.1em;
 
@@ -143,7 +139,7 @@ a:hover.reply-new {
       display: block;
       margin-top: 2px;
       margin-bottom: 2px;
-      font-size: 18px;
+      font-size: 1.286em;
     }
   }
   .jump-form {
@@ -153,7 +149,7 @@ a:hover.reply-new {
       height: 20px;
       text-align: center;
       margin-bottom: 0;
-      font-size: 16px;
+      font-size: 1.143em;
     }
     button.btn {
       float: right;
@@ -198,7 +194,7 @@ a:hover.reply-new {
   }
   h4 {
     display: inline;
-    font-size: 18px;
+    font-size: 1.286em;
     line-height: 15px;
   }
   .bg {
@@ -207,20 +203,10 @@ a:hover.reply-new {
     bottom: 0;
     width: 0;
     border-right: 1px solid  scale-color-diff();
-    background-color:  dark-light-diff($success, $secondary, 60%, -35%);
+    background-color:  desaturate(dark-light-diff($success, $secondary, 60%, -35%), 30%);
     transition: width .75s;
-  }
-}
 
-#suggested-topics .topic-statuses .topic-status {
-  padding: 0;
-  i {
-    font-size:15px;
   }
-}
-
-#suggested-topics .topics {
-  padding-bottom: 15px;
 }
 
 .heatmap-high {color: #fe7a15 !important;}
@@ -238,7 +224,7 @@ a:hover.reply-new {
   bottom: 0;
   position: fixed;
   width: 100%;
-  font-size: 15px;
+  font-size: 1.071em;
   z-index: 495
 }
 
@@ -257,5 +243,26 @@ and (max-width : 870px) {
   #topic-progress, #topic-progress-expanded {
     left: 210px;
     }
+
+}
+
+
+@media all
+and (max-width : 724px) {
+
+  #topic-progress-wrapper {
+    right: 0;
+    #topic-progress, #topic-progress-expanded { left: auto; right: 145px;  }
+  }
+
+}
+
+@media all
+and (max-width : 485px) {
+
+  #topic-progress-wrapper.docked {
+    display: none;
+    }
+
 
 }

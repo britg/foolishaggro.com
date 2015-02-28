@@ -1,28 +1,46 @@
-/**
-  This controller supports the interface for listing screened IP addresses in the admin section.
+import { outputExportResult } from 'discourse/lib/export-result';
 
-  @class AdminLogsScreenedIpAddressesController
-  @extends Ember.ArrayController
-  @namespace Discourse
-  @module Discourse
-**/
 export default Ember.ArrayController.extend(Discourse.Presence, {
   loading: false,
-  content: [],
   itemController: 'admin-log-screened-ip-address',
+  filter: null,
 
-  show: function() {
+  show: Discourse.debounce(function() {
     var self = this;
-    this.set('loading', true);
-    Discourse.ScreenedIpAddress.findAll().then(function(result) {
-      self.set('content', result);
+    self.set('loading', true);
+    Discourse.ScreenedIpAddress.findAll(this.get("filter")).then(function(result) {
+      self.set('model', result);
       self.set('loading', false);
     });
-  },
+  }, 250).observes("filter"),
 
   actions: {
-    recordAdded: function(arg) {
-      this.get("content").unshiftObject(arg);
+    recordAdded(arg) {
+      this.get("model").unshiftObject(arg);
+    },
+
+    rollUp() {
+      const self = this;
+      return bootbox.confirm(I18n.t("admin.logs.screened_ips.roll_up_confirm"), I18n.t("no_value"), I18n.t("yes_value"), function (confirmed) {
+        if (confirmed) {
+          self.set("loading", true);
+          return Discourse.ScreenedIpAddress.rollUp().then(function(results) {
+            if (results && results.subnets) {
+              if (results.subnets.length > 0) {
+                self.send("show");
+                bootbox.alert(I18n.t("admin.logs.screened_ips.rolled_up_some_subnets", { subnets: results.subnets.join(", ") }));
+              } else {
+                self.set("loading", false);
+                bootbox.alert(I18n.t("admin.logs.screened_ips.rolled_up_no_subnet"));
+              }
+            }
+          });
+        }
+      });
+    },
+
+    exportScreenedIpList() {
+      Discourse.ExportCsv.exportScreenedIpList().then(outputExportResult);
     }
   }
 });

@@ -5,6 +5,7 @@
 //= require handlebars.js
 //= require jquery_include.js
 //= require ember_include.js
+//= require i18n-patches
 
 //= require loader
 //= require message-bus
@@ -39,4 +40,6 @@
 //= require lock-on.js
 //= require ember-cloaking
 //= require break_string
+//= require buffered-proxy
+//= require jquery.autoellipsis-1.0.10.min.js
 //= require_tree ./discourse/ember

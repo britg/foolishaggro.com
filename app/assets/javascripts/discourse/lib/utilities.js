@@ -146,39 +146,26 @@ Discourse.Utilities = {
     }
   },
 
-  /**
-    Validate a list of files to be uploaded
-
-    @method validateUploadedFiles
-    @param {Array} files The list of files we want to upload
-  **/
   validateUploadedFiles: function(files, bypassNewUserRestriction) {
     if (!files || files.length === 0) { return false; }
 
-    // can only upload one file at a time
     if (files.length > 1) {
       bootbox.alert(I18n.t('post.errors.too_many_uploads'));
       return false;
     }
 
     var upload = files[0];
-    var type = Discourse.Utilities.isAnImage(upload.name) ? 'image' : 'attachment';
 
     // CHROME ONLY: if the image was pasted, sets its name to a default one
-    if (upload instanceof Blob && !(upload instanceof File) && upload.type === "image/png") { upload.name = "blob.png"; }
+    if (typeof Blob !== "undefined" && typeof File !== "undefined") {
+      if (upload instanceof Blob && !(upload instanceof File) && upload.type === "image/png") { upload.name = "blob.png"; }
+    }
+
+    var type = Discourse.Utilities.isAnImage(upload.name) ? 'image' : 'attachment';
 
     return Discourse.Utilities.validateUploadedFile(upload, type, bypassNewUserRestriction);
   },
 
-  /**
-    Validate a file to be uploaded
-
-    @method validateUploadedFile
-    @param {File} file The file to be uploaded
-    @param {string} type The type of the upload (image, attachment)
-    @params {bool} bypassNewUserRestriction
-    @returns true whenever the upload is valid
-  **/
   validateUploadedFile: function(file, type, bypassNewUserRestriction) {
     // check that the uploaded file is authorized
     if (!Discourse.Utilities.authorizesAllExtensions() &&
@@ -200,7 +187,7 @@ Discourse.Utilities = {
     var fileSizeKB = file.size / 1024;
     var maxSizeKB = Discourse.SiteSettings['max_' + type + '_size_kb'];
     if (fileSizeKB > maxSizeKB) {
-      bootbox.alert(I18n.t('post.errors.' + type + '_too_large', { max_size_kb: maxSizeKB }));
+      bootbox.alert(I18n.t('post.errors.file_too_large', { max_size_kb: maxSizeKB }));
       return false;
     }
 
@@ -269,7 +256,7 @@ Discourse.Utilities = {
     @param {String} path The path
   **/
   isAnImage: function(path) {
-    return (/\.(png|jpg|jpeg|gif|bmp|tif|tiff)$/i).test(path);
+    return (/\.(png|jpg|jpeg|gif|bmp|tif|tiff|svg|webp)$/i).test(path);
   },
 
   /**
@@ -279,25 +266,29 @@ Discourse.Utilities = {
   **/
   allowsAttachments: function() {
     return Discourse.Utilities.authorizesAllExtensions() ||
-           !(/((png|jpg|jpeg|gif|bmp|tif|tiff)(,\s)?)+$/i).test(Discourse.Utilities.authorizedExtensions());
+           !(/((png|jpg|jpeg|gif|bmp|tif|tiff|svg|webp)(,\s)?)+$/i).test(Discourse.Utilities.authorizedExtensions());
   },
 
   displayErrorForUpload: function(data) {
     // deal with meaningful errors first
     if (data.jqXHR) {
       switch (data.jqXHR.status) {
-        // cancel from the user
+        // cancelled by the user
         case 0: return;
 
         // entity too large, usually returned from the web server
         case 413:
           var maxSizeKB = Discourse.SiteSettings.max_image_size_kb;
-          bootbox.alert(I18n.t('post.errors.image_too_large', { max_size_kb: maxSizeKB }));
+          bootbox.alert(I18n.t('post.errors.file_too_large', { max_size_kb: maxSizeKB }));
           return;
 
         // the error message is provided by the server
         case 422:
-          bootbox.alert(data.jqXHR.responseJSON.join("\n"));
+          if (data.jqXHR.responseJSON.message) {
+            bootbox.alert(data.jqXHR.responseJSON.message);
+          } else {
+            bootbox.alert(data.jqXHR.responseJSON.join("\n"));
+          }
           return;
       }
     }
@@ -322,6 +313,7 @@ Discourse.Utilities = {
     } else {
       return new Ember.RSVP.Promise(function(resolve) {
         var image = document.createElement("img");
+        image.crossOrigin = 'Anonymous';
         // this event will be fired as soon as the image is loaded
         image.onload = function(e) {
           var img = e.target;
@@ -350,26 +342,6 @@ Discourse.Utilities = {
         // launch the onload event
         image.src = url;
       });
-    }
-  },
-
-  timestampFromAutocloseString: function(arg) {
-    if (!arg) return null;
-    if (arg.match(/^[\d]{4}-[\d]{1,2}-[\d]{1,2} [\d]{1,2}:[\d]{2}/)) {
-      return moment(arg).toJSON(); // moment will add the timezone
-    } else {
-      var matches = arg.match(/^([\d]{1,2}):([\d]{2})$/); // just the time HH:MM
-      if (matches) {
-        var now = moment(),
-            t = moment(new Date(now.year(), now.month(), now.date(), matches[1], matches[2]));
-        if (t.isAfter()) {
-          return t.toJSON();
-        } else {
-          return t.add('days', 1).toJSON();
-        }
-      } else {
-        return (arg === '' ? null : arg);
-      }
     }
   },
 
