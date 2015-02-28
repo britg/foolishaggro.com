@@ -2,8 +2,10 @@
 %html{ :lang => "en" }
   %head
     %link{ :href => 'http://fonts.googleapis.com/css?family=Condiment|Press+Start+2P', :rel => 'stylesheet', :type => 'text/css' }
+    %link{ rel: "alternate", type: "application/rss+xml", title: "Foolish Aggro Devlog", href: "https://foolishaggro.com/latest.rss" }
     %meta{'http-equiv' => "content-type", :content => "text/html;charset=UTF-8"}
     %meta{:name => "google-site-verification", :content => "aynvIRUd8CVkj47C55EPwKTSm_vKtijp53puB6hlQlU"}
+
 
     %title= @browser_title || "Foolish Aggro &middot; Game Development Studio".html_safe
 
@@ -31,10 +33,10 @@
                 = link_to "Foolish Aggro", root_path, :class => "navbar-brand"
 
               %ul.nav.navbar-nav
-                %li.active= link_to "Our Games", root_path
+                %li.active= link_to "News &amp; Livestreams".html_safe, root_path
                 %li= link_to "About", "http://foolishaggro.com/t/about-us/30"
                 %li= link_to "Contact", "http://foolishaggro.com/t/contact-us/31"
-                %li= link_to "Forums", "/categories"
+                %li= link_to "Discuss", "/latest"
 
               .social-media
                 = link_to image_tag("pages/twitch_logo.png", :class => "logo"), "http://twitch.tv/britgtx"

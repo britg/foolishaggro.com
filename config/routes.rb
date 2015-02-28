@@ -478,6 +478,7 @@ Discourse::Application.routes.draw do
 
   get 'pyroclasm' => redirect("/category/pyroclasm")
   get 'foolishgalaxy' => "pages#game", :game => "foolishgalaxy"
+  get 'mazing/daily' => "gameapis#mazingdaily"
   resources :scores
 
   Discourse.filters.each do |filter|

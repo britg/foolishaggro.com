@@ -1,5 +1,11 @@
 
+
+
+
 .row
+
+  #tagline
+    %h2 Foolishly handcrafted games
 
   .col-md-3
 
@@ -36,6 +42,17 @@
     :erb
       <object type="application/x-shockwave-flash" height="458" width="750" id="live_embed_player_flash" data="http://www.twitch.tv/widgets/live_embed_player.swf?channel=britgtx" bgcolor="#000000"><param name="allowFullScreen" value="true" /><param name="allowScriptAccess" value="always" /><param name="allowNetworking" value="all" /><param name="movie" value="http://www.twitch.tv/widgets/live_embed_player.swf" /><param name="flashvars" value="hostname=www.twitch.tv&channel=britgtx&auto_play=true&start_volume=25" /></object>
 
+    %hr
+
+    - @videos.each do |video|
+      .topic
+        %h4.title= link_to video.title, video.video_url, :class => "video-link"
+        = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url, :class => "video-link"
+
+        %hr
+
+  .col-md-4
+
     - @topics.each do |topic|
       .topic
         %h3.title= link_to topic.title, topic.relative_url
@@ -44,7 +61,7 @@
           %strong= topic.user.username
           - topic.category.try(:tap) do |cat|
             in
-            %span.label.label-info= cat.name
+            %span.label.label-info= link_to cat.name, "/category/#{cat.slug}"
 
         .content= topic.posts.first.excerpt.html_safe
 
@@ -54,16 +71,6 @@
 
     = link_to "Visit the forums for more discussions", "/latest", :class => "btn btn-primary btn-large btn-block"
 
-  .col-md-4
-
-    %h3 Recent Streams
-
-    - @videos.each do |video|
-      .topic
-        %h4.title= link_to video.title, video.video_url, :class => "video-link"
-        = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url, :class => "video-link"
-
-        %hr
 
     = link_to "Twitter", "https://twitter.com/foolishaggro", :class => "btn btn-block btn-info"
     = link_to "Facebook", "https://www.facebook.com/foolishaggro", :class => "btn btn-block btn-primary"
