@@ -10,7 +10,7 @@ class PagesController < ActionController::Base
                    .where(:user_id => @admin_ids,
                           :archetype => Archetype.default)
                    .where("category_id not in (5, 8, 9, 11)")
-                   .limit(10)
+                   .limit(3)
   end
 
   def game
