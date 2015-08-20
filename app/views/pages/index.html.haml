@@ -37,29 +37,29 @@
       = link_to "Play in your browser", "http://playforgecraft.com", :class => "btn btn-block btn-primary"
 
 .row
-  .col-md-8
+  .col-md-6
 
     .topic
       %h3.title
         Development livestreams on
         = link_to image_tag("pages/twitch_logo.png"), "https://twitch.tv/britgtx"
-      %p
-        = link_to "Click here", "https://twitch.tv/britgtx"
-        to subscribe and get notified when we stream.
 
-    :erb
-      <object type="application/x-shockwave-flash" height="458" width="750" id="live_embed_player_flash" data="http://www.twitch.tv/widgets/live_embed_player.swf?channel=britgtx" bgcolor="#000000"><param name="allowFullScreen" value="true" /><param name="allowScriptAccess" value="always" /><param name="allowNetworking" value="all" /><param name="movie" value="http://www.twitch.tv/widgets/live_embed_player.swf" /><param name="flashvars" value="hostname=www.twitch.tv&channel=britgtx&auto_play=true&start_volume=25" /></object>
+    <object type="application/x-shockwave-flash" style="width: 100%; min-height: 400px;" id="live_embed_player_flash" data="http://www.twitch.tv/widgets/live_embed_player.swf?channel=britgtx" bgcolor="#000000"><param name="allowFullScreen" value="true" /><param name="allowScriptAccess" value="always" /><param name="allowNetworking" value="all" /><param name="movie" value="http://www.twitch.tv/widgets/live_embed_player.swf" /><param name="flashvars" value="hostname=www.twitch.tv&channel=britgtx&auto_play=true&start_volume=25" /></object>
 
-    %hr
 
-    - @videos.each do |video|
-      .topic
-        %h4.title= link_to video.title, video.video_url, :class => "video-link"
-        = link_to image_tag(video.thumbnail_url, :class => "video-thumb"), video.video_url, :class => "video-link"
+  .col-md-6
 
-        %hr
+    .topic
+      %h3.title
+        Development video archives on
+        = link_to image_tag("pages/youtube_logo_dark.png", style: "height: 35px;"), "https://youtube.com/foolishaggro"
 
-  .col-md-4
+    <iframe style="width:100%; min-height: 400px;" src="https://www.youtube.com/embed/videoseries?list=PLjG5_CnrWHc-6-tZsU0pDveCqzr81DC8j" frameborder="0" allowfullscreen></iframe>
+
+
+.row
+
+  .col-md-12
 
     - @topics.each do |topic|
       .topic
@@ -82,4 +82,3 @@
 
     = link_to "Twitter", "https://twitter.com/foolishaggro", :class => "btn btn-block btn-info"
     = link_to "Facebook", "https://www.facebook.com/foolishaggro", :class => "btn btn-block btn-primary"
-    = link_to "Google+", "https://plus.google.com/114088551259464978564", :rel => "publisher", :class => "btn btn-block btn-danger"

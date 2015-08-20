@@ -13,7 +13,7 @@ require 'sidekiq/capistrano'
 # You should change this to your fork of discourse
 set :repository, 'git@github.com:britg/foolishaggro.com.git'
 set :deploy_via, :remote_cache
-set :branch, fetch(:branch, 'cms')
+set :branch, fetch(:branch, 'fa')
 set :scm, :git
 ssh_options[:forward_agent] = true
 
